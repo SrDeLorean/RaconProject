@@ -1,0 +1,250 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=Rajdhani:wght@500;600;700&family=Teko:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Outfit', sans-serif;
+  --font-display: 'Teko', sans-serif;
+  --font-condensed: 'Rajdhani', sans-serif;
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+}
+
+@layer base {
+  /* MODO CLARO (Beige Cálido/Crema) */
+  :root {
+    --background: 35 20% 98%;
+    --foreground: 20 15% 15%;
+    --card: 35 20% 96%;
+    --card-foreground: 20 15% 15%;
+    --muted: 35 10% 90%;
+    --muted-foreground: 20 10% 45%;
+    --border: 35 15% 85%;
+    --input: 35 15% 85%;
+    --primary: 352 100% 45%; 
+    --primary-foreground: 0 0% 100%;
+    --secondary: 35 15% 90%;
+    --secondary-foreground: 20 15% 15%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 352 100% 45%;
+    --radius: 0.75rem;
+  }
+
+  /* MODO OSCURO (Café Profundo / Gemini Style) */
+  .dark {
+    --background: 24 15% 5%;     /* Café muy oscuro */
+    --foreground: 35 20% 90%;    /* Blanco cálido */
+    --card: 24 12% 8%;          /* Gris café suave */
+    --card-foreground: 35 20% 90%;
+    --muted: 24 10% 12%;        /* Café tierra para zonas mudas */
+    --muted-foreground: 35 10% 60%;
+    --border: 24 10% 18%;       /* Borde suave, no agresivo */
+    --input: 24 10% 18%;
+    --primary: 352 100% 50%; 
+    --primary-foreground: 0 0% 100%;
+    --secondary: 24 10% 15%;
+    --secondary-foreground: 35 20% 90%;
+    --destructive: 0 60% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 352 100% 50%;
+  }
+}
+
+/* 3. TEMA (Aquí Tailwind v4 crea las clases basándose en las variables de arriba) */
+@theme {
+  --font-sans: 'Outfit', sans-serif;
+  --font-display: 'Teko', sans-serif;
+  --font-condensed: 'Rajdhani', sans-serif;
+
+  /* Mapeamos los colores a las variables de arriba */
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+/* 4. BASE Y UTILIDADES (El resto de tu lógica táctica) */
+@layer base {
+  * { 
+    @apply border-border selection:bg-primary/30 selection:text-primary-foreground; 
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased min-h-screen relative overflow-x-hidden;
+    font-family: var(--font-sans);
+    background-image: radial-gradient(circle at 50% -10%, hsla(var(--primary), 0.08) 0%, transparent 70%);
+    background-attachment: fixed;
+  }
+
+  body::before {
+    content: "";
+    @apply absolute inset-0 pointer-events-none opacity-[0.04];
+    background-image: linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+    @apply uppercase tracking-normal leading-[0.9];
+  }
+
+  .font-condensed {
+    font-family: var(--font-condensed);
+    @apply uppercase font-bold tracking-widest;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-border rounded-full hover:bg-primary/50 transition-colors; }
+}
+
+/* 6. UTILIDADES SEMÁNTICAS AMC / E-SPORTS */
+@layer utilities {
+  .text-amc-title, .text-title-pro {
+    @apply font-semibold uppercase text-foreground;
+    font-family: var(--font-display) !important;
+    letter-spacing: 0.02em;
+    text-shadow: 0 4px 12px rgba(0,0,0,0.5); 
+  }
+
+  .text-technical {
+    @apply font-bold uppercase;
+    font-family: var(--font-condensed) !important;
+    letter-spacing: 0.15em;
+    font-size: 0.75rem;
+    color: hsl(var(--primary));
+  }
+
+  .text-description {
+    font-family: var(--font-sans); 
+    @apply font-light leading-relaxed text-muted-foreground;
+    font-size: 0.95rem; 
+  }
+
+  .text-glow-primary {
+    color: hsl(var(--primary)) !important;
+    text-shadow: 0 0 25px hsla(var(--primary), 0.4);
+  }
+
+  /* --- ARMADURA TÁCTICA 2.0 --- */
+  .btn-action-primary {
+    @apply relative overflow-hidden transition-all duration-300 flex items-center justify-center border-none rounded-md active:scale-95;
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsla(var(--primary), 0.8) 100%) !important;
+    box-shadow: 0 8px 25px -8px hsla(var(--primary), 0.5), inset 0 1px 1px rgba(255,255,255,0.2) !important;
+    color: hsl(var(--primary-foreground)) !important;
+    font-family: var(--font-sans) !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.15em !important;
+    font-size: 0.8rem !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+  }
+
+  .btn-action-primary:hover {
+    transform: translateY(-2px) scale(1.01) !important;
+    box-shadow: 0 12px 30px -8px hsla(var(--primary), 0.7), inset 0 1px 1px rgba(255,255,255,0.3) !important;
+  }
+
+  .btn-tactical {
+    @apply relative overflow-hidden transition-all duration-300 flex items-center justify-center border border-primary/30 rounded-md active:scale-95;
+    background: hsla(var(--primary), 0.1) !important;
+    backdrop-filter: blur(8px);
+    color: hsl(var(--primary)) !important;
+    font-family: var(--font-sans) !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.1em !important;
+    font-size: 0.75rem !important;
+  }
+
+  .btn-tactical:hover {
+    background: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
+    box-shadow: 0 0 20px hsla(var(--primary), 0.3) !important;
+    border-color: transparent !important;
+  }
+
+  /* --- GLASSMORPHISM 2.0 --- */
+  .glass-sidebar {
+    @apply bg-background/40 backdrop-blur-2xl border-r border-border;
+  }
+
+  .glass-card {
+    @apply bg-card/40 backdrop-blur-2xl border border-white/5 shadow-xl rounded-xl;
+    background-image: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 100%) !important;
+  }
+
+  .neon-glow {
+    @apply shadow-[0_8px_30px_rgba(232,0,29,0.15)] border-primary/30;
+  }
+
+  .animate-scanline {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .animate-scanline::after {
+    content: "";
+    @apply absolute inset-0 w-full h-full pointer-events-none;
+    background: linear-gradient(to bottom, transparent, hsla(var(--primary), 0.03) 50%, transparent);
+    animation: scanline 6s linear infinite;
+  }
+
+  .ambient-glow-primary {
+    @apply absolute pointer-events-none -z-10 rounded-full blur-[100px] md:blur-[120px];
+    background: hsla(var(--primary), 0.12);
+  }
+
+  .status-led-online {
+    @apply h-2 w-2 rounded-full animate-pulse shrink-0;
+    background-color: #10b981; 
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+  }
+  
+  .status-led-offline {
+    @apply h-2 w-2 rounded-full shrink-0;
+    background-color: hsl(var(--muted-foreground));
+  }
+
+  .surface-panel {
+    @apply bg-background/40 border border-border/50 rounded-md backdrop-blur-sm;
+  }
+
+  .slot-empty {
+    @apply bg-transparent border border-dashed border-border/40 opacity-50 hover:opacity-100 transition-opacity flex items-center justify-center rounded-md;
+  }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
