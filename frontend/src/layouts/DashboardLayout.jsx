@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import Button from '../components/shared/Button';
-import Badge from '../components/shared/Badge';
-import { useTheme } from '../hooks/useTheme';
-import { useAuthStore } from '../store/useAuthStore';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import Avatar from '@/components/ui/Avatar'; // <-- NUEVO: Importamos el Avatar
+import { useTheme } from '@/hooks/useTheme';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function DashboardLayout({ menuItems = [], profile }) {
   const { user, logout } = useAuthStore();
@@ -48,6 +49,12 @@ export default function DashboardLayout({ menuItems = [], profile }) {
     await logout(); 
     navigate('/login');
   };
+
+  // Unificamos datos del usuario (Prioridad: Estado Global de Zustand > Props > Default)
+  const displayName = user?.name || profile?.name || 'Administrador';
+  const displayRole = user?.rol || profile?.rol || 'Super Admin';
+  const displayEmail = user?.email || profile?.email || 'admin@racon.com';
+  const displayAvatar = user?.profile_photo_url || profile?.avatar;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex overflow-hidden font-sans">
@@ -165,10 +172,9 @@ export default function DashboardLayout({ menuItems = [], profile }) {
             </h2>
           </div>
           
-          {/* LADO DERECHO: Alerta + Tema + Datos Usuario (Mantiene el mismo código que ya tenías) */}
+          {/* LADO DERECHO: Alerta + Tema + Datos Usuario */}
           <div className="flex items-center gap-3 sm:gap-4 relative z-10">
             {/* 1. BOTÓN DE ALERTAS */}
-            {/* BOTÓN DE ALERTAS - Código limpio y verificado */}
             <button className="relative p-2.5 rounded-xl text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all duration-200 focus:outline-none group">
               <svg 
                 className="w-5 h-5 group-hover:animate-bounce" 
@@ -204,15 +210,22 @@ export default function DashboardLayout({ menuItems = [], profile }) {
                 onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
                 className="flex items-center gap-3 p-1.5 pr-3 rounded-2xl hover:bg-muted/50 transition-all duration-200 focus:outline-none"
               >
-                <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-black text-sm shadow-[0_0_15px_hsla(var(--primary),0.3)] shrink-0">
-                  {profile?.initial || 'A'}
-                </div>
+                {/* NUESTRO NUEVO COMPONENTE AVATAR INYECTADO AQUÍ 
+                  Mantenemos un tamaño similar y le pasamos tu clase de sombra glow
+                */}
+                <Avatar 
+                  name={displayName} 
+                  src={displayAvatar}
+                  size="md"
+                  className="shadow-[0_0_15px_hsla(var(--primary),0.3)] !rounded-xl" 
+                />
+                
                 <div className="text-left hidden xs:block">
                   <p className="text-sm font-bold tracking-wide text-foreground max-w-[120px] truncate">
-                    {profile?.name || 'Administrador'}
+                    {displayName}
                   </p>
                   <p className="text-xs font-medium text-muted-foreground opacity-80">
-                    Super Admin
+                    {displayRole}
                   </p>
                 </div>
                 <svg className={`w-4 h-4 text-muted-foreground transition-transform duration-300 hidden xs:block ${isUserDropdownOpen ? 'rotate-180 text-primary' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,8 +237,8 @@ export default function DashboardLayout({ menuItems = [], profile }) {
               {isUserDropdownOpen && (
                 <div className="absolute right-0 mt-3 w-56 bg-card border border-border/50 shadow-lg rounded-xl py-2 animate-fade-in z-50">
                   <div className="px-4 py-3 border-b border-border/50 xs:hidden mb-2">
-                    <p className="text-sm font-bold text-foreground">{profile?.name || 'Administrador'}</p>
-                    <p className="text-xs text-muted-foreground truncate">{profile?.email || 'admin@racon.com'}</p>
+                    <p className="text-sm font-bold text-foreground truncate">{displayName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{displayEmail}</p>
                   </div>
                   <Link to="/admin/perfil" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" onClick={() => setIsUserDropdownOpen(false)}>
                     <span className="text-lg opacity-70">👤</span> Mi Perfil

@@ -6,6 +6,8 @@ import { adminRoutes } from './adminRoutes.jsx';
 import { organizadorRoutes } from './organizadorRoutes.jsx';
 import { jugadorRoutes } from './jugadorRoutes.jsx';
 
+import ErrorBoundary from '@/components/ErrorBoundary';
+
 // Importaciones dinámicas (Code Splitting)
 const PublicLayout = lazy(() => import('@/layouts/PublicLayout'));
 const Home = lazy(() => import('@/features/public/pages/Home'));
@@ -36,6 +38,7 @@ export const router = createBrowserRouter([
   // Rutas Públicas
   {
     element: <Suspense fallback={<PageLoader />}><PublicLayout /></Suspense>,
+    errorElement: <ErrorBoundary />,
     children: [
       { path: '/', element: <Home /> },
       { path: '/login', element: <Login /> },
@@ -46,18 +49,21 @@ export const router = createBrowserRouter([
   // Rutas Privadas: ADMIN
   {
     element: <Suspense fallback={<PageLoader />}><ProtectedRoute allowedRoles={['admin']} /></Suspense>,
+    errorElement: <ErrorBoundary />,
     children: [adminRoutes],
   },
   
   // Rutas Privadas: ORGANIZADOR
   {
     element: <Suspense fallback={<PageLoader />}><ProtectedRoute allowedRoles={['organizador']} /></Suspense>,
+    errorElement: <ErrorBoundary />,
     children: [organizadorRoutes],
   },
   
   // Rutas Privadas: JUGADOR
   {
     element: <Suspense fallback={<PageLoader />}><ProtectedRoute allowedRoles={['jugador']} /></Suspense>,
+    errorElement: <ErrorBoundary />,
     children: [jugadorRoutes],
   }
 ]);

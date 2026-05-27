@@ -6,8 +6,9 @@ export default function OrganizadorLayout() {
   
   const navLinks = [
     { path: '/organizador', label: 'Panel Organizador', icon: '🏢' },
-    { path: '/organizador/jugador', label: 'Jugadores', icon: '🏆' },
+    { path: '/organizador/jugadores', label: 'Jugadores', icon: '🏆' },
     { path: '/organizador/competencias', label: 'Mis competencias', icon: '👥' },
+    { path: '/organizador/temporadas', label: 'Temporadas', icon: '📅' },
   ];
 
   return (

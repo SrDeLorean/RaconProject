@@ -6,6 +6,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Class User
@@ -28,7 +29,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     // 3. IMPORTANTE: Debes incluir el trait HasApiTokens para el login
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     protected $perPage = 20;
 
@@ -42,7 +43,10 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'status', // <- No olvides agregarlo aquí
+        'gamertag',
         'id_ea',
+        'plataforma',
         'foto',
         'nacionalidad',
         'posicion',
@@ -50,11 +54,13 @@ class User extends Authenticatable
         'altura',
         'peso',
         'telefono',
+        'biografia',
         'instagram',
         'facebook',
         'twitch',
         'youtube',
         'tiktok',
+        'last_login_at'
     ];
 
     /**
@@ -74,7 +80,9 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed', // Laravel 10+ encripta automáticamente si usas esto
+        'last_login_at' => 'datetime',
+        'fecha_nacimiento' => 'date',
+        'password' => 'hashed',
     ];
 
 
@@ -84,6 +92,11 @@ class User extends Authenticatable
     public function equipos()
     {
         return $this->hasMany(\App\Models\Equipo::class, 'id', 'id_capitan');
+    }
+
+    public function organizacion()
+    {
+        return $this->hasOne(Organizacion::class, 'owner_id', 'id');
     }
 
     /**

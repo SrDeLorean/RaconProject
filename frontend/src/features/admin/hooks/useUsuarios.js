@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '@/api/axios';
 import { useDebounce } from '@/hooks/useDebounce';
 
 export const useUsuarios = () => {
-  // 1. Estados de Datos y Paginación
   const [usuarios, setUsuarios] = useState([]);
   const [activeTab, setActiveTab] = useState('todos');
   const [searchTerm, setSearchTerm] = useState('');
@@ -11,22 +10,21 @@ export const useUsuarios = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
 
-  // 2. Estados de UI (Notificaciones y Modales)
   const [notification, setNotification] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   
-  // 3. Estados de Entidades
   const [selectedUsuario, setSelectedUsuario] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
   const [formData, setFormData] = useState({ name: '', email: '', password: '', role: '', status: 'activo' });
+  
+  // 🔥 MEJORA: Estado para los errores de validación de Laravel
+  const [formErrors, setFormErrors] = useState({});
 
-  // 4. Estados de Carga
   const [isFetching, setIsFetching] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Implementación del Hook genérico de Debounce (400ms de retraso)
   const debouncedSearchTerm = useDebounce(searchTerm, 400);
 
   const triggerNotification = (variant, text) => {
@@ -34,7 +32,7 @@ export const useUsuarios = () => {
     setTimeout(() => setNotification(null), 4000);
   };
 
-  const fetchUsuarios = async () => {
+  const fetchUsuarios = useCallback(async () => {
     setIsFetching(true);
     try {
       const params = {
@@ -55,17 +53,17 @@ export const useUsuarios = () => {
     } finally {
       setIsFetching(false);
     }
-  };
+  }, [currentPage, debouncedSearchTerm, activeTab]);
 
-  // El efecto ahora reacciona de forma limpia a los cambios sin timeouts locales manuales
   useEffect(() => {
     fetchUsuarios();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, debouncedSearchTerm, activeTab]);
+  }, [fetchUsuarios]);
 
   const handleSave = async (e) => {
     e.preventDefault();
     setIsSaving(true);
+    setFormErrors({}); // 🔥 Limpiar errores antes de intentar guardar
+
     try {
       if (selectedUsuario) {
         await api.put(`/users/${selectedUsuario.id}`, formData);
@@ -77,7 +75,13 @@ export const useUsuarios = () => {
       await fetchUsuarios();
       setIsDrawerOpen(false);
     } catch (error) {
-      triggerNotification('error', error.response?.data?.message || 'Error en la petición.');
+      // 🔥 MEJORA: Control exacto del Error 422 (Validación de Laravel)
+      if (error.response?.status === 422) {
+        setFormErrors(error.response.data.errors);
+        triggerNotification('error', 'Por favor, revisa los campos marcados.');
+      } else {
+        triggerNotification('error', error.response?.data?.message || 'Error en la petición.');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -102,24 +106,26 @@ export const useUsuarios = () => {
     }
   };
 
-  const openDrawer = (usuario = null) => {
+  // Envolvemos acciones en useCallback para que sean estables en el useMemo de columnas
+  const openDrawer = useCallback((usuario = null) => {
     setSelectedUsuario(usuario);
+    setFormErrors({}); // Limpiar errores al abrir el drawer
     setFormData(usuario 
       ? { name: usuario.name, email: usuario.email, password: '', role: usuario.role, status: usuario.status || 'activo' }
       : { name: '', email: '', password: '', role: '', status: 'activo' }
     );
     setIsDrawerOpen(true);
-  };
+  }, []);
 
-  const confirmDelete = (usuario) => {
+  const confirmDelete = useCallback((usuario) => {
     setUserToDelete(usuario);
     setIsDeleteModalOpen(true);
-  };
+  }, []);
 
   return {
     data: { usuarios, totalRecords, currentPage, totalPages, searchTerm, activeTab },
     ui: { notification, isDrawerOpen, isDeleteModalOpen, isFetching, isSaving, isDeleting, selectedUsuario, userToDelete },
-    form: { formData, setFormData },
+    form: { formData, setFormData, formErrors }, // Pasamos formErrors al controlador
     actions: { 
       setSearchTerm, setCurrentPage, setActiveTab, setNotification,
       openDrawer, closeDrawer: () => setIsDrawerOpen(false),

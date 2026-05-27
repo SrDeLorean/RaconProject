@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class OrganizacioneRequest extends FormRequest
+class OrganizacionEquipoUsuarioRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,21 +22,11 @@ class OrganizacioneRequest extends FormRequest
     public function rules(): array
     {
         return [
-			'owner_id' => 'required',
-			'nombre' => 'required|string',
-			'slug' => 'required|string',
-			'descripcion' => 'string',
-			'logo' => 'string',
-			'banner' => 'string',
-			'color_hex' => 'string',
-			'email_contacto' => 'string',
-			'discord_url' => 'string',
-			'twitter_url' => 'string',
-			'twitch_url' => 'string',
-			'website' => 'string',
-			'pais' => 'string',
-			'is_verified' => 'required',
-			'estado' => 'required',
+			'organizacion_id' => 'required',
+			'equipo_id' => 'required',
+			'user_id' => 'required',
+			'estado_fichaje' => 'required',
+			'fecha_vinculacion' => 'required',
         ];
     }
 }

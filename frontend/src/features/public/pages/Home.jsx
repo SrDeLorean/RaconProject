@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import Button from '@/components/shared/Button';
-import Badge from '@/components/shared/Badge';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
 
 export default function Home() {
   return (

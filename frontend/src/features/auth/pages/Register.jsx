@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
-import Input from '@/components/shared/Input';
-import Button from '@/components/shared/Button';
+import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
-import Select from '@/components/shared/Select';
+import Select from '@/components/ui/Select';
 
 import bgRegister from '@/assets/images/bg-register.jpg';
 

@@ -1,57 +1,211 @@
-import React, { useEffect } from 'react';
+import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCompetencias } from '../hooks/useCompetencias';
-import DataTable from '@/components/shared/DataTable';
+
+// Componentes UI Compartidos
+import DataTable from '@/components/ui/DataTable';
 import CrudHeader from '@/components/shared/CrudHeader';
+import DeleteModal from '@/components/shared/DeleteModal';
+import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
+import Alert from '@/components/shared/Alert';
+import Select from '@/components/ui/Select';
+
+// Formulario de Creación/Edición
 import CompetenciaFormDrawer from '../components/CompetenciaFormDrawer';
 
 export default function CompetenciasCRUD() {
-  const { 
-    competencias, isFetching, isDrawerOpen, setIsDrawerOpen, 
-    selected, setSelected, formData, setFormData, 
-    fetchCompetencias, saveCompetencia 
-  } = useCompetencias();
+  const navigate = useNavigate();
+  const { data, ui, form, actions } = useCompetencias();
 
-  const handleEdit = (comp) => {
-    setSelected(comp);
-    setFormData(comp); // Asume que formData coincide con la estructura de la competencia
-    setIsDrawerOpen(true);
-  };
+  // Pestañas de filtrado rápido por estado
+  const tabsConfig = useMemo(() => [
+    { id: 'todos', label: 'Todas las Divisiones', icon: '🏆' },
+    { id: 'borrador', label: 'Borrador', icon: '🛠️' },
+    { id: 'inscripciones', label: 'Inscripciones', icon: '📝' },
+    { id: 'en_curso', label: 'En Curso', icon: '⚽' },
+    { id: 'finalizada', label: 'Concluidas', icon: '🏁' },
+  ], []);
 
-  const columns = [
-    { header: 'Nombre', accessor: 'nombre' },
-    { header: 'Formato', accessor: 'formato' },
-    { header: 'Premio', render: (row) => <span className="font-mono text-primary">${row.prize_pool}</span> },
-    { header: 'Estado', render: (row) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-            row.estado === 'en_curso' ? 'bg-green-500/10 text-green-500' : 'bg-slate-500/10 text-slate-400'
-        }`}>
-            {row.estado}
+  // Mapeo dinámico de las temporadas para el Select del filtro superior
+  const opcionesFiltroTemporadas = useMemo(() => {
+    return data.temporadasList.map(t => ({
+      value: t.id,
+      label: t.nombre
+    }));
+  }, [data.temporadasList]);
+
+  // Configuración de las columnas de la tabla
+  const columnas = useMemo(() => [
+    { 
+      header: 'División', 
+      render: (row) => (
+        <div className="flex items-center gap-3">
+          <div className="w-4 h-4 rounded-full border border-border shadow-sm shrink-0" style={{ backgroundColor: row.color_tema || '#ef4444' }} />
+          <div className="flex flex-col">
+            <span className="font-bold text-foreground text-sm uppercase">{row.nombre}</span>
+            <span className="text-xs text-muted-foreground">{row.slug}</span>
+          </div>
+        </div>
+      )
+    },
+    { 
+      header: 'Temporada Vinc.', 
+      render: (row) => (
+        <span className="text-xs font-semibold text-foreground bg-muted/60 px-2.5 py-1 rounded-md border border-border/40 uppercase tracking-wide">
+          {row.temporada?.nombre || 'Sin ciclo'}
         </span>
-    )},
-    { header: 'Acciones', render: (row) => (
-        <button onClick={() => handleEdit(row)} className="text-primary hover:underline">Editar</button>
-    )}
-  ];
+      )
+    },
+    { 
+      header: 'Formato', 
+      render: (row) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-foreground text-sm uppercase font-mono">{row.formato}</span>
+          <span className="text-xs text-muted-foreground uppercase tracking-wider">{row.plataforma}</span>
+        </div>
+      )
+    },
+    { 
+      header: 'Finanzas', 
+      render: (row) => (
+        <div className="flex flex-col text-xs font-mono">
+          <span className="text-muted-foreground">Inscripción: ${row.entry_fee}</span>
+          <span className="text-primary font-bold">Premio: ${row.prize_pool}</span>
+        </div>
+      )
+    },
+    { 
+      header: 'Cupos', 
+      render: (row) => (
+        <Badge variant={row.equipos_count >= row.max_participantes ? 'error' : 'neutral'}>
+          {row.equipos_count || 0} / {row.max_participantes}
+        </Badge>
+      )
+    },
+    { 
+      header: 'Fase', 
+      render: (row) => {
+        const variant = row.estado === 'en_curso' ? 'success' : row.estado === 'inscripciones' ? 'brand' : row.estado === 'finalizada' ? 'error' : 'neutral';
+        return <Badge variant={variant} className="uppercase text-[10px] tracking-wider font-bold">{row.estado}</Badge>;
+      }
+    },
+    { 
+      header: 'Acciones', 
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          
+          {/* 🔥 BOTÓN MAESTRO: Navega al Dashboard de la Competencia */}
+          <Button 
+            variant="solid" 
+            size="sm" 
+            className="h-8 px-3 text-xs bg-foreground text-background font-bold shadow-sm hover:scale-[1.02] transition-transform"
+            onClick={() => navigate(`/organizador/competencias/${row.id}`)}
+          >
+            ⚙️ Gestionar
+          </Button>
+
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-8 px-3 text-xs border-border/50 text-foreground hover:bg-muted" 
+            onClick={() => actions.openDrawer(row)}
+          >
+            Editar
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-8 px-3 text-xs border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive/50" 
+            onClick={() => actions.confirmDelete(row)}
+          >
+            Borrar
+          </Button>
+        </div>
+      )
+    },
+  ], [actions, navigate]);
 
   return (
-    <div className="space-y-6">
-      <CrudHeader 
-        title="Gestión de Competencias" 
-        buttonText="Nueva Competencia" 
-        onAddClick={() => { setSelected(null); setIsDrawerOpen(true); }} 
-      />
+    <div className="flex flex-col gap-6 animate-fade-in relative">
       
-      <div className="bg-bg-surface rounded-2xl border border-border shadow-sm">
-        <DataTable columns={columns} data={competencias} isLoading={isFetching} />
+      {/* Alerta Global Flotante */}
+      {ui.notification && (
+        <Alert variant={ui.notification.variant} className="fixed top-24 right-8 z-[110] shadow-lg max-w-sm" onClose={() => actions.setNotification(null)}>
+          {ui.notification.text}
+        </Alert>
+      )}
+
+      {/* Cabecera del CRUD */}
+      <CrudHeader 
+        title="Consola de Divisiones" 
+        description="Estructura, supervisa y despliega las ligas globales creadas en tu comunidad." 
+        buttonText="+ Nueva División" 
+        onAddClick={() => actions.openDrawer(null)} 
+        tabs={tabsConfig} 
+        activeTab={data.activeTab} 
+        onTabChange={(tabId) => { actions.setActiveTab(tabId); actions.setCurrentPage(1); }} 
+      />
+
+      {/* TOOLBAR SUPERIOR DE FILTRADO EXPRESS */}
+      <div className="max-w-xs bg-background rounded-xl border border-border/40 p-1 -mb-2 shadow-sm">
+        <Select
+          value={data.filterTemporadaId}
+          onChange={(e) => {
+            actions.setFilterTemporadaId(e.target.value);
+            actions.setCurrentPage(1); // Volvemos a la página 1 al filtrar
+          }}
+          options={[
+            { value: '', label: '🔍 Mostrar Todas las Temporadas' },
+            ...opcionesFiltroTemporadas
+          ]}
+        />
       </div>
 
+      {/* Tabla de Datos Principal */}
+      <div className="relative">
+        {ui.isFetching && data.competencias.length > 0 && (
+          <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-30 flex items-center justify-center rounded-xl transition-all duration-300">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        )}
+        <DataTable 
+          title="Directorio de Competencias Activas" 
+          columns={columnas} 
+          data={data.competencias} 
+          searchPlaceholder="Filtrar por nombre de liga..." 
+          onSearch={(value) => { actions.setSearchTerm(value); actions.setCurrentPage(1); }} 
+          currentPage={data.currentPage} 
+          totalPages={data.totalPages} 
+          totalRecords={data.totalRecords} 
+          perPage={10} 
+          isLoading={ui.isFetching && data.competencias.length === 0} 
+          onPageChange={(page) => actions.setCurrentPage(page)} 
+        />
+      </div>
+
+      {/* DRAWER: CREAR/EDITAR LA DIVISIÓN */}
       <CompetenciaFormDrawer 
-        isOpen={isDrawerOpen} 
-        onClose={() => setIsDrawerOpen(false)} 
-        onSave={saveCompetencia}
-        formData={formData}
-        setFormData={setFormData}
-        isEditing={!!selected}
+        isOpen={ui.isDrawerOpen} 
+        onClose={actions.closeDrawer} 
+        onSave={actions.handleSave} 
+        isSaving={ui.isSaving} 
+        selectedCompetencia={ui.selectedCompetencia} 
+        formData={form.formData} 
+        setFormData={form.setFormData} 
+        formErrors={form.formErrors} 
+        temporadasList={data.temporadasList} 
+      />
+
+      {/* MODAL: CONFIRMAR ELIMINACIÓN */}
+      <DeleteModal 
+        isOpen={ui.isDeleteModalOpen} 
+        onClose={actions.closeDeleteModal} 
+        onConfirm={actions.executeDelete} 
+        isDeleting={ui.isDeleting} 
+        title="Eliminar División" 
+        message={<>¿Seguro que deseas eliminar permanentemente la división <strong className="text-foreground">{ui.itemToDelete?.nombre}</strong>?</>} 
       />
     </div>
   );

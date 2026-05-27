@@ -12,25 +12,29 @@ use App\Http\Resources\UserResource;
 
 class UserController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
         $query = User::query();
 
-        // Filtro de Búsqueda
+        // 1. Filtro de Búsqueda Ampliado (Ahora busca también por Gamertag y EA ID)
         $query->when($request->filled('search'), function ($q) use ($request) {
             $searchTerm = $request->search;
             $q->where(function ($query) use ($searchTerm) {
                 $query->where('name', 'like', "%{$searchTerm}%")
-                    ->orWhere('email', 'like', "%{$searchTerm}%");
+                      ->orWhere('email', 'like', "%{$searchTerm}%")
+                      ->orWhere('gamertag', 'like', "%{$searchTerm}%") // Búsqueda gamer
+                      ->orWhere('id_ea', 'like', "%{$searchTerm}%");
             });
         });
 
-        // 🌟 NUEVO: Filtro por Rol (Conectado a las Tabs de React)
+        // 2. Filtro por Rol (Dashboard General)
         $query->when($request->filled('role'), function ($q) use ($request) {
             $q->where('role', $request->role);
+        });
+
+        // 3. 🔥 NUEVO: Filtro por Estado (Para las pestañas del Organizador: Activo, Inactivo...)
+        $query->when($request->filled('status'), function ($q) use ($request) {
+            $q->where('status', $request->status);
         });
 
         $perPage = $request->get('per_page', 10);
@@ -39,39 +43,42 @@ class UserController extends Controller
         return UserResource::collection($users);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(UserRequest $request): JsonResponse
     {
-        $user = User::create($request->validated());
+        $validated = $request->validated();
+
+        // Si no tienes configurado 'password' => 'hashed' en tu modelo, actívalo aquí:
+        // $validated['password'] = bcrypt($validated['password']);
+
+        $user = User::create($validated);
 
         return response()->json(new UserResource($user));
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(User $user): JsonResponse
     {
         return response()->json(new UserResource($user));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(UserRequest $request, User $user): JsonResponse
     {
-        $user->update($request->validated());
+        $validated = $request->validated();
+
+        // 🔥 CRÍTICO: Si el frontend manda la contraseña vacía (significa que no quiere cambiarla)
+        // La removemos del array para no sobrescribir el password con NULL.
+        if (empty($validated['password'])) {
+            unset($validated['password']);
+        }
+        // else { $validated['password'] = bcrypt($validated['password']); } // Si no usas casts en el modelo.
+
+        $user->update($validated);
 
         return response()->json(new UserResource($user));
     }
 
-    /**
-     * Delete the specified resource.
-     */
     public function destroy(User $user): Response
     {
+        // Esto ejecutará un Soft Delete automático si configuraste el trait SoftDeletes en el modelo User
         $user->delete();
 
         return response()->noContent();

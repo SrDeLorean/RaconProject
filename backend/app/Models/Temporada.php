@@ -2,43 +2,36 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-/**
- * Class Temporada
- *
- * @property $id
- * @property $id_organizacion
- * @property $nombre
- * @property $fecha_inicio
- * @property $fecha_termino
- * @property $estado
- * @property $created_at
- * @property $updated_at
- *
- * @property Organizacione $organizacione
- * @package App
- * @mixin \Illuminate\Database\Eloquent\Builder
- */
 class Temporada extends Model
 {
-    
-    protected $perPage = 20;
+    use HasFactory, SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
-    protected $fillable = ['id_organizacion', 'nombre', 'fecha_inicio', 'fecha_termino', 'estado'];
+    // 🔥 ASEGÚRATE DE QUE 'organizacion_id' ESTÉ AQUÍ:
+    protected $fillable = [
+        'organizacion_id',
+        'nombre',
+        'slug',
+        'estado_mercado',
+        'fecha_inicio',
+        'fecha_fin',
+        'activa'
+    ];
 
+    protected $casts = [
+        'activa' => 'boolean',
+    ];
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function organizacione()
+    public function organizacion()
     {
-        return $this->belongsTo(\App\Models\Organizacione::class, 'id_organizacion', 'id');
+        return $this->belongsTo(Organizacion::class);
     }
-    
+
+    public function competencias()
+    {
+        return $this->hasMany(Competencia::class);
+    }
 }

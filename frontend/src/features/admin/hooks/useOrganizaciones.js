@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import api from '@/api/axios'; // Tu instancia de axios configurada
-import { useDebounce } from '@/hooks/useDebounce'; // Asegúrate de tener este hook
+import api from '@/api/axios'; 
+import { useDebounce } from '@/hooks/useDebounce'; 
 
 export const useOrganizaciones = () => {
   // 1. Estados de Datos y Paginación
@@ -22,9 +22,10 @@ export const useOrganizaciones = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  // 3. Estados de Entidades
+  // 3. Estados de Entidades y Errores
   const [selectedOrganizacion, setSelectedOrganizacion] = useState(null);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [formErrors, setFormErrors] = useState({}); // 🔥 CAPTURA DE ERRORES LARAVEL
   const [formData, setFormData] = useState({ 
     nombre: '', 
     slug: '', 
@@ -59,11 +60,10 @@ export const useOrganizaciones = () => {
         estado: activeTab !== 'todas' ? activeTab : undefined,
       };
       
-      // LA RUTA DEBE SER EXACTAMENTE ESTA
       const response = await api.get('/organizaciones', { params });
       const responseData = response.data;
       
-      setOrganizaciones(responseData.data || []);
+      setOrganizaciones(responseData.data || responseData || []);
       setTotalPages(responseData.meta?.last_page || responseData.last_page || 1);
       setTotalRecords(responseData.meta?.total || responseData.total || 0);
     } catch (error) {
@@ -81,22 +81,30 @@ export const useOrganizaciones = () => {
     fetchOrganizaciones();
   }, [fetchOrganizaciones]);
 
-  // C. Guardar / Editar
+  // C. Guardar / Editar con validación tipificada
   const handleSave = async (e) => {
     if (e) e.preventDefault();
     setIsSaving(true);
+    setFormErrors({}); // Limpiamos errores previos al enviar
+
     try {
       if (selectedOrganizacion) {
         await api.put(`/organizaciones/${selectedOrganizacion.id}`, formData);
-        triggerNotification('success', 'Organización actualizada.');
+        triggerNotification('success', 'Organización actualizada correctamente.');
       } else {
         await api.post('/organizaciones', formData);
-        triggerNotification('success', 'Organización creada.');
+        triggerNotification('success', 'Nueva organización dada de alta con éxito.');
       }
       await fetchOrganizaciones();
       setIsDrawerOpen(false);
     } catch (error) {
-      triggerNotification('error', error.response?.data?.message || 'Error en la petición.');
+      // 🔥 Vinculación directa con el Request Validation de Laravel
+      if (error.response?.status === 422) {
+        setFormErrors(error.response.data.errors);
+        triggerNotification('error', 'Por favor, revisa los campos duplicados o inválidos.');
+      } else {
+        triggerNotification('error', error.response?.data?.message || 'Error interno al procesar la solicitud.');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -107,7 +115,7 @@ export const useOrganizaciones = () => {
     setIsDeleting(true);
     try {
       await api.delete(`/organizaciones/${itemToDelete.id}`);
-      triggerNotification('success', 'Eliminado correctamente.');
+      triggerNotification('success', 'La organización ha sido removida del sistema.');
       
       if (organizaciones.length === 1 && currentPage > 1) {
         setCurrentPage(prev => prev - 1);
@@ -116,15 +124,16 @@ export const useOrganizaciones = () => {
       }
       setIsDeleteModalOpen(false);
     } catch (error) {
-      triggerNotification('error', 'Error al eliminar.');
+      triggerNotification('error', 'No se pudo dar de baja la organización.');
     } finally {
       setIsDeleting(false);
     }
   };
 
-  // E. Controladores
+  // E. Controladores de apertura
   const openDrawer = (org = null) => {
     setSelectedOrganizacion(org);
+    setFormErrors({}); // 🔥 Limpiamos el feedback visual al abrir
     setFormData(org 
       ? { nombre: org.nombre, slug: org.slug, owner_id: org.owner_id, is_verified: org.is_verified, estado: org.estado }
       : { nombre: '', slug: '', owner_id: '', is_verified: false, estado: 'activo' }
@@ -135,7 +144,7 @@ export const useOrganizaciones = () => {
   return {
     data: { organizaciones, usuariosOrganizadores, totalRecords, currentPage, totalPages, searchTerm, activeTab },
     ui: { notification, isDrawerOpen, isDeleteModalOpen, isFetching, isSaving, isDeleting, selectedOrganizacion, itemToDelete },
-    form: { formData, setFormData },
+    form: { formData, setFormData, formErrors }, // Enviamos formErrors al exterior
     actions: { 
       setSearchTerm, setCurrentPage, setActiveTab, setNotification,
       openDrawer, closeDrawer: () => setIsDrawerOpen(false),

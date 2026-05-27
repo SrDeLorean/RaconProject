@@ -1,12 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useUsuarios } from '../hooks/useUsuarios';
 
 // Componentes UI Transversales (Shared)
-import DataTable from '@/components/shared/DataTable';
+import DataTable from '@/components/ui/DataTable';
 import CrudHeader from '@/components/shared/CrudHeader';
 import DeleteModal from '@/components/shared/DeleteModal';
-import Badge from '@/components/shared/Badge';
-import Button from '@/components/shared/Button';
+import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
 
 // Componentes de Dominio Único
@@ -15,19 +15,20 @@ import UsuarioFormDrawer from '../components/UsuarioFormDrawer';
 export default function UsuariosCRUD() {
   const { data, ui, form, actions } = useUsuarios();
 
-  const tabsConfig = [
+  // 🔥 MEJORA: useMemo evita que se re-cree en cada render
+  const tabsConfig = useMemo(() => [
     { id: 'todos', label: 'Todos', icon: '👥' },
     { id: 'administrador', label: 'Administradores', icon: '⚡' },
     { id: 'organizador', label: 'Organizadores', icon: '🏢' },
     { id: 'jugador', label: 'Jugadores', icon: '🎮' },
-  ];
+  ], []);
 
-  const columnas = [
+  // 🔥 MEJORA: Columnas cacheadas, solo cambian si las acciones cambian
+  const columnas = useMemo(() => [
     { 
       header: 'Usuario', 
       render: (row) => (
         <div className="flex items-center gap-3">
-          {/* Avatar dinámico estilo Producción */}
           <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-display font-bold text-lg shadow-sm shrink-0">
             {row.name ? row.name.charAt(0).toUpperCase() : 'U'}
           </div>
@@ -41,7 +42,6 @@ export default function UsuariosCRUD() {
     { 
       header: 'Rol', 
       render: (row) => {
-        // Estilos semánticos dependiendo del rol
         const roleStyles = {
           administrador: 'bg-destructive/10 text-destructive border-destructive/20',
           organizador: 'bg-primary/10 text-primary border-primary/20',
@@ -88,19 +88,17 @@ export default function UsuariosCRUD() {
         </div>
       )
     },
-  ];
+  ], [actions]); // Dependencia actualizada
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in relative">
       
-      {/* Alertas Flotantes Globales */}
       {ui.notification && (
         <Alert variant={ui.notification.variant} className="fixed top-24 right-8 z-[110] shadow-lg max-w-sm" onClose={() => actions.setNotification(null)}>
           {ui.notification.text}
         </Alert>
       )}
 
-      {/* Cabecera del CRUD (Aquí el CrudHeader debería tener bg-transparent o bg-card) */}
       <CrudHeader 
         title="Gestión de Usuarios"
         description="Administra los accesos y roles del sistema."
@@ -114,7 +112,6 @@ export default function UsuariosCRUD() {
         }}
       />
 
-      {/* Contenedor de la Tabla con Skeleton/Loader Superpuesto */}
       <div className="relative">
         {ui.isFetching && data.usuarios.length > 0 && (
           <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-30 flex items-center justify-center rounded-xl transition-all duration-300">
@@ -138,7 +135,7 @@ export default function UsuariosCRUD() {
           totalPages={data.totalPages} 
           totalRecords={data.totalRecords}
           perPage={10}
-          isLoading={ui.isFetching}
+          isLoading={ui.isFetching && data.usuarios.length === 0}
           onPageChange={(page) => actions.setCurrentPage(page)}
         />
       </div>
@@ -151,6 +148,7 @@ export default function UsuariosCRUD() {
         selectedUsuario={ui.selectedUsuario}
         formData={form.formData}
         setFormData={form.setFormData}
+        formErrors={form.formErrors} // 🔥 Nuevo prop inyectado
       />
 
       <DeleteModal

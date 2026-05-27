@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTheme } from '@/hooks/useTheme';
-import Button from '@/components/shared/Button';
-import Select from '@/components/shared/Select';
+import Button from '@/components/ui/Button';
+import Select from '@/components/ui/Select';
 
 export default function Configuracion() {
   const { user } = useAuthStore();

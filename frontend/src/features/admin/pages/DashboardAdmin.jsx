@@ -1,9 +1,9 @@
 import React from 'react';
 import StatCard from '@/components/shared/StatCard';
 import Table from '@/components/shared/Table';
-import Badge from '@/components/shared/Badge';
+import Badge from '@/components/ui/Badge';
 import Card from '@/components/shared/Card';
-import Button from '@/components/shared/Button';
+import Button from '@/components/ui/Button';
 
 
 export default function DashboardAdmin() {

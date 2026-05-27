@@ -26,7 +26,7 @@ class AuthController extends Controller
         }
 
         // 3. Si es correcto, buscamos al usuario y le creamos su Token
-        $user = User::where('email', $request->email)->firstOrFail();
+        $user = User::where('email', $request->email)->with('organizacion')->firstOrFail();
         $token = $user->createToken('auth_token')->plainTextToken;
 
         // 4. Retornamos user y token en la raíz para que Zustand los lea directo

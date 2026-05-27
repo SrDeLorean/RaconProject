@@ -7,19 +7,11 @@ use Illuminate\Validation\Rule;
 
 class UserRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         $userId = $this->route('user') ? $this->route('user')->id : null;
@@ -27,18 +19,26 @@ class UserRequest extends FormRequest
         return [
             'name'             => ['required', 'string', 'max:255'],
             'email'            => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
-            'id_ea'            => ['nullable', 'string', 'max:255'],
-            'role'             => ['required', 'in:jugador,organizador,administrador'],
             'password'         => $userId ? ['nullable', 'string', 'min:8'] : ['required', 'string', 'min:8'],
 
-            // Campos de perfil
+            // 🔥 Roles y Estados (Obligatorio para que funcione el Frontend)
+            'role'             => ['required', 'in:jugador,organizador,administrador'],
+            'status'           => ['required', 'in:activo,inactivo,suspendido'],
+
+            // 🔥 Identidades E-Sports
+            'gamertag'         => ['nullable', 'string', 'max:255', Rule::unique('users', 'gamertag')->ignore($userId)],
+            'id_ea'            => ['nullable', 'string', 'max:255', Rule::unique('users', 'id_ea')->ignore($userId)],
+            'plataforma'       => ['nullable', 'in:ps5,xbox,pc,crossplay'],
+
+            // Campos de perfil (Corregidos los tipos numéricos y fechas)
             'foto'             => ['nullable', 'string', 'max:255'],
             'nacionalidad'     => ['nullable', 'string', 'max:255'],
             'posicion'         => ['nullable', 'string', 'max:255'],
-            'fecha_nacimiento' => ['nullable', 'string', 'max:255'],
-            'altura'           => ['nullable', 'string', 'max:255'],
-            'peso'             => ['nullable', 'string', 'max:255'],
+            'fecha_nacimiento' => ['nullable', 'date'], // Ahora valida que sea una fecha real
+            'altura'           => ['nullable', 'integer', 'min:100', 'max:250'], // Entero (cm)
+            'peso'             => ['nullable', 'integer', 'min:30', 'max:200'],  // Entero (kg)
             'telefono'         => ['nullable', 'string', 'max:255'],
+            'biografia'        => ['nullable', 'string'],
 
             // Redes Sociales
             'instagram'        => ['nullable', 'string', 'max:255'],

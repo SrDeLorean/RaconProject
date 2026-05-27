@@ -1,6 +1,6 @@
 import { useAuthStore } from '@/store/useAuthStore';
 import Card from '@/components/shared/Card';
-import Button from '@/components/shared/Button';
+import Button from '@/components/ui/Button';
 
 export default function DashboardJugador() {
   const { user } = useAuthStore();

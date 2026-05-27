@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Input from './Input';
-import Button from './Button';
+import Pagination from './Pagination'; // Paginador avanzado
 
 export default function DataTable({ 
   title,
@@ -24,7 +24,7 @@ export default function DataTable({
     if (onSearch) onSearch(value);
   };
 
-  // 🌟 AJUSTE LÓGICO: Si no hay registros, forzamos inicio y fin a 0
+  // Ajuste lógico: Si no hay registros, forzamos inicio y fin a 0
   const startRecord = totalRecords === 0 ? 0 : ((currentPage - 1) * perPage) + 1;
   const endRecord = totalRecords === 0 ? 0 : Math.min(currentPage * perPage, totalRecords);
 
@@ -129,11 +129,10 @@ export default function DataTable({
       </div>
 
       {/* ================= FOOTER (PAGINACIÓN) ================= */}
-      {/* 🌟 AJUSTE VISUAL: Se unifican alturas y se mejora la adaptabilidad en móviles */}
-      <div className="p-4 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between bg-card gap-4 z-20 relative rounded-b-xl">
+      <div className="p-4 border-t border-border/50 flex flex-col xl:flex-row items-center justify-between bg-card gap-4 z-20 relative rounded-b-xl">
         
         {/* Info de registros */}
-        <div className="text-sm font-medium text-muted-foreground w-full sm:w-auto text-center sm:text-left">
+        <div className="text-sm font-medium text-muted-foreground w-full xl:w-auto text-center xl:text-left shrink-0">
           {totalRecords === 0 ? (
             <span>No hay registros para mostrar</span>
           ) : (
@@ -143,37 +142,16 @@ export default function DataTable({
           )}
         </div>
         
-        {/* Controles de paginación */}
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-end">
-          
-          <Button 
-            variant="outline" 
-            className="h-9 px-3 sm:px-4 border-border/50 text-foreground hover:bg-muted"
-            disabled={currentPage === 1 || isLoading} 
-            onClick={() => onPageChange(currentPage - 1)}
-          >
-            <svg className="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
-            {/* Oculto en móviles para ahorrar espacio */}
-            <span className="hidden sm:inline">Anterior</span>
-          </Button>
-          
-          {/* Indicador central con la MISMA ALTURA (h-9) que los botones */}
-          <div className="h-9 px-4 flex items-center justify-center rounded-md bg-muted/30 border border-border/50 text-sm font-bold text-foreground min-w-[4rem]">
-            {currentPage} <span className="text-muted-foreground font-normal mx-1.5">/</span> {totalPages === 0 ? 1 : totalPages}
-          </div>
-
-          <Button 
-            variant="outline" 
-            className="h-9 px-3 sm:px-4 border-border/50 text-foreground hover:bg-muted"
-            disabled={currentPage === totalPages || isLoading || totalRecords === 0} 
-            onClick={() => onPageChange(currentPage + 1)}
-          >
-            {/* Oculto en móviles para ahorrar espacio */}
-            <span className="hidden sm:inline">Siguiente</span>
-            <svg className="w-4 h-4 sm:ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
-          </Button>
-          
+        {/* COMPONENTE DE PAGINACIÓN AVANZADA */}
+        <div className="w-full overflow-x-auto pb-2 xl:pb-0">
+          <Pagination 
+            currentPage={currentPage}
+            totalPages={totalPages === 0 ? 1 : totalPages}
+            onPageChange={onPageChange}
+            className="!mt-0 min-w-max justify-center xl:justify-end" 
+          />
         </div>
+        
       </div>
     </div>
   );

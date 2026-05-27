@@ -2,63 +2,40 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-/**
- * Class Competencia
- *
- * @property $id
- * @property $organizacion_id
- * @property $nombre
- * @property $slug
- * @property $descripcion
- * @property $banner
- * @property $formato
- * @property $prize_pool
- * @property $entry_fee
- * @property $max_participantes
- * @property $estado
- * @property $fecha_inicio_inscripciones
- * @property $fecha_fin_inscripciones
- * @property $fecha_inicio_competencia
- * @property $created_at
- * @property $updated_at
- * @property $deleted_at
- *
- * @property Organizacione $organizacione
- * @property Divisione[] $divisiones
- * @package App
- * @mixin \Illuminate\Database\Eloquent\Builder
- */
 class Competencia extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
-    protected $perPage = 20;
+    protected $fillable = [
+        'temporada_id', 'nombre', 'slug', 'descripcion', 'reglas',
+        'banner', 'color_tema', 'formato', 'plataforma', 'prize_pool',
+        'entry_fee', 'max_participantes', 'es_publico', 'estado',
+        'fecha_inicio_inscripciones', 'fecha_fin_inscripciones', 'fecha_inicio_competencia'
+    ];
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
-    protected $fillable = ['organizacion_id', 'nombre', 'slug', 'descripcion', 'banner', 'formato', 'prize_pool', 'entry_fee', 'max_participantes', 'estado', 'fecha_inicio_inscripciones', 'fecha_fin_inscripciones', 'fecha_inicio_competencia'];
+    protected $casts = [
+        'prize_pool' => 'decimal:2',
+        'entry_fee' => 'decimal:2',
+        'es_publico' => 'boolean',
+        'fecha_inicio_inscripciones' => 'datetime',
+        'fecha_fin_inscripciones' => 'datetime',
+        'fecha_inicio_competencia' => 'datetime',
+    ];
 
-
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function organizacione()
+    public function temporada()
     {
-        return $this->belongsTo(\App\Models\Organizacione::class, 'organizacion_id', 'id');
+        return $this->belongsTo(Temporada::class);
     }
-    
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function divisiones()
+
+    // Equipos inscritos en esta competencia específica
+    public function equipos()
     {
-        return $this->hasMany(\App\Models\Divisione::class, 'id', 'id_competencia');
+        return $this->belongsToMany(Equipo::class, 'competencia_equipo')
+                    ->withPivot('estado_inscripcion')
+                    ->withTimestamps();
     }
-    
 }

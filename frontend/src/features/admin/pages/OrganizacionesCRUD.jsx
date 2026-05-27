@@ -1,12 +1,12 @@
 import React from 'react';
-import { useOrganizaciones } from '../hooks/useOrganizaciones'; // Tu hook personalizado
+import { useOrganizaciones } from '../hooks/useOrganizaciones';
 
 // Componentes UI Transversales (Shared)
-import DataTable from '@/components/shared/DataTable';
+import DataTable from '@/components/ui/DataTable';
 import CrudHeader from '@/components/shared/CrudHeader';
 import DeleteModal from '@/components/shared/DeleteModal';
-import Badge from '@/components/shared/Badge';
-import Button from '@/components/shared/Button';
+import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
 
 // Componente del Módulo
@@ -27,7 +27,6 @@ export default function OrganizacionesCRUD() {
       header: 'Organización', 
       render: (row) => (
         <div className="flex items-center gap-3">
-          {/* Avatar de la Organización (Usa logo si existe, sino la inicial) */}
           {row.logo ? (
             <img src={row.logo} alt={row.nombre} className="w-10 h-10 rounded-xl object-cover border border-border/50" />
           ) : (
@@ -95,14 +94,12 @@ export default function OrganizacionesCRUD() {
   return (
     <div className="flex flex-col gap-6 animate-fade-in relative">
       
-      {/* Alertas Flotantes Globales */}
       {ui.notification && (
         <Alert variant={ui.notification.variant} className="fixed top-24 right-8 z-[110] shadow-lg max-w-sm" onClose={() => actions.setNotification(null)}>
           {ui.notification.text}
         </Alert>
       )}
 
-      {/* Cabecera del CRUD con Pestañas Responsivas */}
       <CrudHeader 
         title="Gestión de Organizaciones"
         description="Controla las ligas, comunidades y organizadores del sistema."
@@ -116,7 +113,6 @@ export default function OrganizacionesCRUD() {
         }}
       />
 
-      {/* Tabla con Filtro de Carga Difuminado */}
       <div className="relative">
         {ui.isFetching && data.organizaciones.length > 0 && (
           <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-30 flex items-center justify-center rounded-xl transition-all duration-300">
@@ -140,12 +136,11 @@ export default function OrganizacionesCRUD() {
           totalPages={data.totalPages} 
           totalRecords={data.totalRecords}
           perPage={10}
-          isLoading={ui.isFetching}
+          isLoading={ui.isFetching && data.organizaciones.length === 0}
           onPageChange={(page) => actions.setCurrentPage(page)}
         />
       </div>
 
-      {/* Formulario Lateral Deslizante */}
       <OrganizacionFormDrawer 
         isOpen={ui.isDrawerOpen}
         onClose={actions.closeDrawer}
@@ -154,10 +149,10 @@ export default function OrganizacionesCRUD() {
         selectedOrganizacion={ui.selectedOrganizacion}
         formData={form.formData}
         setFormData={form.setFormData}
-        usuariosOrganizadores={data.usuariosOrganizadores} // Lista de usuarios con rol 'organizador' que viene del backend
+        formErrors={form.formErrors} // 🔥 Propagamos el objeto de errores hacia el formulario
+        usuariosOrganizadores={data.usuariosOrganizadores} 
       />
 
-      {/* Confirmación de Borrado */}
       <DeleteModal
         isOpen={ui.isDeleteModalOpen}
         onClose={actions.closeDeleteModal}

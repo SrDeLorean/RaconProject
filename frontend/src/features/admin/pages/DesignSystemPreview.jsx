@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import Card from '@/components/shared/Card';
-import Button from '@/components/shared/Button';
-import Badge from '@/components/shared/Badge';
-import Input from '@/components/shared/Input';
-import Select from '@/components/shared/Select';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import StatCard from '@/components/shared/StatCard';
 import EmptyState from '@/components/shared/EmptyState';
 import Table from '@/components/shared/Table'; 
 import DeleteModal from '@/components/shared/DeleteModal';
-import Drawer from '@/components/shared/Drawer';
+import Drawer from '@/components/ui/Drawer';
 
 export default function DesignSystemPreview() {
   const [isModalOpen, setIsModalOpen] = useState(false);

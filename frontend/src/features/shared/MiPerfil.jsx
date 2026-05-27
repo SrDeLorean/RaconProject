@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
-import Button from '@/components/shared/Button';
-import Input from '@/components/shared/Input';
-import Badge from '@/components/shared/Badge';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import Badge from '@/components/ui/Badge';
 
 export default function MiPerfil() {
   const { user } = useAuthStore();
