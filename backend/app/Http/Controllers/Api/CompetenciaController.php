@@ -48,6 +48,12 @@ class CompetenciaController extends Controller
 
     public function show(Competencia $competencia)
     {
+        $competencia->load([
+            'equipos',
+            'temporada.organizacion',
+            'partidos.local',
+            'partidos.visitante',
+        ]);
         return response()->json(['data' => $competencia]);
     }
 

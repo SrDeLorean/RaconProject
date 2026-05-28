@@ -15,6 +15,19 @@ const Login = lazy(() => import('@/features/auth/pages/Login'));
 const Register = lazy(() => import('@/features/auth/pages/Register'));
 const ProtectedRoute = lazy(() => import('@/components/ProtectedRoute'));
 
+// Nuevas Páginas Públicas
+const Organizaciones = lazy(() => import('@/features/public/pages/Organizaciones'));
+const Temporadas = lazy(() => import('@/features/public/pages/Temporadas'));
+const Competencias = lazy(() => import('@/features/public/pages/Competencias'));
+const DetalleCompetenciaPublica = lazy(() => import('@/features/public/pages/DetalleCompetenciaPublica'));
+const Partidos = lazy(() => import('@/features/public/pages/Partidos'));
+const Clasificacion = lazy(() => import('@/features/public/pages/Clasificacion'));
+const Equipos = lazy(() => import('@/features/public/pages/Equipos'));
+const Jugadores = lazy(() => import('@/features/public/pages/Jugadores'));
+const TotwTots = lazy(() => import('@/features/public/pages/TotwTots'));
+const Infografia = lazy(() => import('@/features/public/pages/Infografia'));
+const Contacto = lazy(() => import('@/features/public/pages/Contacto'));
+
 // 💎 Pantalla de Carga Global Premium (Ajustada al nuevo diseño HSL)
 const PageLoader = () => (
   <div className="min-h-screen bg-background flex flex-col items-center justify-center overflow-hidden relative">
@@ -43,6 +56,17 @@ export const router = createBrowserRouter([
       { path: '/', element: <Home /> },
       { path: '/login', element: <Login /> },
       { path: '/registro', element: <Register /> }, 
+      { path: '/organizaciones', element: <Organizaciones /> },
+      { path: '/organizaciones/:orgId', element: <Temporadas /> },
+      { path: '/organizaciones/:orgId/temporadas/:tempId', element: <Competencias /> },
+      { path: '/competencia-detalle/:compId', element: <DetalleCompetenciaPublica /> },
+      { path: '/partidos', element: <Partidos /> },
+      { path: '/clasificacion', element: <Clasificacion /> },
+      { path: '/equipos', element: <Equipos /> },
+      { path: '/jugadores', element: <Jugadores /> },
+      { path: '/totw-tots', element: <TotwTots /> },
+      { path: '/infografia', element: <Infografia /> },
+      { path: '/contacto', element: <Contacto /> },
     ],
   },
   

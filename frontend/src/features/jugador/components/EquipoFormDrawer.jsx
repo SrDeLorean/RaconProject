@@ -99,6 +99,15 @@ export default function EquipoFormDrawer({
             ]} 
           />
 
+          <Input 
+            label="ID de Club EA Sports (API)" 
+            placeholder="Ej. 50846" 
+            value={formData.club_id_ea || ''} 
+            onChange={(e) => setFormData({ ...formData, club_id_ea: e.target.value })} 
+            disabled={isSaving} 
+            error={formErrors?.club_id_ea?.[0]} 
+          />
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input 
               label="Usuario de Twitter / X" 

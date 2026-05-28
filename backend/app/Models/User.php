@@ -87,11 +87,10 @@ class User extends Authenticatable
 
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * Los equipos a los que pertenece el jugador a lo largo de la organización
      */
-    public function equipos()
-    {
-        return $this->hasMany(\App\Models\Equipo::class, 'id', 'id_capitan');
+    public function equipos() {
+        return $this->belongsToMany(Equipo::class, 'organizacion_equipo_usuario'); // ¿Este nombre es EXACTAMENTE el mismo que tienes en tu base de datos?
     }
 
     public function organizacion()

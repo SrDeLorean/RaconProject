@@ -2,64 +2,46 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * Class Partido
- *
- * @property $id
- * @property $id_temporada_division
- * @property $id_equipo_local
- * @property $id_equipo_visitante
- * @property $jornada
- * @property $fecha_hora
- * @property $goles_local
- * @property $goles_visitante
- * @property $estado
- * @property $created_at
- * @property $updated_at
- *
- * @property Equipo $equipo
- * @property Equipo $equipo
- * @property TemporadaDivisione $temporadaDivisione
- * @package App
- * @mixin \Illuminate\Database\Eloquent\Builder
- */
 class Partido extends Model
 {
-    
-    protected $perPage = 20;
+    use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
-    protected $fillable = ['id_temporada_division', 'id_equipo_local', 'id_equipo_visitante', 'jornada', 'fecha_hora', 'goles_local', 'goles_visitante', 'estado'];
+    protected $table = 'partidos';
 
+    protected $fillable = [
+        'competencia_id',
+        'equipo_local_id',
+        'equipo_visitante_id',
+        'jornada',
+        'grupo',
+        'fecha',
+        'hora',
+        'goles_local',
+        'goles_visitante',
+        'stats'
+    ];
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function equipo()
+    protected $casts = [
+        'stats' => 'array',
+        'goles_local' => 'integer',
+        'goles_visitante' => 'integer'
+    ];
+
+    public function competencia()
     {
-        return $this->belongsTo(\App\Models\Equipo::class, 'id_equipo_visitante', 'id');
+        return $this->belongsTo(Competencia::class, 'competencia_id');
     }
-    
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function equipo()
+
+    public function local()
     {
-        return $this->belongsTo(\App\Models\Equipo::class, 'id_equipo_local', 'id');
+        return $this->belongsTo(Equipo::class, 'equipo_local_id');
     }
-    
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function temporadaDivisione()
+
+    public function visitante()
     {
-        return $this->belongsTo(\App\Models\TemporadaDivisione::class, 'id_temporada_division', 'id');
+        return $this->belongsTo(Equipo::class, 'equipo_visitante_id');
     }
-    
 }

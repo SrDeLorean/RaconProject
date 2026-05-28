@@ -41,8 +41,14 @@ export default function PublicLayout() {
 
   const navLinks = [
     { path: '/', label: 'Inicio' },
-    { path: '/torneos', label: 'Torneos' },
     { path: '/organizaciones', label: 'Organizaciones' },
+    { path: '/partidos', label: 'Partidos' },
+    { path: '/clasificacion', label: 'Clasificación' },
+    { path: '/equipos', label: 'Equipos' },
+    { path: '/jugadores', label: 'Jugadores' },
+    { path: '/totw-tots', label: 'TOTW/TOTS' },
+    { path: '/infografia', label: 'Infografía' },
+    { path: '/contacto', label: 'Contacto' },
   ];
 
   return (

@@ -45,7 +45,8 @@ class OrganizacionController extends Controller
      */
     public function show(Organizacion $organizacion): JsonResponse
     {
-        return response()->json(new OrganizacionResource($organizacion));
+        $organizacion->load(['temporadas.competencias', 'owner']);
+        return response()->json($organizacion);
     }
 
     /**

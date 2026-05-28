@@ -7,6 +7,7 @@ import Select from '@/components/ui/Select';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
+import MatchmakerCalendario from './components/MatchmakerCalendario';
 
 export default function CompetenciaDetalle() {
   const { id } = useParams(); // Obtenemos el ID de la URL
@@ -198,18 +199,10 @@ export default function CompetenciaDetalle() {
       )}
 
       {/* ========================================= */}
-      {/* VISTA: CALENDARIO (FUTURA IMPLEMENTACIÓN) */}
+      {/* VISTA: CALENDARIO Y MATCHMAKING           */}
       {/* ========================================= */}
       {activeTab === 'calendario' && (
-        <div className="flex flex-col items-center justify-center p-16 border border-dashed border-border rounded-xl bg-muted/10 text-center gap-4">
-          <span className="text-4xl">📅</span>
-          <div>
-            <h3 className="text-lg font-bold text-foreground uppercase tracking-wide">Gestor de Calendario</h3>
-            <p className="text-sm text-muted-foreground mt-1 max-w-md">
-              El módulo de cruces y fixture estará disponible pronto. Aquí podrás generar las jornadas automáticamente.
-            </p>
-          </div>
-        </div>
+        <MatchmakerCalendario equipos={data.equiposInscritos} competenciaId={competencia.id} />
       )}
 
     </div>

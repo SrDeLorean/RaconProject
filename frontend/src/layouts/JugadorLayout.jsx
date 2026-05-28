@@ -6,8 +6,8 @@ export default function JugadorLayout() {
   
   const navLinks = [
     { path: '/jugador', label: 'Mi Panel', icon: '🎮' },
-    { path: '/jugador/torneos', label: 'Torneos', icon: '🏆' },
-    { path: '/jugador/miequipo', label: 'Mis Equipos', icon: '🛡️' },
+    { path: '/jugador/miequipo', label: 'Gestionar Club', icon: '🛡️' },
+    { path: '/jugador/mis-equipos', label: 'Mis Equipos', icon: '⚽' },
   ];
 
   return (

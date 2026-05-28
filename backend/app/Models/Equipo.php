@@ -41,6 +41,7 @@ class Equipo extends Model
         'logo',
         'banner',
         'plataforma',
+        'club_id_ea',
         'redes_sociales',
         'estado',
     ];
@@ -67,6 +68,16 @@ class Equipo extends Model
     {
         return $this->belongsToMany(User::class, 'equipo_jugador')
                     ->withPivot('dorsal', 'posicion_bloque', 'estado_fichaje')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Relación con los jugadores del equipo vinculados por Organización
+     */
+    public function rosterOrganizacion()
+    {
+        return $this->belongsToMany(User::class, 'organizacion_equipo_usuario')
+                    ->withPivot('organizacion_id', 'dorsal', 'posicion_bloque', 'estado_fichaje', 'fecha_vinculacion')
                     ->withTimestamps();
     }
 

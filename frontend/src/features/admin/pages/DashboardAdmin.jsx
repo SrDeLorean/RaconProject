@@ -1,15 +1,49 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import StatCard from '@/components/shared/StatCard';
 import Table from '@/components/shared/Table';
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/shared/Card';
 import Button from '@/components/ui/Button';
-
+import api from '@/api/axios';
+import Alert from '@/components/shared/Alert';
 
 export default function DashboardAdmin() {
-  // ==========================================
-  // 1. DATOS SIMULADOS (Luego vendrán de tu API/Zustand)
-  // ==========================================
+  const [solicitudesAdmin, setSolicitudesAdmin] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [notification, setNotification] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(null);
+
+  const fetchPendingApprovals = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/solicitudes-fichaje');
+      setSolicitudesAdmin(response.data || []);
+    } catch (error) {
+      console.error("Error al obtener solicitudes pendientes de admin:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPendingApprovals();
+  }, []);
+
+  const handleDecidirAdmin = async (id, respuesta) => {
+    setIsProcessing(id);
+    try {
+      const response = await api.post(`/solicitudes-fichaje/${id}/admin-decidir`, {
+        respuesta,
+        observaciones: respuesta === 'aprobar' ? 'Aprobado de manera administrativa' : 'Rechazado de manera administrativa por mercado cerrado'
+      });
+      setNotification({ variant: 'success', text: response.data.message || 'Operación registrada.' });
+      await fetchPendingApprovals();
+    } catch (error) {
+      setNotification({ variant: 'error', text: error.response?.data?.message || 'Error al procesar la decisión.' });
+    } finally {
+      setIsProcessing(null);
+    }
+  };
 
   const stats = [
     { title: 'Torneos Activos', value: '24', icon: '🏆', trend: 12, trendLabel: 'vs mes pasado' },
@@ -33,38 +67,31 @@ export default function DashboardAdmin() {
       header: 'Estado', 
       render: (row) => <Badge variant={row.variant}>{row.estado}</Badge> 
     },
-    { 
-      header: 'Acción', 
-      render: () => <Button variant="outline" size="sm" className="!py-1.5 !px-4 text-xs">Ver panel</Button> 
-    },
   ];
 
-  const actividadReciente = [
-    { id: 1, mensaje: 'Nuevo equipo "Furious" registrado en Copa Racon.', tiempo: 'Hace 5 min', icon: '🛡️' },
-    { id: 2, mensaje: 'Organización "LVP Chile" solicitó verificación.', tiempo: 'Hace 2 horas', icon: '🏢' },
-    { id: 3, mensaje: 'El servidor de partidas reportó latencia alta.', tiempo: 'Hace 4 horas', icon: '⚠️' },
-    { id: 4, mensaje: 'Torneo "Liga de Verano" configurado con éxito.', tiempo: 'Hace 1 día', icon: '✅' },
-  ];
-
-  // ==========================================
-  // 2. RENDERIZADO DE LA VISTA
-  // ==========================================
   return (
-    <div className="flex flex-col gap-8 animate-fade-in">
+    <div className="flex flex-col gap-8 animate-fade-in relative">
       
+      {notification && (
+        <Alert 
+          variant={notification.variant} 
+          className="fixed top-24 right-8 z-[110] shadow-lg max-w-sm" 
+          onClose={() => setNotification(null)}
+        >
+          {notification.text}
+        </Alert>
+      )}
+
       {/* HEADER DE LA PÁGINA */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-black text-text-main tracking-tight mb-1">
+          <h1 className="text-3xl font-black text-foreground tracking-tight mb-1">
             Dashboard Global
           </h1>
-          <p className="text-sm font-medium text-text-muted">
-            Bienvenido de nuevo. Aquí tienes el resumen de tu ecosistema hoy.
+          <p className="text-sm font-medium text-muted-foreground">
+            Bienvenido de nuevo. Aquí tienes el resumen y control administrativo del ecosistema.
           </p>
         </div>
-        <Button variant="primary" className="shrink-0">
-          + NUEVO TORNEO
-        </Button>
       </div>
 
       {/* FILA DE MÉTRICAS (STAT CARDS) */}
@@ -81,18 +108,73 @@ export default function DashboardAdmin() {
         ))}
       </div>
 
-      {/* CONTENIDO PRINCIPAL: TABLA + BARRA LATERAL */}
+      {/* SECCIÓN NUEVA: SOLICITUDES DE TRASPASOS EN MERCADO CERRADO */}
+      <div className="flex flex-col gap-4">
+        <h2 className="text-lg font-black text-foreground tracking-wide flex items-center gap-2">
+          <span>🔒</span> Traspasos Pendientes (Mercado Cerrado)
+        </h2>
+        
+        {loading ? (
+          <div className="py-6 text-center text-xs text-muted-foreground animate-pulse">Sincronizando aprobaciones...</div>
+        ) : solicitudesAdmin.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {solicitudesAdmin.map((sol) => (
+              <div key={sol.id} className="border border-border/50 bg-card p-4 rounded-xl flex flex-col justify-between gap-3 shadow-md relative overflow-hidden">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="font-bold text-primary uppercase">{sol.organizacion?.nombre}</span>
+                  <span className="bg-muted px-2 py-0.5 rounded text-muted-foreground uppercase font-bold border border-border/40">Mercado Cerrado</span>
+                </div>
+                
+                <div className="space-y-1 mt-1">
+                  <p className="text-xs text-muted-foreground leading-normal">
+                    El club <strong className="text-foreground">{sol.equipo?.nombre}</strong> solicita fichar a:
+                  </p>
+                  <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">
+                    {sol.jugador?.gamertag || sol.jugador?.name}
+                  </h4>
+                  <p className="text-[10px] text-muted-foreground">
+                    Posición sugerida: <span className="font-semibold">{sol.posicion}</span> • Dorsal: <span className="font-semibold">{sol.dorsal || 'N/A'}</span>
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={isProcessing === sol.id}
+                    className="flex-1 h-8 text-[11px] border-destructive/20 text-destructive hover:bg-destructive/10 font-bold"
+                    onClick={() => handleDecidirAdmin(sol.id, 'rechazar')}
+                  >
+                    Rechazar
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    disabled={isProcessing === sol.id}
+                    className="flex-1 h-8 text-[11px] bg-primary text-primary-foreground font-bold shadow-[0_0_10px_hsla(var(--primary),0.3)]"
+                    onClick={() => handleDecidirAdmin(sol.id, 'aprobar')}
+                  >
+                    Aprobar
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-5 border border-dashed border-border/60 bg-muted/10 rounded-xl text-center text-xs text-muted-foreground py-8">
+            No hay solicitudes de traspaso pendientes de aprobación administrativa en este momento.
+          </div>
+        )}
+      </div>
+
+      {/* CONTENIDO DE TORNEOS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* COLUMNA IZQUIERDA: Tabla de Torneos (Ocupa 2/3 del espacio) */}
+        {/* COLUMNA IZQUIERDA: Tabla de Torneos */}
         <div className="lg:col-span-2 flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-black text-text-main tracking-wide">
+            <h2 className="text-lg font-black text-foreground tracking-wide">
               Torneos Destacados
             </h2>
-            <button className="text-sm font-bold text-brand-light hover:text-brand-primary transition-colors">
-              Ver todos →
-            </button>
           </div>
           
           <Table 
@@ -102,39 +184,16 @@ export default function DashboardAdmin() {
           />
         </div>
 
-        {/* COLUMNA DERECHA: Actividad Reciente (Ocupa 1/3 del espacio) */}
+        {/* COLUMNA DERECHA: Resumen de Circuito */}
         <div className="flex flex-col gap-4">
-          <h2 className="text-lg font-black text-text-main tracking-wide">
-            Actividad Reciente
+          <h2 className="text-lg font-black text-foreground tracking-wide">
+            Ecosistema RaconPro
           </h2>
-          
-          <Card variant="glass" className="p-6 flex-1">
-            <div className="flex flex-col gap-6 relative">
-              {/* Línea conectora del timeline */}
-              <div className="absolute left-[1.15rem] top-2 bottom-2 w-px bg-border-subtle z-0"></div>
-              
-              {actividadReciente.map((act) => (
-                <div key={act.id} className="relative z-10 flex gap-4 group">
-                  {/* Círculo del icono */}
-                  <div className="w-10 h-10 rounded-full bg-bg-base border-2 border-bg-surface flex items-center justify-center text-sm shadow-sm group-hover:border-brand-primary/50 group-hover:scale-110 transition-all duration-300 shrink-0">
-                    {act.icon}
-                  </div>
-                  {/* Texto */}
-                  <div className="flex flex-col pt-1">
-                    <p className="text-sm font-medium text-text-main leading-tight">
-                      {act.mensaje}
-                    </p>
-                    <span className="text-xs font-bold text-text-muted mt-1">
-                      {act.tiempo}
-                    </span>
-                  </div>
-                </div>
-              ))}
+          <Card variant="glass" className="p-5 text-xs space-y-4">
+            <div className="space-y-2 leading-relaxed text-muted-foreground">
+              <p>Como Administrador de la plataforma, controlas la configuración global de ligas, temporadas y el estado de traspasos.</p>
+              <p>Cuando un mercado de fichajes se cierra, todos los traspasos aceptados por los jugadores requieren tu firma manual en este panel para completarse de forma reglamentaria.</p>
             </div>
-            
-            <Button variant="secondary" fullWidth className="mt-8 text-xs !py-2.5">
-              CARGAR MÁS
-            </Button>
           </Card>
         </div>
 

@@ -240,10 +240,15 @@ export default function DashboardLayout({ menuItems = [], profile }) {
                     <p className="text-sm font-bold text-foreground truncate">{displayName}</p>
                     <p className="text-xs text-muted-foreground truncate">{displayEmail}</p>
                   </div>
-                  <Link to="/admin/perfil" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" onClick={() => setIsUserDropdownOpen(false)}>
+                  <Link to={`/${user?.rol || 'admin'}/perfil`} className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" onClick={() => setIsUserDropdownOpen(false)}>
                     <span className="text-lg opacity-70">👤</span> Mi Perfil
                   </Link>
-                  <Link to="/admin/configuracion" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" onClick={() => setIsUserDropdownOpen(false)}>
+                  {user?.rol === 'jugador' && (
+                    <Link to="/jugador/mis-equipos" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" onClick={() => setIsUserDropdownOpen(false)}>
+                      <span className="text-lg opacity-70">⚽</span> Mis Equipos
+                    </Link>
+                  )}
+                  <Link to={`/${user?.rol || 'admin'}/configuracion`} className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" onClick={() => setIsUserDropdownOpen(false)}>
                     <span className="text-lg opacity-70">⚙️</span> Configuración
                   </Link>
                   <div className="h-px bg-border/50 my-2"></div>

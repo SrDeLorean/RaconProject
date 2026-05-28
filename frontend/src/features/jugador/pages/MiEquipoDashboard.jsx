@@ -11,6 +11,7 @@ import DeleteModal from '@/components/shared/DeleteModal';
 import ResumenClub from './components/ResumenClub';
 import PlantillaClub from './components/PlantillaClub';
 import CompeticionClub from './components/CompeticionClub';
+import PartidosReportesClub from './components/PartidosReportesClub';
 import OficinaClub from './components/OficinaClub';
 import EquipoFormDrawer from '../components/EquipoFormDrawer';
 
@@ -22,6 +23,7 @@ export default function MiEquipoDashboard() {
     { id: 'resumen', label: 'Resumen', icon: '📊' },
     { id: 'roster', label: 'Plantilla & Roster', icon: '👥' },
     { id: 'competencias', label: 'Competición', icon: '🏆' },
+    { id: 'calendario', label: 'Calendario y Reportes', icon: '📅' },
     { id: 'configuracion', label: 'Oficina', icon: '⚙️' },
   ], []);
 
@@ -70,9 +72,27 @@ export default function MiEquipoDashboard() {
                   {data.equipo.nombre}
                   <Badge variant="success">Capitán</Badge>
                 </h1>
-                <p className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">
-                  Ecosistema: <span className="text-foreground font-semibold">{data.equipo.plataforma}</span>
-                </p>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-muted-foreground">
+                  <span>
+                    Ecosistema: <span className="text-foreground font-semibold uppercase">{data.equipo.plataforma}</span>
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-[10px] uppercase tracking-wider">Circuito:</span>
+                    {data.organizaciones.length > 0 ? (
+                      <select
+                        value={data.organizacionId || ''}
+                        onChange={(e) => actions.selectOrganizacion(Number(e.target.value))}
+                        className="bg-card border border-border/60 rounded px-2 py-0.5 text-[11px] font-bold text-primary focus:ring-1 focus:ring-primary focus:outline-none cursor-pointer"
+                      >
+                        {data.organizaciones.map((org) => (
+                          <option key={org.id} value={org.id}>{org.nombre}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-[11px] font-bold text-destructive">Ninguna Organización</span>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -108,15 +128,15 @@ export default function MiEquipoDashboard() {
 
             {data.activeTab === 'roster' && (
               <PlantillaClub 
-                roster={data.roster}
-                jugadoresLibres={data.jugadoresLibres}
-                searchTerm={data.searchJugadorTerm}
-                onSearchChange={(val) => {
-                  actions.setSearchJugadorTerm(val);
-                  actions.buscarJugadoresLibres(val);
-                }}
-                onFichar={actions.handleFicharJugador}
-                onDesvincular={actions.openDesvincular}
+                roster={data.roster} 
+                jugadoresLibres={data.jugadoresLibres} 
+                searchTerm={data.searchJugadorTerm} 
+                onSearchChange={actions.setSearchJugadorTerm} // 🔥 Solo actualiza el estado, el Debounce hace la petición solo.
+                onFichar={actions.handleFicharJugador} 
+                onDesvincular={actions.openDesvincular} 
+                onUpdateRoster={actions.handleUpdateRosterJugador}
+                organizaciones={data.organizaciones}
+                historialFichajes={data.historialFichajes}
               />
             )}
 
@@ -124,6 +144,13 @@ export default function MiEquipoDashboard() {
               <CompeticionClub 
                 competencias={data.competencias} 
                 onInscribir={actions.handleInscribirCompetencia} 
+              />
+            )}
+
+            {data.activeTab === 'calendario' && (
+              <PartidosReportesClub 
+                equipo={data.equipo} 
+                roster={data.roster} 
               />
             )}
 

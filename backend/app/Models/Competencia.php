@@ -38,4 +38,10 @@ class Competencia extends Model
                     ->withPivot('estado_inscripcion')
                     ->withTimestamps();
     }
+
+    // Partidos de esta competencia
+    public function partidos()
+    {
+        return $this->hasMany(Partido::class, 'competencia_id')->orderBy('fecha')->orderBy('hora');
+    }
 }

@@ -45,6 +45,7 @@ class EquipoRequest extends FormRequest
             'logo' => 'nullable|string',
             'banner' => 'nullable|string',
             'plataforma' => 'nullable|string|in:crossplay,ps5,xbox,pc',
+            'club_id_ea' => 'nullable|string|max:255',
 
             // El frontend en React envía redes_sociales como un objeto JSON,
             // por lo que Laravel lo recibe como un array. Validamos su contenido interno.

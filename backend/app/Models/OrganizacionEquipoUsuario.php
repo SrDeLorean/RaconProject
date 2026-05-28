@@ -9,7 +9,7 @@ class OrganizacionEquipoUsuario extends Model
     protected $table = 'organizacion_equipo_usuario';
 
     protected $fillable = [
-        'organizacion_id', 'equipo_id', 'user_id', 'estado_fichaje', 'fecha_vinculacion'
+        'organizacion_id', 'equipo_id', 'user_id', 'estado_fichaje', 'fecha_vinculacion', 'dorsal', 'posicion_bloque'
     ];
 
     protected $casts = [

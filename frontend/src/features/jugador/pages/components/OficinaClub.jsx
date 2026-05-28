@@ -10,7 +10,7 @@ export default function OficinaClub({ formData, setFormData, formErrors, isSavin
       </h3>
       
       <form className="space-y-5" onSubmit={onSave}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Input 
             label="Nombre del Club *" 
             value={formData.nombre} 
@@ -25,6 +25,13 @@ export default function OficinaClub({ formData, setFormData, formErrors, isSavin
             onChange={(e) => setFormData({...formData, abreviatura: e.target.value})} 
             error={formErrors?.abreviatura?.[0]} 
             required
+          />
+          <Input 
+            label="ID de Club EA Sports (API)" 
+            placeholder="Ej: 50846"
+            value={formData.club_id_ea || ''} 
+            onChange={(e) => setFormData({...formData, club_id_ea: e.target.value})} 
+            error={formErrors?.club_id_ea?.[0]} 
           />
         </div>
 
