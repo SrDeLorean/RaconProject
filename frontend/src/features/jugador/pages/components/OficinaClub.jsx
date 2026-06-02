@@ -1,6 +1,7 @@
 import React from 'react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
+import ImageUploader from '@/components/ui/ImageUploader';
 
 export default function OficinaClub({ formData, setFormData, formErrors, isSaving, onSave }) {
   return (
@@ -10,6 +11,23 @@ export default function OficinaClub({ formData, setFormData, formErrors, isSavin
       </h3>
       
       <form className="space-y-5" onSubmit={onSave}>
+        
+        {/* Cargador de multimedia del Club */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-2 border-b border-border/20">
+          <ImageUploader 
+            label="Logotipo del Club (Escudo)" 
+            value={formData.logo} 
+            onChange={(url) => setFormData({ ...formData, logo: url })}
+            folder="equipos"
+          />
+          <ImageUploader 
+            label="Banner de la Sede" 
+            value={formData.banner} 
+            onChange={(url) => setFormData({ ...formData, banner: url })}
+            folder="equipos"
+          />
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Input 
             label="Nombre del Club *" 

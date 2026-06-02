@@ -18,10 +18,25 @@ class PartidoController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Partido::with([
-            'local',
-            'visitante',
-            'competencia.temporada.organizacion',
+            'local:id,nombre,logo,abreviatura',
+            'visitante:id,nombre,logo,abreviatura',
+            'competencia.temporada.organizacion:id,nombre,logo',
         ]);
+
+        $user = auth('sanctum')->user();
+        if ($request->boolean('for_organizer') && $user) {
+            $organizacion = \App\Models\Organizacion::where('owner_id', $user->id)->first();
+            if ($organizacion) {
+                $query->whereHas('competencia.temporada', function ($q) use ($organizacion) {
+                    $q->where('organizacion_id', $organizacion->id);
+                });
+            } else {
+                $role = $user->role;
+                if ($role !== 'admin' && $role !== 'administrador') {
+                    return response()->json([]);
+                }
+            }
+        }
 
         if ($request->filled('competencia_id')) {
             $query->where('competencia_id', $request->competencia_id);
@@ -40,7 +55,89 @@ class PartidoController extends Controller
             });
         }
 
+        // --- OPTIMIZATION FILTERS ---
+        if ($request->filled('fecha')) {
+            $query->where('fecha', $request->fecha);
+        }
+
+        if ($request->filled('status')) {
+            $today = $request->input('today', date('Y-m-d'));
+            if ($request->status === 'live') {
+                $query->where('fecha', $today);
+            } elseif ($request->status === 'finished') {
+                $query->whereNotNull('goles_local')
+                      ->whereNotNull('goles_visitante');
+            } elseif ($request->status === 'upcoming') {
+                $query->whereNull('goles_local')
+                      ->whereNull('goles_visitante')
+                      ->where('fecha', '!=', $today);
+            }
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->whereHas('local', function($sq) use ($search) {
+                    $sq->where('nombre', 'like', "%{$search}%");
+                })->orWhereHas('visitante', function($sq) use ($search) {
+                    $sq->where('nombre', 'like', "%{$search}%");
+                })->orWhereHas('competencia', function($sq) use ($search) {
+                    $sq->where('nombre', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        // Limit results if loading all upcoming or finished to prevent huge payload (maximum 100)
+        if (!$request->filled('fecha') && ($request->status === 'finished' || $request->status === 'upcoming')) {
+            $query->limit(100);
+        }
+
         return response()->json($query->orderBy('fecha')->orderBy('hora')->get());
+    }
+
+    /**
+     * Retornar el listado de fechas con partidos programados que cumplen con los filtros.
+     */
+    public function dates(Request $request): JsonResponse
+    {
+        $query = Partido::select('fecha', \DB::raw('count(*) as count'))
+            ->groupBy('fecha');
+
+        if ($request->filled('organizacion_id')) {
+            $query->whereHas('competencia.temporada', function ($q) use ($request) {
+                $q->where('organizacion_id', $request->organizacion_id);
+            });
+        }
+
+        if ($request->filled('competencia_id')) {
+            $query->where('competencia_id', $request->competencia_id);
+        }
+
+        if ($request->filled('equipo_id')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('equipo_local_id', $request->equipo_id)
+                  ->orWhere('equipo_visitante_id', $request->equipo_id);
+            });
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->whereHas('local', function($sq) use ($search) {
+                    $sq->where('nombre', 'like', "%{$search}%");
+                })->orWhereHas('visitante', function($sq) use ($search) {
+                    $sq->where('nombre', 'like', "%{$search}%");
+                })->orWhereHas('competencia', function($sq) use ($search) {
+                    $sq->where('nombre', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        $dates = $query->whereNotNull('fecha')
+            ->orderBy('fecha')
+            ->get();
+
+        return response()->json($dates);
     }
 
     /**
@@ -122,6 +219,90 @@ class PartidoController extends Controller
         return response()->json([
             'message' => 'Partido actualizado con éxito.',
             'partido' => $partido
+        ]);
+    }
+
+    /**
+     * Mostrar detalles de un partido, sus estadísticas de equipo e individuales.
+     */
+    public function show($id): JsonResponse
+    {
+        $partido = Partido::with([
+            'local:id,nombre,logo,abreviatura,id_capitan',
+            'visitante:id,nombre,logo,abreviatura,id_capitan',
+            'competencia.temporada.organizacion'
+        ])->findOrFail($id);
+
+        $statsEquipos = \App\Models\EstadisticaEquipo::where('partido_id', $partido->id)->get();
+
+        $statsJugadores = \App\Models\EstadisticaJugador::with('jugador:id,name,foto,gamertag')
+            ->where('partido_id', $partido->id)
+            ->get();
+
+        $statsLogs = \App\Models\EstadisticaJugadorLog::with([
+            'jugador:id,name,foto,gamertag',
+            'equipo:id,nombre,logo,abreviatura'
+        ])
+        ->where('partido_id', $partido->id)
+        ->get();
+
+        return response()->json([
+            'partido' => $partido,
+            'stats_equipos' => $statsEquipos,
+            'stats_jugadores' => $statsJugadores,
+            'stats_logs' => $statsLogs
+        ]);
+    }
+
+    /**
+     * Contar partidos por estado y fecha con soporte de filtros.
+     */
+    public function counts(Request $request): JsonResponse
+    {
+        $today = $request->input('today', date('Y-m-d'));
+        
+        $queryBase = Partido::query();
+
+        if ($request->filled('organizacion_id')) {
+            $queryBase->whereHas('competencia.temporada', function ($q) use ($request) {
+                $q->where('organizacion_id', $request->organizacion_id);
+            });
+        }
+
+        if ($request->filled('competencia_id')) {
+            $queryBase->where('competencia_id', $request->competencia_id);
+        }
+
+        if ($request->filled('equipo_id')) {
+            $queryBase->where(function ($q) use ($request) {
+                $q->where('equipo_local_id', $request->equipo_id)
+                  ->orWhere('equipo_visitante_id', $request->equipo_id);
+            });
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $queryBase->where(function($q) use ($search) {
+                $q->whereHas('local', function($sq) use ($search) {
+                    $sq->where('nombre', 'like', "%{$search}%");
+                })->orWhereHas('visitante', function($sq) use ($search) {
+                    $sq->where('nombre', 'like', "%{$search}%");
+                })->orWhereHas('competencia', function($sq) use ($search) {
+                    $sq->where('nombre', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        $all = (clone $queryBase)->where('fecha', $request->input('fecha'))->count();
+        $live = (clone $queryBase)->where('fecha', $today)->count();
+        $finished = (clone $queryBase)->whereNotNull('goles_local')->whereNotNull('goles_visitante')->count();
+        $upcoming = (clone $queryBase)->whereNull('goles_local')->whereNull('goles_visitante')->where('fecha', '!=', $today)->count();
+
+        return response()->json([
+            'all' => $all,
+            'live' => $live,
+            'finished' => $finished,
+            'upcoming' => $upcoming
         ]);
     }
 }

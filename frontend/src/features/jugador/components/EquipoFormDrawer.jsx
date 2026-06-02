@@ -3,6 +3,7 @@ import Drawer from '@/components/ui/Drawer';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import ImageUploader from '@/components/ui/ImageUploader';
 
 export default function EquipoFormDrawer({ 
   isOpen, 
@@ -46,6 +47,22 @@ export default function EquipoFormDrawer({
         {/* --- SECCIÓN 1: IDENTIDAD DEL CLUB --- */}
         <div className="space-y-4">
           <h3 className="text-xs font-bold text-primary uppercase tracking-widest border-b border-border/50 pb-2">Identidad del Club</h3>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ImageUploader 
+              label="Escudo del Club (Logo)" 
+              value={formData.logo} 
+              onChange={(url) => setFormData({ ...formData, logo: url })}
+              folder="equipos"
+            />
+            <ImageUploader 
+              label="Banner del Sede" 
+              value={formData.banner} 
+              onChange={(url) => setFormData({ ...formData, banner: url })}
+              folder="equipos"
+            />
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input 
               label="Nombre del Equipo *" 

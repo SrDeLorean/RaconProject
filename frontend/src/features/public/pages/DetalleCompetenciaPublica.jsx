@@ -51,47 +51,126 @@ function computeStandings(partidos, equipos) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+const getImageUrl = (path) => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${backendBaseUrl}${cleanPath}`;
+};
+
 function MatchCard({ partido }) {
-  const hasResult = partido.goles_local != null && partido.goles_visitante != null;
-  const localWon  = hasResult && partido.goles_local  > partido.goles_visitante;
-  const visitaWon = hasResult && partido.goles_visitante > partido.goles_local;
+  const navigate = useNavigate();
+  const today = new Date().toISOString().split('T')[0];
+  const isLive = partido.fecha && partido.fecha === today;
+  const isFinished = partido.goles_local != null && partido.goles_visitante != null;
+  const teamL = partido.local?.nombre || 'Por definir';
+  const teamV = partido.visitante?.nombre || 'Por definir';
+  const localWinner = isFinished && partido.goles_local > partido.goles_visitante;
+  const visitaWinner = isFinished && partido.goles_visitante > partido.goles_local;
+
   return (
-    <div className="border border-border/50 bg-card/25 backdrop-blur-md rounded-xl p-4 flex flex-col gap-3 shadow-sm hover:border-primary/40 transition-all">
-      {partido.jornada && (
-        <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-          {partido.jornada}{partido.grupo ? ` • Grupo ${partido.grupo}` : ''}
+    <div
+      className={`relative overflow-hidden rounded-2xl glass-hud-panel p-5 flex flex-col md:flex-row justify-between items-center gap-6 md:gap-10 border transition-all duration-300 scanlines select-none ${
+        isLive ? 'live-match-flash border-primary/50 bg-primary/5' : 'border-border/45'
+      }`}
+    >
+      <div className="absolute inset-0 hud-noise pointer-events-none opacity-40"></div>
+
+      {/* LEFT: Hora + Estado */}
+      <div className="flex md:flex-col items-center md:items-start justify-between w-full md:w-auto shrink-0 gap-2 border-b md:border-b-0 md:border-r border-border/30 dark:border-white/[0.08] pb-3 md:pb-0 md:pr-8">
+        <div className="text-center md:text-left">
+          <span className="text-[9px] font-condensed text-muted-foreground font-black tracking-widest block uppercase">HORA DE TRANSMISIÓN</span>
+          <span className="text-xl font-display font-black text-foreground tracking-widest leading-none mt-1 block">
+            {partido.hora || 'Por definir'}
+          </span>
         </div>
-      )}
-      <div className="flex items-center justify-between gap-2">
-        {/* Local */}
-        <div className={`flex-1 text-right space-y-0.5 ${localWon ? 'text-primary' : 'text-foreground'}`}>
-          <p className="text-xs font-black uppercase truncate">{partido.local?.nombre || partido.local?.abreviatura || 'TBD'}</p>
-          <p className="text-[9px] font-mono text-muted-foreground">{partido.local?.abreviatura}</p>
-        </div>
-        {/* Score / Time */}
-        <div className="flex flex-col items-center px-3">
-          {hasResult ? (
-            <span className="text-xl font-black font-mono tracking-widest text-foreground">
-              <span className={localWon ? 'text-primary' : ''}>{partido.goles_local}</span>
-              <span className="text-muted-foreground/50 mx-1">-</span>
-              <span className={visitaWon ? 'text-primary' : ''}>{partido.goles_visitante}</span>
+        <div className="mt-1">
+          {isLive ? (
+            <span className="inline-flex items-center gap-1.5 text-[9px] font-condensed font-black tracking-widest text-primary bg-primary/10 border border-primary/35 px-3 py-1 rounded">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" /> EN VIVO
+            </span>
+          ) : isFinished ? (
+            <span className="inline-flex items-center gap-1.5 text-[9px] font-condensed font-black tracking-widest text-muted-foreground bg-muted border border-border/50 px-3 py-1 rounded">
+              FINALIZADO
             </span>
           ) : (
-            <div className="text-center">
-              <p className="text-sm font-black font-mono text-primary">{partido.hora || '--:--'}</p>
-              <p className="text-[9px] bg-muted/40 text-muted-foreground font-bold px-1.5 py-0.5 rounded uppercase">{partido.fecha || 'Por definir'}</p>
+            <span className="inline-flex items-center gap-1.5 text-[9px] font-condensed font-black tracking-widest text-primary/95 bg-primary/5 border border-primary/20 px-3 py-1 rounded">
+              PROGRAMADO
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* CENTER: Team A - Score - Team B (Aligned like eSports broadcast banner) */}
+      <div className="flex-1 flex items-center justify-between gap-6 md:gap-10 w-full min-w-0">
+        
+        {/* Local Team */}
+        <div className="flex-1 flex items-center justify-end gap-3 min-w-0 text-right">
+          <span className={`text-xs md:text-sm font-condensed font-black uppercase tracking-wider truncate ${localWinner ? 'text-primary' : 'text-foreground'}`}>
+            {teamL}
+          </span>
+          {partido.local?.logo ? (
+            <img 
+              src={getImageUrl(partido.local.logo)} 
+              alt={teamL} 
+              className="w-9 h-9 rounded-xl object-cover border bg-background shadow-inner shrink-0" 
+            />
+          ) : (
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-background font-display font-black text-sm uppercase ${
+              localWinner ? 'border-primary text-primary shadow-[0_0_10px_rgba(232,0,29,0.15)]' : 'border-border/50 text-muted-foreground'
+            }`}>
+              {partido.local?.abreviatura || teamL.charAt(0)}
             </div>
           )}
         </div>
-        {/* Visitante */}
-        <div className={`flex-1 text-left space-y-0.5 ${visitaWon ? 'text-primary' : 'text-foreground'}`}>
-          <p className="text-xs font-black uppercase truncate">{partido.visitante?.nombre || partido.visitante?.abreviatura || 'TBD'}</p>
-          <p className="text-[9px] font-mono text-muted-foreground">{partido.visitante?.abreviatura}</p>
+
+        {/* Score in Center */}
+        <div className="shrink-0 min-w-[84px] text-center">
+          <span className="text-2xl md:text-3xl font-display font-black tracking-widest leading-none block">
+            <span className={localWinner ? 'text-primary' : 'text-foreground'}>{isFinished || isLive ? partido.goles_local : ''}</span>
+            <span className="text-muted-foreground/30 mx-2">{isFinished || isLive ? '–' : 'VS'}</span>
+            <span className={visitaWinner ? 'text-primary' : 'text-foreground'}>{isFinished || isLive ? partido.goles_visitante : ''}</span>
+          </span>
+          {partido.jornada && (
+            <span className="text-[8px] font-condensed font-bold text-muted-foreground uppercase tracking-widest mt-1 block">
+              {partido.jornada}
+            </span>
+          )}
         </div>
+
+        {/* Visitante Team */}
+        <div className="flex-1 flex items-center justify-start gap-3 min-w-0 text-left">
+          {partido.visitante?.logo ? (
+            <img 
+              src={getImageUrl(partido.visitante.logo)} 
+              alt={teamV} 
+              className="w-9 h-9 rounded-xl object-cover border bg-background shadow-inner shrink-0" 
+            />
+          ) : (
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-background font-display font-black text-sm uppercase ${
+              visitaWinner ? 'border-primary text-primary shadow-[0_0_10px_rgba(232,0,29,0.15)]' : 'border-border/50 text-muted-foreground'
+            }`}>
+              {partido.visitante?.abreviatura || teamV.charAt(0)}
+            </div>
+          )}
+          <span className={`text-xs md:text-sm font-condensed font-black uppercase tracking-wider truncate ${visitaWinner ? 'text-primary' : 'text-foreground'}`}>
+            {teamV}
+          </span>
+        </div>
+
       </div>
-      {hasResult && (
-        <div className="text-[9px] text-center font-bold uppercase text-emerald-400 tracking-widest">✅ Finalizado</div>
-      )}
+
+      {/* RIGHT: Watch / Detalle Button */}
+      <div className="shrink-0 w-full md:w-auto border-t md:border-t-0 md:border-l border-border/30 dark:border-white/[0.08] pt-4 md:pt-0 md:pl-8 flex justify-center">
+        <button
+          onClick={() => navigate(`/partidos/${partido.id}`)}
+          className="w-full md:w-32 py-3 px-6 text-[10px] font-condensed font-black tracking-widest uppercase bg-primary/15 text-primary border border-primary/35 rounded-xl hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_15px_rgba(232,0,29,0.45)] transition-all duration-300 cursor-pointer font-black"
+        >
+          {isLive ? '🔴 VER DUELO' : isFinished ? 'ANALIZAR' : 'VER DETALLES'}
+        </button>
+      </div>
+
     </div>
   );
 }
@@ -411,26 +490,63 @@ function PlayoffBracket({ partidos }) {
 
 function FixturaLiga({ partidos }) {
   const jornadas = useMemo(() => groupBy(partidos, 'jornada'), [partidos]);
-  const jornadaKeys = Object.keys(jornadas);
+  const jornadaKeys = useMemo(() => {
+    return Object.keys(jornadas).sort((a, b) => {
+      const numA = parseInt(a.replace(/^\D+/g, ''), 10);
+      const numB = parseInt(b.replace(/^\D+/g, ''), 10);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return a.localeCompare(b);
+    });
+  }, [jornadas]);
+
+  const [activeJornadaIndex, setActiveJornadaIndex] = useState(0);
+
+  // Reset selected index if matches list changes
+  useEffect(() => {
+    setActiveJornadaIndex(0);
+  }, [partidos]);
+
   if (jornadaKeys.length === 0) {
     return <p className="text-center text-sm text-muted-foreground italic py-10">No hay partidos registrados en el calendario aún.</p>;
   }
+
+  const currentJornada = jornadaKeys[activeJornadaIndex];
+  const currentMatches = jornadas[currentJornada] || [];
+
   return (
-    <div className="space-y-8">
-      {jornadaKeys.map(jornada => (
-        <div key={jornada} className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-border/40" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-primary px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
-              {jornada}
-            </span>
-            <div className="h-px flex-1 bg-border/40" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {jornadas[jornada].map((p, i) => <MatchCard key={p.id ?? i} partido={p} />)}
-          </div>
+    <div className="space-y-6">
+      {/* Paginador de Jornadas */}
+      {jornadaKeys.length > 1 && (
+        <div className="flex items-center justify-between bg-card/25 backdrop-blur-md border border-border/40 p-3.5 rounded-2xl max-w-md mx-auto shadow-lg relative overflow-hidden scanlines">
+          <div className="absolute inset-0 hud-noise pointer-events-none opacity-20"></div>
+          <button
+            disabled={activeJornadaIndex === 0}
+            onClick={() => setActiveJornadaIndex(prev => prev - 1)}
+            className="px-4 py-2 rounded-xl border border-border/50 bg-card/85 text-xs font-condensed tracking-wider font-bold text-muted-foreground hover:text-foreground disabled:opacity-20 hover:border-primary/30 transition-all duration-200 cursor-pointer select-none"
+          >
+            ◀ Anterior
+          </button>
+          
+          <span className="text-xs font-black uppercase tracking-widest text-primary font-display bg-primary/10 border border-primary/20 px-5 py-2 rounded-full shadow-[0_0_15px_rgba(232,0,29,0.1)]">
+            {currentJornada}
+          </span>
+
+          <button
+            disabled={activeJornadaIndex === jornadaKeys.length - 1}
+            onClick={() => setActiveJornadaIndex(prev => prev + 1)}
+            className="px-4 py-2 rounded-xl border border-border/50 bg-card/85 text-xs font-condensed tracking-wider font-bold text-muted-foreground hover:text-foreground disabled:opacity-20 hover:border-primary/30 transition-all duration-200 cursor-pointer select-none"
+          >
+            Siguiente ▶
+          </button>
         </div>
-      ))}
+      )}
+
+      {/* Render Current Matches */}
+      <div className="space-y-3.5">
+        {currentMatches.map((p, i) => (
+          <MatchCard key={p.id ?? i} partido={p} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -447,11 +563,11 @@ function FixturaCopa({ partidos }) {
       {Object.keys(grupos).length > 0 && (
         <div className="space-y-6">
           <h3 className="text-lg font-display font-black text-foreground uppercase tracking-wider">📋 Fase de Grupos</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-6">
             {Object.entries(grupos).map(([grupo, ps]) => (
               <div key={grupo} className="space-y-3">
                 <div className="text-xs font-black uppercase tracking-widest text-primary border-b border-primary/30 pb-1">Grupo {grupo}</div>
-                <div className="space-y-3">
+                <div className="space-y-3.5">
                   {ps.map((p, i) => <MatchCard key={p.id ?? i} partido={p} />)}
                 </div>
               </div>
@@ -519,6 +635,57 @@ export default function DetalleCompetenciaPublica() {
   const [loading, setLoading] = useState(true);
   const [activeSubTab, setActiveSubTab] = useState('detalles');
 
+  const partidos = competencia?.partidos || [];
+  const equipos  = competencia?.equipos  || [];
+  const formato  = (competencia?.formato || 'liga').toLowerCase();
+  const isPlayoff = formato === 'playoffs' || formato === 'playoff';
+  const isCopa    = formato === 'copa';
+  const isLiga    = !isPlayoff && !isCopa;
+
+  // Extract unique dates from partidos
+  const uniqueDates = useMemo(() => {
+    const dates = new Set();
+    partidos.forEach(p => {
+      if (p.fecha) dates.add(p.fecha);
+    });
+    return Array.from(dates).sort();
+  }, [partidos]);
+
+  const [dateIndex, setDateIndex] = useState(0);
+
+  // Active Date selector
+  const activeDate = useMemo(() => {
+    if (uniqueDates.length === 0) return null;
+    return uniqueDates[dateIndex];
+  }, [uniqueDates, dateIndex]);
+
+  // Filtered partidos by date
+  const filteredPartidos = useMemo(() => {
+    if (!activeDate) return partidos;
+    return partidos.filter(p => p.fecha === activeDate);
+  }, [partidos, activeDate]);
+
+  // Format dates for selector
+  const formattedDates = useMemo(() => {
+    const weekdays = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+    const months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+    
+    return uniqueDates.map(dateStr => {
+      const d = new Date(`${dateStr}T00:00:00`);
+      const weekdayStr = weekdays[d.getDay()].toLowerCase();
+      const monthStr = months[d.getMonth()].toLowerCase();
+      
+      const count = partidos.filter(p => p.fecha === dateStr).length;
+      
+      return {
+        dateStr,
+        dayNum: d.getDate(),
+        label: `${weekdayStr}/${monthStr}`,
+        count
+      };
+    });
+  }, [uniqueDates, partidos]);
+
   useEffect(() => {
     if (!compId) return;
     const fetchDetalle = async () => {
@@ -536,9 +703,14 @@ export default function DetalleCompetenciaPublica() {
 
   if (loading) {
     return (
-      <div className="pt-28 pb-16 min-h-screen bg-background flex flex-col items-center justify-center gap-3">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
-        <span className="text-sm font-bold tracking-widest text-primary uppercase animate-pulse">Desencriptando Ficha del Torneo...</span>
+      <div className="pt-28 pb-16 min-h-screen bg-background">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 space-y-8">
+          <div className="skeleton-shimmer h-20 rounded-2xl"></div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="skeleton-shimmer h-80 rounded-xl"></div>
+            <div className="lg:col-span-2 skeleton-shimmer h-96 rounded-xl"></div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -552,13 +724,6 @@ export default function DetalleCompetenciaPublica() {
     );
   }
 
-  const partidos = competencia.partidos || [];
-  const equipos  = competencia.equipos  || [];
-  const formato  = (competencia.formato || 'liga').toLowerCase();
-  const isPlayoff = formato === 'playoffs' || formato === 'playoff';
-  const isCopa    = formato === 'copa';
-  const isLiga    = !isPlayoff && !isCopa;
-
   const formatoLabel = isLiga ? '🏟️ Liga' : isPlayoff ? '🏆 Playoffs' : '🥇 Copa';
 
   const tabs = [
@@ -567,54 +732,100 @@ export default function DetalleCompetenciaPublica() {
     { id: 'fixture',  label: 'Calendario / Partidos', icon: '📅' },
     { id: 'tabla',    label: isPlayoff ? 'Cuadro Eliminatorio' : 'Tabla de Posiciones', icon: '📊' },
   ];
-
   return (
     <div className="relative min-h-screen bg-background pt-28 pb-16 overflow-hidden">
 
-      {/* Background */}
-      <div
-        className="absolute inset-0 bg-cover bg-center z-0"
-        style={{ backgroundImage: "url('https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1920&auto=format&fit=crop')" }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/70 to-background z-10" />
+      {/* Ambient glows */}
+      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 blur-[120px] rounded-full pointer-events-none z-10 animate-pulse-glow" />
+      <div className="absolute bottom-10 right-10 w-[400px] h-[400px] bg-primary/3 blur-[110px] rounded-full pointer-events-none z-0"></div>
+
+      {/* Sleek Navigation Back Button Row */}
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 mt-4 pb-4 flex justify-start items-center relative z-30">
+        <button 
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2.5 px-4 py-2 rounded-xl border border-border/50 bg-card/35 backdrop-blur-md text-xs font-condensed tracking-wider font-bold text-muted-foreground hover:text-primary hover:border-primary/45 transition-all duration-300 shadow-md active:scale-95 group cursor-pointer"
+        >
+          <span className="group-hover:-translate-x-1 transition-transform duration-300">←</span>
+          VOLVER AL TORNEO
+        </button>
       </div>
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/20 blur-[120px] rounded-full pointer-events-none z-10 animate-pulse-glow" />
 
-      <div className="relative z-20 max-w-7xl mx-auto px-6 lg:px-10 space-y-12">
+      <div className="relative z-20 max-w-7xl mx-auto px-6 lg:px-10 space-y-8">
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b border-border/50 pb-8">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2.5 rounded-xl border border-border/60 hover:bg-muted/50 transition-all active:scale-95 text-muted-foreground hover:text-foreground bg-card/40 backdrop-blur-md"
-            >
-              ⬅️ Volver
-            </button>
-            <div>
-              <Badge variant="primary" className="px-2 py-0.5 text-[10px] font-condensed tracking-widest text-primary border-primary/30 bg-primary/10 rounded-full animate-pulse-glow">
-                {competencia.temporada?.organizacion?.nombre} / {competencia.temporada?.nombre}
-              </Badge>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-foreground tracking-wide uppercase mt-2 leading-[0.85]">
-                {competencia.nombre}
-              </h1>
+        {/* 2. HERO CENTRAL (Cinemático y Táctico - Estilo Organizaciones con Banner) */}
+        <section className="relative z-20 max-w-7xl mx-auto overflow-hidden rounded-3xl border border-border/40 bg-card/45 backdrop-blur-md shadow-2xl mt-8">
+          
+          {/* Banner image as header */}
+          <div className="relative h-56 md:h-72 w-full overflow-hidden border-b border-border/40">
+            {competencia.banner || competencia.temporada?.organizacion?.banner ? (
+              <img 
+                src={getImageUrl(competencia.banner || competencia.temporada?.organizacion?.banner)} 
+                alt={competencia.nombre} 
+                className="w-full h-full object-cover opacity-85" 
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-r from-primary/10 via-background to-primary/5 flex items-center justify-center">
+                <span className="text-muted-foreground text-xs uppercase tracking-widest font-condensed">Sin banner oficial</span>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent z-10"></div>
+          </div>
+
+          <div className="p-6 md:p-8 relative z-10 -mt-14 md:-mt-16">
+            {/* Palabras de fondo brush estilo editorial */}
+            <div className="absolute inset-0 pointer-events-none select-none overflow-hidden z-0">
+              <span className="absolute top-2 left-10 text-[9rem] md:text-[14rem] font-display font-black uppercase text-foreground/[0.015] dark:text-foreground/[0.025] blur-[2px] float-brush-1">
+                TORNEO
+              </span>
+              <span className="absolute bottom-2 right-20 text-[9rem] md:text-[14rem] font-display font-black uppercase text-foreground/[0.015] dark:text-foreground/[0.025] blur-[3px] float-brush-2">
+                FIXTURE
+              </span>
+            </div>
+
+            {/* Transparent background number */}
+            <div className="absolute -top-16 -left-12 text-[15rem] md:text-[23rem] font-display font-black text-foreground/[0.035] dark:text-foreground/[0.045] select-none leading-none pointer-events-none font-extrabold tracking-tighter">
+              {String(equipos.length || 1).padStart(2, '0')}
+            </div>
+
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
+              <div className="flex items-center gap-4">
+                {competencia.logo ? (
+                  <img 
+                    src={getImageUrl(competencia.logo)} 
+                    alt={competencia.nombre} 
+                    className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover border-4 border-card bg-card shadow-xl shrink-0"
+                  />
+                ) : (
+                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-background border-4 border-card flex items-center justify-center font-display font-black text-primary text-3xl shrink-0">
+                    {competencia.nombre?.charAt(0)}
+                  </div>
+                )}
+                <div>
+                  <Badge variant="primary" className="px-2.5 py-1 text-[10px] font-condensed tracking-widest text-primary border border-primary/30 bg-primary/10 rounded-full animate-pulse-glow">
+                    {competencia.temporada?.organizacion?.nombre} / {competencia.temporada?.nombre}
+                  </Badge>
+                  <h1 className="text-4xl md:text-6xl font-display font-black text-foreground uppercase tracking-normal leading-[0.8] drop-shadow-2xl mt-2">
+                    {competencia.nombre}
+                  </h1>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2 shrink-0">
+                <Badge variant="outline" className="text-primary font-mono text-xs uppercase px-3 py-1.5 border-primary/30">
+                  {formatoLabel}
+                </Badge>
+                <Badge variant="outline" className="text-muted-foreground font-mono text-[10px] uppercase px-2 py-1 border-border/40">
+                  {competencia.estado || 'activo'}
+                </Badge>
+              </div>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <Badge variant="outline" className="text-primary font-mono text-xs uppercase px-3 py-1.5 border-primary/30">
-              {formatoLabel}
-            </Badge>
-            <Badge variant="outline" className="text-muted-foreground font-mono text-[10px] uppercase px-2 py-1 border-border/40">
-              {competencia.estado || 'activo'}
-            </Badge>
-          </div>
-        </div>
+        </section>
 
         {/* 3-col layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
           {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
             <Card className="p-6 border border-border/50 backdrop-blur-md bg-card/25 shadow-lg relative overflow-hidden" withGlow>
               <h3 className="font-display font-black text-2xl text-foreground uppercase tracking-wider mb-4 border-b border-border/40 pb-2">
                 ⚡ Ficha Rápida
@@ -677,7 +888,7 @@ export default function DetalleCompetenciaPublica() {
           </div>
 
           {/* Main */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
             {/* Tabs */}
             <div className="flex gap-1 bg-muted/40 p-1 rounded-lg border border-border/40 overflow-x-auto">
               {tabs.map(tab => (
@@ -750,11 +961,65 @@ export default function DetalleCompetenciaPublica() {
 
               {/* FIXTURE */}
               {activeSubTab === 'fixture' && (
-                <>
-                  {isLiga    && <FixturaLiga    partidos={partidos} />}
-                  {isPlayoff && <PlayoffBracket partidos={partidos} />}
-                  {isCopa    && <FixturaCopa    partidos={partidos} />}
-                </>
+                <div className="space-y-6">
+                  {/* Date Selector Strip if dates exist */}
+                  {formattedDates.length > 0 && (
+                    <div className="flex items-center gap-3 bg-card/25 backdrop-blur-md border border-border/40 p-4 rounded-2xl">
+                      {/* Left Arrow */}
+                      <button
+                        disabled={dateIndex === 0}
+                        onClick={() => setDateIndex(prev => Math.max(0, prev - 1))}
+                        className="p-3.5 rounded-xl border border-border/40 dark:border-white/[0.06] bg-card/85 text-muted-foreground hover:text-foreground disabled:opacity-20 hover:border-primary/40 transition-all duration-300 cursor-pointer shrink-0"
+                      >
+                        ◀
+                      </button>
+
+                      {/* Carousel wrapper */}
+                      <div className="flex-1 flex gap-3 overflow-x-auto pb-1.5 custom-scrollbar">
+                        {formattedDates.map((item, idx) => {
+                          const isActive = dateIndex === idx;
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => setDateIndex(idx)}
+                              className={`flex-1 min-w-[84px] py-3.5 px-2.5 rounded-2xl border flex flex-col items-center gap-1.5 transition-all duration-300 cursor-pointer ${
+                                isActive
+                                  ? 'bg-primary text-primary-foreground border-primary active-date-glow scale-105'
+                                  : 'bg-card/70 text-muted-foreground border-border/45 dark:border-white/[0.06] hover:border-primary/30 hover:text-foreground'
+                              }`}
+                            >
+                              <span className="text-[9px] font-condensed font-black tracking-widest uppercase">{item.label}</span>
+                              <span className="text-xl font-display font-black leading-none">{item.dayNum}</span>
+                              <span className={`text-[8px] font-condensed font-black px-1.5 py-0.5 rounded-full mt-1.5 transition-colors ${
+                                isActive 
+                                  ? 'bg-white/20 text-white' 
+                                  : item.count > 0 
+                                  ? 'bg-primary/10 text-primary border border-primary/20' 
+                                  : 'bg-muted text-muted-foreground'
+                              }`}>
+                                {item.count} {item.count === 1 ? 'partido' : 'partidos'}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Right Arrow */}
+                      <button
+                        disabled={dateIndex === uniqueDates.length - 1}
+                        onClick={() => setDateIndex(prev => Math.min(uniqueDates.length - 1, prev + 1))}
+                        className="p-3.5 rounded-xl border border-border/40 dark:border-white/[0.06] bg-card/85 text-muted-foreground hover:text-foreground disabled:opacity-20 hover:border-primary/40 transition-all duration-300 cursor-pointer shrink-0"
+                      >
+                        ▶
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Render filtered matches based on active Date */}
+                  {isLiga    && <FixturaLiga    partidos={filteredPartidos} />}
+                  {isPlayoff && <PlayoffBracket partidos={filteredPartidos} />}
+                  {isCopa    && <FixturaCopa    partidos={filteredPartidos} />}
+                </div>
               )}
 
               {/* TABLA */}

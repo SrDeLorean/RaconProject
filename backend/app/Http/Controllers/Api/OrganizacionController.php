@@ -17,11 +17,15 @@ class OrganizacionController extends Controller
      */
     public function index(Request $request)
     {
-        // Cambiamos a 'organizacion' porque el modelo se llama así
-        $query = \App\Models\Organizacion::query()->with('owner');
+        // Cargamos todas las relaciones necesarias para calcular estadísticas reales en el frontend
+        $query = \App\Models\Organizacion::query()->with(['owner', 'temporadas.competencias.equipos', 'temporadas.competencias.partidos']);
 
         if ($request->filled('estado') && $request->estado !== 'todas') {
             $query->where('estado', $request->estado);
+        }
+
+        if ($request->filled('owner_id')) {
+            $query->where('owner_id', $request->owner_id);
         }
 
         if ($request->filled('search')) {
@@ -45,7 +49,7 @@ class OrganizacionController extends Controller
      */
     public function show(Organizacion $organizacion): JsonResponse
     {
-        $organizacion->load(['temporadas.competencias', 'owner']);
+        $organizacion->load(['temporadas.competencias.equipos', 'temporadas.competencias.partidos', 'owner']);
         return response()->json($organizacion);
     }
 

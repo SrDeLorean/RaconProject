@@ -19,13 +19,18 @@ export default function Avatar({ src, name = 'Usuario', size = 'md', className =
     return fullName.substring(0, 2).toUpperCase();
   };
 
+  const backendBaseUrl = 'http://localhost:8000';
+  const displaySrc = src
+    ? (src.startsWith('http') ? src : `${backendBaseUrl}${src}`)
+    : '';
+
   return (
     <div
       className={`relative inline-flex items-center justify-center shrink-0 rounded-full font-bold bg-red-600/10 text-red-600 dark:bg-red-500/20 dark:text-red-400 border border-red-600/20 shadow-sm transition-all ${sizes[size]} ${className}`}
     >
       {src && !imageError ? (
         <img
-          src={src}
+          src={displaySrc}
           alt={name}
           className="w-full h-full rounded-full object-cover"
           onError={() => setImageError(true)}

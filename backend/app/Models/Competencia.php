@@ -12,7 +12,7 @@ class Competencia extends Model
 
     protected $fillable = [
         'temporada_id', 'nombre', 'slug', 'descripcion', 'reglas',
-        'banner', 'color_tema', 'formato', 'plataforma', 'prize_pool',
+        'logo', 'banner', 'color_tema', 'formato', 'plataforma', 'prize_pool',
         'entry_fee', 'max_participantes', 'es_publico', 'estado',
         'fecha_inicio_inscripciones', 'fecha_fin_inscripciones', 'fecha_inicio_competencia'
     ];

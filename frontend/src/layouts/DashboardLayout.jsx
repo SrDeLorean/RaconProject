@@ -52,9 +52,16 @@ export default function DashboardLayout({ menuItems = [], profile }) {
 
   // Unificamos datos del usuario (Prioridad: Estado Global de Zustand > Props > Default)
   const displayName = user?.name || profile?.name || 'Administrador';
-  const displayRole = user?.rol || profile?.rol || 'Super Admin';
+  const displayRole = user?.role || user?.rol || profile?.role || profile?.rol || 'Super Admin';
   const displayEmail = user?.email || profile?.email || 'admin@racon.com';
   const displayAvatar = user?.profile_photo_url || profile?.avatar;
+
+  const getRolePrefix = () => {
+    const r = user?.role || user?.rol || 'jugador';
+    if (r === 'administrador' || r === 'admin') return 'admin';
+    return r;
+  };
+  const rolePrefix = getRolePrefix();
 
   return (
     <div className="min-h-screen bg-background text-foreground flex overflow-hidden font-sans">
@@ -240,15 +247,15 @@ export default function DashboardLayout({ menuItems = [], profile }) {
                     <p className="text-sm font-bold text-foreground truncate">{displayName}</p>
                     <p className="text-xs text-muted-foreground truncate">{displayEmail}</p>
                   </div>
-                  <Link to={`/${user?.rol || 'admin'}/perfil`} className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" onClick={() => setIsUserDropdownOpen(false)}>
+                  <Link to={`/${rolePrefix}/perfil`} className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" onClick={() => setIsUserDropdownOpen(false)}>
                     <span className="text-lg opacity-70">👤</span> Mi Perfil
                   </Link>
-                  {user?.rol === 'jugador' && (
+                  {(user?.role === 'jugador' || user?.rol === 'jugador') && (
                     <Link to="/jugador/mis-equipos" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" onClick={() => setIsUserDropdownOpen(false)}>
                       <span className="text-lg opacity-70">⚽</span> Mis Equipos
                     </Link>
                   )}
-                  <Link to={`/${user?.rol || 'admin'}/configuracion`} className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" onClick={() => setIsUserDropdownOpen(false)}>
+                  <Link to={`/${rolePrefix}/configuracion`} className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" onClick={() => setIsUserDropdownOpen(false)}>
                     <span className="text-lg opacity-70">⚙️</span> Configuración
                   </Link>
                   <div className="h-px bg-border/50 my-2"></div>

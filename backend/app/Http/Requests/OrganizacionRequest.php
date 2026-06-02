@@ -14,7 +14,8 @@ class OrganizacionRequest extends FormRequest
 
     public function rules(): array
     {
-        $orgId = $this->route('organizacion') ? $this->route('organizacion')->id : null;
+        $organizacion = $this->route('organizacion');
+        $orgId = is_object($organizacion) ? $organizacion->id : $organizacion;
 
         return [
             'owner_id'       => ['required', 'exists:users,id'],

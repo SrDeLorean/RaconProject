@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTemporadas } from '../hooks/useTemporadas';
 
 // Componentes UI Comunes
@@ -13,6 +14,7 @@ import Alert from '@/components/shared/Alert';
 import TemporadaFormDrawer from '../components/TemporadaFormDrawer';
 
 export default function TemporadasCRUD() {
+  const navigate = useNavigate();
   const { data, ui, form, actions } = useTemporadas();
 
   const tabsConfig = useMemo(() => [
@@ -63,8 +65,8 @@ export default function TemporadasCRUD() {
           <Button 
             variant="solid" 
             size="sm" 
-            className="h-8 px-3 text-xs bg-foreground text-background font-bold"
-            onClick={() => console.log("Redirigiendo a competencias de la temporada:", row.id)}
+            className="h-8 px-3 text-xs bg-foreground text-background font-bold shadow-sm hover:scale-[1.02] transition-transform"
+            onClick={() => navigate('/organizador/competencias', { state: { filterTemporadaId: row.id } })}
           >
             🏆 Divisiones
           </Button>
@@ -87,7 +89,7 @@ export default function TemporadasCRUD() {
         </div>
       )
     },
-  ], [actions]);
+  ], [actions, navigate]);
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in relative">

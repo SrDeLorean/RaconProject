@@ -20,7 +20,7 @@ export const useMiEquipo = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); 
   const [jugadorSeleccionado, setJugadorSeleccionado] = useState(null);
 
-  const defaultForm = { nombre: '', abreviatura: '', descripcion: '', plataforma: 'crossplay', club_id_ea: '', twitter: '', twitch: '' };
+  const defaultForm = { nombre: '', abreviatura: '', descripcion: '', plataforma: 'crossplay', club_id_ea: '', logo: '', banner: '', twitter: '', twitch: '' };
   const [formData, setFormData] = useState(defaultForm);
   const [formErrors, setFormErrors] = useState({});
 
@@ -66,13 +66,15 @@ export const useMiEquipo = () => {
           descripcion: equipoData.descripcion || '',
           plataforma: equipoData.plataforma || 'crossplay',
           club_id_ea: equipoData.club_id_ea || '',
+          logo: equipoData.logo || '',
+          banner: equipoData.banner || '',
           twitter: equipoData.redes_sociales?.twitter || '',
           twitch: equipoData.redes_sociales?.twitch || ''
         });
 
         // Obtener historial de transacciones/fichajes para el log
         const historyResponse = await api.get('/solicitudes-fichaje?tipo=enviadas');
-        setHistorialFichajes(historyResponse.data || []);
+        setHistorialFichajes(historyResponse.data?.data || historyResponse.data || []);
       } else {
         setEquipo(null);
       }

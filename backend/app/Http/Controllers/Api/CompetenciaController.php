@@ -13,13 +13,29 @@ class CompetenciaController extends Controller
 {
     public function index(Request $request)
     {
-        // 1. Identificamos la organización que administra este usuario
-        $organizacion = \App\Models\Organizacion::where('owner_id', auth()->id())->firstOrFail();
+        $user = auth('sanctum')->user();
 
-        // 2. Traemos todas las competencias cuyas temporadas pertenezcan a su organización
-        $query = Competencia::whereHas('temporada', function ($q) use ($organizacion) {
-            $q->where('organizacion_id', $organizacion->id);
-        });
+        if ($request->boolean('for_organizer') && $user) {
+            // 1. Identificamos la organización que administra este usuario
+            $organizacion = \App\Models\Organizacion::where('owner_id', $user->id)->first();
+
+            if (!$organizacion) {
+                // Si es admin, dejamos ver todas; de lo contrario, listado vacío limpio en vez de 404
+                $role = $user->role;
+                if ($role === 'admin' || $role === 'administrador') {
+                    $query = Competencia::query();
+                } else {
+                    return response()->json(['data' => [], 'total' => 0]);
+                }
+            } else {
+                // 2. Traemos todas las competencias cuyas temporadas pertenezcan a su organización
+                $query = Competencia::whereHas('temporada', function ($q) use ($organizacion) {
+                    $q->where('organizacion_id', $organizacion->id);
+                });
+            }
+        } else {
+            $query = Competencia::query();
+        }
 
         // 3. 🔥 FILTRO DE TABLA OPCIONAL: Si viene un temporada_id desde el combo del front, filtramos
         if ($request->filled('temporada_id')) {
@@ -41,7 +57,7 @@ class CompetenciaController extends Controller
         }
 
         // Incluimos la relación de la temporada para pintar su nombre en la tabla
-        $query->with(['temporada:id,nombre'])->withCount('equipos')->latest();
+        $query->with(['temporada.organizacion'])->withCount('equipos')->latest();
 
         return response()->json($query->paginate($request->per_page ?? 10));
     }

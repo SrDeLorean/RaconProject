@@ -77,7 +77,17 @@ export const useAuthStore = create(
       },
 
       // Limpiar errores manualmente (útil al cambiar de vista o escribir)
-      clearAuthError: () => set({ authError: null })
+      clearAuthError: () => set({ authError: null }),
+
+      // Actualizar los datos del usuario en el store
+      setUser: (user) => {
+        const normalized = (user && user.data && typeof user.data === 'object' && user.data.email) ? user.data : user;
+        if (Array.isArray(normalized)) {
+          console.warn("Intento de guardar un array en el estado de usuario bloqueado.");
+          return;
+        }
+        set({ user: normalized });
+      }
     }),
     {
       name: 'auth-storage',

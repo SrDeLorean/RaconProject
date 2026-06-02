@@ -14,16 +14,17 @@ class UserRequest extends FormRequest
 
     public function rules(): array
     {
-        $userId = $this->route('user') ? $this->route('user')->id : null;
+        $routeParam = $this->route('usuario') ?? $this->route('user');
+        $userId = $routeParam ? (is_object($routeParam) ? $routeParam->id : $routeParam) : null;
 
         return [
-            'name'             => ['required', 'string', 'max:255'],
-            'email'            => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
+            'name'             => ['sometimes', 'required', 'string', 'max:255'],
+            'email'            => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
             'password'         => $userId ? ['nullable', 'string', 'min:8'] : ['required', 'string', 'min:8'],
 
             // 🔥 Roles y Estados (Obligatorio para que funcione el Frontend)
-            'role'             => ['required', 'in:jugador,organizador,administrador'],
-            'status'           => ['required', 'in:activo,inactivo,suspendido'],
+            'role'             => ['sometimes', 'required', 'in:jugador,organizador,administrador'],
+            'status'           => ['sometimes', 'required', 'in:activo,inactivo,suspendido'],
 
             // 🔥 Identidades E-Sports
             'gamertag'         => ['nullable', 'string', 'max:255', Rule::unique('users', 'gamertag')->ignore($userId)],

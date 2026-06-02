@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import api from '@/api/axios';
 import { useDebounce } from '@/hooks/useDebounce';
 
 export const useCompetencias = () => {
+  const location = useLocation();
+  const initialTemporadaId = location.state?.filterTemporadaId || '';
   const [competencias, setCompetencias] = useState([]);
   const [temporadasList, setTemporadasList] = useState([]);
-  const [filterTemporadaId, setFilterTemporadaId] = useState(''); // 🔥 Filtro para la tabla principal
+  const [filterTemporadaId, setFilterTemporadaId] = useState(initialTemporadaId); // 🔥 Filtro para la tabla principal o pre-cargado desde state
   const [activeTab, setActiveTab] = useState('todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -30,6 +33,8 @@ export const useCompetencias = () => {
     temporada_id: '', // Se seleccionará manualmente en el drawer
     nombre: '',
     slug: '',
+    logo: '',
+    banner: '',
     color_tema: '#ef4444',
     formato: 'liga',
     plataforma: 'crossplay',
@@ -71,6 +76,7 @@ export const useCompetencias = () => {
         per_page: 10,
         search: debouncedSearchTerm !== '' ? debouncedSearchTerm : undefined,
         estado: activeTab !== 'todos' ? activeTab : undefined,
+        for_organizer: true,
       };
 
       const response = await api.get('/competencias', { params });
@@ -149,6 +155,8 @@ export const useCompetencias = () => {
           temporada_id: competencia.temporada_id || '',
           nombre: competencia.nombre,
           slug: competencia.slug,
+          logo: competencia.logo || '',
+          banner: competencia.banner || '',
           color_tema: competencia.color_tema || '#ef4444',
           formato: competencia.formato || 'liga',
           plataforma: competencia.plataforma || 'crossplay',

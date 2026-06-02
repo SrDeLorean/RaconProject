@@ -12,7 +12,7 @@ class SolicitudFichaje extends Model
     protected $table = 'solicitudes_fichaje';
 
     protected $fillable = [
-        'organizacion_id', 'temporada_id', 'equipo_id', 'user_id', 'estado', 'dorsal', 'posicion', 'comprobante_pago', 'observaciones_admin'
+        'organizacion_id', 'temporada_id', 'equipo_id', 'equipo_origen_id', 'user_id', 'estado', 'dorsal', 'posicion', 'comprobante_pago', 'observaciones_admin'
     ];
 
     public function organizacion()
@@ -28,6 +28,11 @@ class SolicitudFichaje extends Model
     public function equipo()
     {
         return $this->belongsTo(Equipo::class);
+    }
+
+    public function equipoOrigen()
+    {
+        return $this->belongsTo(Equipo::class, 'equipo_origen_id');
     }
 
     public function jugador()

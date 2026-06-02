@@ -18,7 +18,24 @@ class EquipoController extends Controller
      */
     public function index(Request $request)
     {
-        $equipos = Equipo::paginate();
+        $query = Equipo::query()->with('capitan');
+
+        // Búsqueda por nombre o abreviatura
+        $query->when($request->filled('search'), function ($q) use ($request) {
+            $searchTerm = $request->search;
+            $q->where(function ($sub) use ($searchTerm) {
+                $sub->where('nombre', 'like', "%{$searchTerm}%")
+                    ->orWhere('abreviatura', 'like', "%{$searchTerm}%");
+            });
+        });
+
+        // Filtro por plataforma (ej. PS4, PS5, PC, etc.)
+        $query->when($request->filled('plataforma'), function ($q) use ($request) {
+            $q->where('plataforma', $request->plataforma);
+        });
+
+        $perPage = $request->get('per_page', 9);
+        $equipos = $query->paginate($perPage);
 
         return EquipoResource::collection($equipos);
     }
@@ -59,6 +76,7 @@ class EquipoController extends Controller
                 return [
                     'id' => $row->jugador->id,
                     'name' => $row->jugador->name,
+                    'foto' => $row->jugador->foto,
                     'gamertag' => $row->jugador->gamertag ?? 'N/A',
                     'dorsal' => $row->dorsal ?? null,
                     'posicion' => $row->posicion_bloque ?? 'Sin asignar',
@@ -136,6 +154,7 @@ class EquipoController extends Controller
                 return [
                     'id' => $row->jugador->id,
                     'name' => $row->jugador->name,
+                    'foto' => $row->jugador->foto,
                     'gamertag' => $row->jugador->gamertag ?? 'N/A',
                     'dorsal' => $row->dorsal,
                     'posicion' => $row->posicion_bloque ?? 'Sin asignar',
@@ -158,6 +177,156 @@ class EquipoController extends Controller
             ];
         });
 
+        $traspasos = \App\Models\SolicitudFichaje::with([
+            'jugador:id,name,foto,gamertag',
+            'equipo:id,nombre,logo,abreviatura',
+            'equipoOrigen:id,nombre,logo,abreviatura',
+            'organizacion:id,nombre,logo'
+        ])
+        ->where('estado', 'aprobado')
+        ->where(function($q) use ($equipo) {
+            $q->where('equipo_id', $equipo->id)
+              ->orWhere('equipo_origen_id', $equipo->id);
+        })
+        ->orderBy('updated_at', 'desc')
+        ->get();
+
+        $partidos = \App\Models\Partido::with([
+            'local:id,nombre,logo,abreviatura',
+            'visitante:id,nombre,logo,abreviatura',
+            'competencia:id,nombre'
+        ])
+        ->where('equipo_local_id', $equipo->id)
+        ->orWhere('equipo_visitante_id', $equipo->id)
+        ->orderBy('fecha', 'desc')
+        ->orderBy('hora', 'desc')
+        ->get();
+
+        // Calcular Estadísticas Tácticas de los partidos finalizados
+        $stats = [
+            'jugados' => 0,
+            'victorias' => 0,
+            'empates' => 0,
+            'derrotas' => 0,
+            'goles_favor' => 0,
+            'goles_contra' => 0,
+        ];
+
+        foreach ($partidos as $partido) {
+            $hasResult = $partido->goles_local !== null && $partido->goles_visitante !== null;
+            if ($partido->estado === 'finalizado' || $hasResult) {
+                $stats['jugados']++;
+                $isLocal = $partido->equipo_local_id === $equipo->id;
+                $golesFavor = $isLocal ? (int)$partido->goles_local : (int)$partido->goles_visitante;
+                $golesContra = $isLocal ? (int)$partido->goles_visitante : (int)$partido->goles_local;
+                
+                $stats['goles_favor'] += $golesFavor;
+                $stats['goles_contra'] += $golesContra;
+
+                if ($golesFavor > $golesContra) {
+                    $stats['victorias']++;
+                } elseif ($golesFavor < $golesContra) {
+                    $stats['derrotas']++;
+                } else {
+                    $stats['empates']++;
+                }
+            }
+        }
+
+        // Top goleadores de la escuadra en el sistema
+        $goleadoresClub = \DB::table('estadisticas_jugadores')
+            ->join('users', 'estadisticas_jugadores.jugador_id', '=', 'users.id')
+            ->where('estadisticas_jugadores.equipo_id', $equipo->id)
+            ->select(
+                'users.id',
+                'users.name',
+                'users.foto',
+                'users.gamertag',
+                'estadisticas_jugadores.posicion',
+                \DB::raw('SUM(estadisticas_jugadores.goles) as total_goles')
+            )
+            ->groupBy('users.id', 'users.name', 'users.foto', 'users.gamertag', 'estadisticas_jugadores.posicion')
+            ->orderByDesc('total_goles')
+            ->take(5)
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'id' => $row->id,
+                    'name' => $row->name,
+                    'foto' => $row->foto,
+                    'gamertag' => $row->gamertag,
+                    'posicion' => $row->posicion,
+                    'total_goles' => (int)$row->total_goles
+                ];
+            });
+
+        // Top asistentes de la escuadra en el sistema
+        $asistentesClub = \DB::table('estadisticas_jugadores')
+            ->join('users', 'estadisticas_jugadores.jugador_id', '=', 'users.id')
+            ->where('estadisticas_jugadores.equipo_id', $equipo->id)
+            ->select(
+                'users.id',
+                'users.name',
+                'users.foto',
+                'users.gamertag',
+                'estadisticas_jugadores.posicion',
+                \DB::raw('SUM(estadisticas_jugadores.asistencias) as total_asistencias')
+            )
+            ->groupBy('users.id', 'users.name', 'users.foto', 'users.gamertag', 'estadisticas_jugadores.posicion')
+            ->orderByDesc('total_asistencias')
+            ->take(5)
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'id' => $row->id,
+                    'name' => $row->name,
+                    'foto' => $row->foto,
+                    'gamertag' => $row->gamertag,
+                    'posicion' => $row->posicion,
+                    'total_asistencias' => (int)$row->total_asistencias
+                ];
+            });
+
+        // Historial completo de torneos disputados por el club agrupados por competencia y temporada
+        $historialClub = \DB::table('estadisticas_equipos')
+            ->join('competencias', 'estadisticas_equipos.competencia_id', '=', 'competencias.id')
+            ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
+            ->join('organizaciones', 'temporadas.organizacion_id', '=', 'organizaciones.id')
+            ->where('estadisticas_equipos.equipo_id', $equipo->id)
+            ->select(
+                'organizaciones.nombre as organizacion_nombre',
+                'temporadas.nombre as temporada_nombre',
+                'competencias.nombre as competencia_nombre',
+                'competencias.banner as competencia_logo',
+                \DB::raw('COUNT(estadisticas_equipos.id) as jugados'),
+                \DB::raw('SUM(CASE WHEN estadisticas_equipos.goles_favor > estadisticas_equipos.goles_en_contra THEN 1 ELSE 0 END) as victorias'),
+                \DB::raw('SUM(CASE WHEN estadisticas_equipos.goles_favor = estadisticas_equipos.goles_en_contra THEN 1 ELSE 0 END) as empates'),
+                \DB::raw('SUM(CASE WHEN estadisticas_equipos.goles_favor < estadisticas_equipos.goles_en_contra THEN 1 ELSE 0 END) as derrotas'),
+                \DB::raw('SUM(estadisticas_equipos.goles_favor) as goles_favor'),
+                \DB::raw('SUM(estadisticas_equipos.goles_en_contra) as goles_contra')
+            )
+            ->groupBy(
+                'organizaciones.nombre',
+                'temporadas.nombre',
+                'competencias.nombre',
+                'competencias.banner'
+            )
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'organizacion_nombre' => $row->organizacion_nombre,
+                    'temporada_nombre' => $row->temporada_nombre,
+                    'competencia_nombre' => $row->competencia_nombre,
+                    'competencia_logo' => $row->competencia_logo,
+                    'jugados' => (int)$row->jugados,
+                    'victorias' => (int)$row->victorias,
+                    'empates' => (int)$row->empates,
+                    'derrotas' => (int)$row->derrotas,
+                    'goles_favor' => (int)$row->goles_favor,
+                    'goles_contra' => (int)$row->goles_contra
+                ];
+              });
+
         return response()->json([
             'id' => $equipo->id,
             'nombre' => $equipo->nombre,
@@ -174,6 +343,12 @@ class EquipoController extends Controller
             ] : null,
             'roster' => $roster,
             'competencias' => $competencias,
+            'traspasos' => $traspasos,
+            'partidos' => $partidos,
+            'goleadores' => $goleadoresClub,
+            'asistentes' => $asistentesClub,
+            'historial_club' => $historialClub,
+            'estadisticas' => $stats
         ]);
     }
 

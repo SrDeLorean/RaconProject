@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/useAuthStore'; // Ajusta la ruta relativa
 
 // 1. Crear una instancia personalizada de Axios
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api',
   timeout: 10000, // 10 segundos de tiempo de espera máximo antes de abortar
   headers: {
     'Content-Type': 'application/json',
@@ -39,15 +39,26 @@ api.interceptors.response.use(
   (response) => response, // Si la respuesta es exitosa (2xx), la deja pasar intacta
   (error) => {
     // Si el backend responde con 401 (No Autorizado) significa que el token expiró o es inválido
-    if (error.response && error.response.status === 401) {
-      console.warn("Sesión expirada o inválida. Forzando logout automático...");
+    // Evitamos interceptar peticiones de login, logout o registro para no entrar en bucles o tapar errores de validación
+    const isAuthRequest = error.config && error.config.url && (
+      error.config.url.includes('/login') || 
+      error.config.url.includes('/logout') ||
+      error.config.url.includes('/register')
+    );
+
+    if (error.response && error.response.status === 401 && !isAuthRequest) {
+      const token = useAuthStore.getState().token;
       
-      // Ejecutamos el logout de Zustand para limpiar el localStorage y redirigir al login
-      useAuthStore.getState().logout();
-      
-      // Opcional: Forzar una redirección limpia de la ventana si no estás dentro de un componente React
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      if (token) {
+        console.warn("Sesión expirada o inválida. Forzando logout automático...");
+        
+        // Ejecutamos el logout de Zustand para limpiar el localStorage y redirigir al login
+        useAuthStore.getState().logout();
+        
+        // Opcional: Forzar una redirección limpia de la ventana si no estás dentro de un componente React
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
       }
     }
     

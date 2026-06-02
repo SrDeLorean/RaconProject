@@ -234,8 +234,8 @@ export default function PlantillaClub({
           />
           
           <div className="space-y-3 max-h-[350px] overflow-y-auto pt-1 pr-1">
-            {jugadoresLibres.length > 0 ? (
-              jugadoresLibres.map((jugador) => (
+            {jugadoresLibres.filter(j => !j.role || j.role === 'jugador').length > 0 ? (
+              jugadoresLibres.filter(j => !j.role || j.role === 'jugador').map((jugador) => (
                 <div key={jugador.id} className="flex flex-col p-3 rounded-xl bg-background border border-border/40 text-xs shadow-md transition-all hover:border-primary/40 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col max-w-[150px]">

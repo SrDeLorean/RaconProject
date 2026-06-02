@@ -2,288 +2,185 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\SolicitudFichaje;
-use App\Models\Equipo;
-use App\Models\Temporada;
-use App\Models\OrganizacionEquipoUsuario;
-use App\Models\User;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreSolicitudFichajeRequest;
+use App\Http\Requests\ResponderSolicitudFichajeRequest;
+use App\Http\Requests\DecidirAdminSolicitudFichajeRequest;
+use App\Services\SolicitudFichajeService;
+use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Throwable;
 
 class SolicitudFichajeController extends Controller
 {
+    use ApiResponse;
+
+    protected SolicitudFichajeService $service;
+
+    /**
+     * Inyectar el servicio de negocio.
+     *
+     * @param SolicitudFichajeService $service
+     */
+    public function __construct(SolicitudFichajeService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Listar solicitudes de fichaje según el rol.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
     public function index(Request $request): JsonResponse
     {
-        $user = auth()->user();
-        $tipo = $request->query('tipo');
+        try {
+            $user = auth()->user();
+            $tipo = $request->query('tipo');
 
-        // 1. Si explícitamente se piden ENVIADAS (por el entrenador/dueño del club)
-        if ($tipo === 'enviadas') {
-            $miEquipo = Equipo::where('id_capitan', $user->id)->first();
-            if ($miEquipo) {
-                $solicitudes = SolicitudFichaje::with(['organizacion', 'jugador'])
-                    ->where('equipo_id', $miEquipo->id)
-                    ->orderBy('created_at', 'desc')
-                    ->get();
-                return response()->json($solicitudes);
-            }
-            return response()->json([]);
+            $solicitudes = $this->service->listarSolicitudes($user, $tipo);
+
+            return $this->successResponse(
+                $solicitudes,
+                'Listado de solicitudes recuperado exitosamente.'
+            );
+        } catch (Throwable $e) {
+            return $this->errorResponse(
+                'Error al recuperar el listado de solicitudes: ' . $e->getMessage(),
+                $e->getCode() >= 400 && $e->getCode() <= 500 ? $e->getCode() : 500
+            );
         }
-
-        // 2. Si explícitamente se piden RECIBIDAS (por el jugador)
-        if ($tipo === 'recibidas') {
-            $solicitudes = SolicitudFichaje::with(['equipo', 'organizacion'])
-                ->where('user_id', $user->id)
-                ->where('estado', 'pendiente_jugador')
-                ->get();
-            return response()->json($solicitudes);
-        }
-
-        // 3. Si explícitamente se piden PENDIENTES DE ADMIN (para administradores)
-        if ($tipo === 'pendientes_admin') {
-            $solicitudes = SolicitudFichaje::with(['equipo', 'organizacion', 'jugador'])
-                ->where('estado', 'pendiente_admin')
-                ->get();
-            return response()->json($solicitudes);
-        }
-
-        // Fallback retrospectivo por rol
-        if ($user->role === 'admin' || $user->role === 'organizador') {
-            $solicitudes = SolicitudFichaje::with(['equipo', 'organizacion', 'jugador'])
-                ->where('estado', 'pendiente_admin')
-                ->get();
-            return response()->json($solicitudes);
-        }
-
-        // Si es capitán (dueño de equipo), ver enviadas
-        $miEquipo = Equipo::where('id_capitan', $user->id)->first();
-        if ($miEquipo) {
-            $solicitudes = SolicitudFichaje::with(['organizacion', 'jugador'])
-                ->where('equipo_id', $miEquipo->id)
-                ->orderBy('created_at', 'desc')
-                ->get();
-            return response()->json($solicitudes);
-        }
-
-        // Si es solo jugador, ver recibidas
-        $solicitudes = SolicitudFichaje::with(['equipo', 'organizacion'])
-            ->where('user_id', $user->id)
-            ->where('estado', 'pendiente_jugador')
-            ->get();
-        return response()->json($solicitudes);
     }
 
     /**
      * Enviar solicitudes de fichaje (una por cada organización elegida).
+     *
+     * @param StoreSolicitudFichajeRequest $request
+     * @return JsonResponse
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreSolicitudFichajeRequest $request): JsonResponse
     {
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'posicion' => 'required|string',
-            'dorsal' => 'nullable|string',
-            'organizacion_ids' => 'required|array|min:1',
-            'organizacion_ids.*' => 'exists:organizaciones,id'
-        ]);
+        try {
+            $capitan = auth()->user();
+            $validated = $request->validated();
 
-        $capitan = auth()->user();
-        $equipo = Equipo::where('id_capitan', $capitan->id)->first();
+            $resultado = $this->service->crearSolicitudes($capitan, $validated);
 
-        if (!$equipo) {
-            return response()->json(['message' => 'No tienes un club registrado para realizar fichajes.'], 403);
+            return $this->successResponse(
+                null,
+                "Se han enviado ({$resultado['creadas']}) solicitudes de fichaje con éxito.",
+                201
+            );
+        } catch (Throwable $e) {
+            return $this->errorResponse(
+                $e->getMessage(),
+                $e->getCode() >= 400 && $e->getCode() <= 500 ? $e->getCode() : 500
+            );
         }
-
-        $targetPlayer = User::find($request->user_id);
-
-        if ($targetPlayer->role !== 'jugador') {
-            return response()->json(['message' => 'Solo puedes fichar a usuarios con rol de jugador.'], 400);
-        }
-
-        if ($targetPlayer->status === 'suspendido') {
-            return response()->json(['message' => 'El competidor está suspendido y no puede ser fichado.'], 400);
-        }
-
-        $creadas = 0;
-
-        foreach ($request->organizacion_ids as $orgId) {
-            // Verificar si ya pertenece a NUESTRO club en esa organización
-            $yaFichadoEnNuestroClub = OrganizacionEquipoUsuario::where('organizacion_id', $orgId)
-                ->where('equipo_id', $equipo->id)
-                ->where('user_id', $targetPlayer->id)
-                ->first();
-
-            if ($yaFichadoEnNuestroClub) {
-                continue; // Saltar si ya tiene club en esta organización
-            }
-
-            // Evitar duplicar solicitudes pendientes
-            $pendiente = SolicitudFichaje::where('organizacion_id', $orgId)
-                ->where('equipo_id', $equipo->id)
-                ->where('user_id', $targetPlayer->id)
-                ->whereIn('estado', ['pendiente_jugador', 'pendiente_admin'])
-                ->first();
-
-            if ($pendiente) {
-                continue;
-            }
-
-            $temporada = Temporada::where('organizacion_id', $orgId)
-                ->where('activa', true)
-                ->first();
-
-            SolicitudFichaje::create([
-                'organizacion_id' => $orgId,
-                'temporada_id' => $temporada ? $temporada->id : null,
-                'equipo_id' => $equipo->id,
-                'user_id' => $targetPlayer->id,
-                'dorsal' => $request->dorsal,
-                'posicion' => $request->posicion,
-                'estado' => 'pendiente_jugador',
-            ]);
-
-            $creadas++;
-        }
-
-        if ($creadas === 0) {
-            return response()->json(['message' => 'El jugador ya pertenece a un club o tiene solicitudes pendientes en los circuitos elegidos.'], 400);
-        }
-
-        return response()->json(['message' => "Se han enviado ($creadas) solicitudes de fichaje con éxito."], 201);
     }
 
     /**
      * El jugador Acepta o Rechaza la oferta.
+     *
+     * @param ResponderSolicitudFichajeRequest $request
+     * @param int $id
+     * @return JsonResponse
      */
-    public function responder(Request $request, $id): JsonResponse
+    public function responder(ResponderSolicitudFichajeRequest $request, $id): JsonResponse
     {
-        $request->validate([
-            'respuesta' => 'required|in:aceptar,rechazar'
-        ]);
+        try {
+            $authUserId = auth()->id();
+            $respuesta = $request->input('respuesta');
 
-        $solicitud = SolicitudFichaje::findOrFail($id);
+            $resultado = $this->service->responderSolicitud((int)$id, $authUserId, $respuesta);
 
-        if ($solicitud->user_id !== auth()->id()) {
-            return response()->json(['message' => 'No tienes permiso sobre esta solicitud.'], 403);
-        }
-
-        if ($solicitud->estado !== 'pendiente_jugador') {
-            return response()->json(['message' => 'Esta solicitud ya ha sido procesada.'], 400);
-        }
-
-        if ($request->respuesta === 'rechazar') {
-            $solicitud->update(['estado' => 'rechazado']);
-            return response()->json(['message' => 'Has rechazado la oferta de fichaje.']);
-        }
-
-        // El jugador aceptó. Revisamos si ya posee un club activo en esta organización
-        $yaTieneClubEnOrg = OrganizacionEquipoUsuario::where('organizacion_id', $solicitud->organizacion_id)
-            ->where('user_id', $solicitud->user_id)
-            ->first();
-
-        // Revisamos el mercado de la temporada.
-        $temporada = Temporada::where('organizacion_id', $solicitud->organizacion_id)
-            ->where('activa', true)
-            ->first();
-
-        $mercadoAbierto = true; // Por defecto abierto si no hay temporada
-        if ($temporada) {
-            $mercadoAbierto = ($temporada->estado_mercado === 'abierto');
-        }
-
-        // Si ya posee club en esta organización, el traspaso DEBE ser autorizado por el administrador
-        if ($yaTieneClubEnOrg && $yaTieneClubEnOrg->equipo_id !== $solicitud->equipo_id) {
-            $solicitud->update(['estado' => 'pendiente_admin']);
-            return response()->json(['message' => 'Oferta aceptada. Al tener un club activo en esta organización, el traspaso queda pendiente de aprobación administrativa.']);
-        }
-
-        if ($mercadoAbierto) {
-            // MERCADO ABIERTO: Incorporación automática al roster
-            OrganizacionEquipoUsuario::updateOrCreate(
-                [
-                    'organizacion_id' => $solicitud->organizacion_id,
-                    'user_id' => $solicitud->user_id,
-                ],
-                [
-                    'equipo_id' => $solicitud->equipo_id,
-                    'dorsal' => $solicitud->dorsal,
-                    'posicion_bloque' => $solicitud->posicion,
-                    'estado_fichaje' => 'activo',
-                    'fecha_vinculacion' => now(),
-                ]
+            return $this->successResponse(
+                null,
+                $resultado['message']
             );
-
-            $solicitud->update(['estado' => 'aprobado']);
-            return response()->json(['message' => '¡Fichaje completado! Te has unido al roster de manera inmediata.']);
-        } else {
-            // MERCADO CERRADO: Pasa a aprobación administrativa
-            $solicitud->update(['estado' => 'pendiente_admin']);
-            return response()->json(['message' => 'Oferta aceptada. Al estar el mercado cerrado, el fichaje queda pendiente de aprobación administrativa.']);
+        } catch (Throwable $e) {
+            return $this->errorResponse(
+                $e->getMessage(),
+                $e->getCode() >= 400 && $e->getCode() <= 500 ? $e->getCode() : 500
+            );
         }
     }
 
     /**
-     * El Administrador decide sobre la solicitud en mercado cerrado.
+     * El Administrador decide sobre la solicitud en mercado cerrado o traspaso entre clubes.
+     *
+     * @param DecidirAdminSolicitudFichajeRequest $request
+     * @param int $id
+     * @return JsonResponse
      */
-    public function decidirAdmin(Request $request, $id): JsonResponse
+    public function decidirAdmin(DecidirAdminSolicitudFichajeRequest $request, $id): JsonResponse
     {
-        $request->validate([
-            'respuesta' => 'required|in:aprobar,rechazar',
-            'observaciones' => 'nullable|string'
-        ]);
+        try {
+            $user = auth()->user();
+            $respuesta = $request->input('respuesta');
+            $observaciones = $request->input('observaciones');
 
-        $user = auth()->user();
-        if ($user->role !== 'admin' && $user->role !== 'organizador') {
-            return response()->json(['message' => 'Acceso denegado. Solo administradores pueden decidir.'], 403);
+            $resultado = $this->service->decidirAdmin((int)$id, $user->role, $respuesta, $observaciones);
+
+            return $this->successResponse(
+                null,
+                $resultado['message']
+            );
+        } catch (Throwable $e) {
+            return $this->errorResponse(
+                $e->getMessage(),
+                $e->getCode() >= 400 && $e->getCode() <= 500 ? $e->getCode() : 500
+            );
         }
-
-        $solicitud = SolicitudFichaje::findOrFail($id);
-
-        if ($solicitud->estado !== 'pendiente_admin') {
-            return response()->json(['message' => 'La solicitud no requiere aprobación administrativa.'], 400);
-        }
-
-        if ($request->respuesta === 'rechazar') {
-            $solicitud->update([
-                'estado' => 'rechazado',
-                'observaciones_admin' => $request->observaciones
-            ]);
-            return response()->json(['message' => 'Solicitud de fichaje rechazada por la administración.']);
-        }
-
-        // Aprobar e inscribir
-        OrganizacionEquipoUsuario::updateOrCreate(
-            [
-                'organizacion_id' => $solicitud->organizacion_id,
-                'user_id' => $solicitud->user_id,
-            ],
-            [
-                'equipo_id' => $solicitud->equipo_id,
-                'dorsal' => $solicitud->dorsal,
-                'posicion_bloque' => $solicitud->posicion,
-                'estado_fichaje' => 'activo',
-                'fecha_vinculacion' => now(),
-            ]
-        );
-
-        $solicitud->update([
-            'estado' => 'aprobado',
-            'observaciones_admin' => $request->observaciones
-        ]);
-
-        return response()->json(['message' => 'Fichaje aprobado de manera administrativa. Jugador incorporado al roster.']);
     }
 
     /**
-     * Eliminar/Cancelar solicitud
+     * Eliminar/Cancelar solicitud de fichaje.
+     *
+     * @param int $id
+     * @return JsonResponse
      */
     public function destroy($id): JsonResponse
     {
-        $solicitud = SolicitudFichaje::findOrFail($id);
-        $solicitud->delete();
-        return response()->json(['message' => 'Solicitud cancelada.']);
+        try {
+            $eliminado = $this->service->cancelarSolicitud((int)$id);
+
+            if (!$eliminado) {
+                return $this->errorResponse('La solicitud no pudo ser encontrada o cancelada.', 404);
+            }
+
+            return $this->successResponse(
+                null,
+                'Solicitud cancelada con éxito.'
+            );
+        } catch (Throwable $e) {
+            return $this->errorResponse(
+                'Error al cancelar la solicitud: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * Obtener listado de traspasos/fichajes aprobados en el sistema (público).
+     *
+     * @return JsonResponse
+     */
+    public function aprobados(): JsonResponse
+    {
+        try {
+            $solicitudes = $this->service->obtenerTraspasosAprobados();
+
+            return $this->successResponse(
+                $solicitudes,
+                'Traspasos aprobados recuperados exitosamente.'
+            );
+        } catch (Throwable $e) {
+            return $this->errorResponse(
+                'Error al recuperar traspasos aprobados: ' . $e->getMessage(),
+                500
+            );
+        }
     }
 }

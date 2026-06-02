@@ -503,6 +503,20 @@ export default function MatchmakerCalendario({ equipos = [], competenciaId = nul
       return;
     }
 
+    // Doble chequeo de seguridad
+    const dbLocalEaId = String(selectedMatch.local?.club_id_ea || '').trim();
+    const dbVisitEaId = String(selectedMatch.visitante?.club_id_ea || '').trim();
+    const idLocalMap = String(eaClubLocalId).trim();
+    const idVisitMap = String(eaClubVisitanteId).trim();
+
+    const matchContainsLocal = idLocalMap === dbLocalEaId || idVisitMap === dbLocalEaId;
+    const matchContainsVisit = idLocalMap === dbVisitEaId || idVisitMap === dbVisitEaId;
+
+    if (!matchContainsLocal || !matchContainsVisit) {
+      alert("❌ Error de validación: Los IDs de Club mapeados no corresponden a los del partido oficial.");
+      return;
+    }
+
     setEaProcessing(true);
     try {
       const res = await api.post(`/partidos/${selectedMatch.id}/ea-report`, {
@@ -1261,16 +1275,35 @@ export default function MatchmakerCalendario({ equipos = [], competenciaId = nul
                           if (mObj && mObj.clubs) {
                             const keys = Object.keys(mObj.clubs);
                             if (keys.length === 2) {
-                              const localClubEaId = selectedMatch.local?.club_id_ea;
-                              if (String(keys[0]) === String(localClubEaId)) {
-                                setEaClubLocalId(keys[0]);
-                                setEaClubVisitanteId(keys[1]);
-                              } else if (String(keys[1]) === String(localClubEaId)) {
-                                setEaClubLocalId(keys[1]);
-                                setEaClubVisitanteId(keys[0]);
+                              const dbLocalEaId = String(selectedMatch.local?.club_id_ea || '').trim();
+                              const dbVisitEaId = String(selectedMatch.visitante?.club_id_ea || '').trim();
+                              
+                              const key0 = String(keys[0]).trim();
+                              const key1 = String(keys[1]).trim();
+                              
+                              const isMatch0Local = key0 === dbLocalEaId;
+                              const isMatch1Local = key1 === dbLocalEaId;
+                              const isMatch0Visit = key0 === dbVisitEaId;
+                              const isMatch1Visit = key1 === dbVisitEaId;
+                              
+                              const hasLocal = isMatch0Local || isMatch1Local;
+                              const hasVisit = isMatch0Visit || isMatch1Visit;
+                              
+                              if (!hasLocal || !hasVisit) {
+                                alert("⚠️ Los clubes de este partido en EA Sports no corresponden a los del partido oficial (Local: " + (selectedMatch.local?.nombre || 'TBD') + ", Visitante: " + (selectedMatch.visitante?.nombre || 'TBD') + "). Por favor selecciona el partido correcto.");
+                                setSelectedEaMatchId('');
+                                setEaClubLocalId('');
+                                setEaClubVisitanteId('');
+                                return;
+                              }
+                              
+                              // Asignar determinando quién es quién
+                              if (isMatch0Local) {
+                                setEaClubLocalId(key0);
+                                setEaClubVisitanteId(key1);
                               } else {
-                                setEaClubLocalId(keys[0]);
-                                setEaClubVisitanteId(keys[1]);
+                                setEaClubLocalId(key1);
+                                setEaClubVisitanteId(key0);
                               }
                             }
                           }

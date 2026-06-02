@@ -23,29 +23,17 @@ const DetalleCompetenciaPublica = lazy(() => import('@/features/public/pages/Det
 const Partidos = lazy(() => import('@/features/public/pages/Partidos'));
 const Clasificacion = lazy(() => import('@/features/public/pages/Clasificacion'));
 const Equipos = lazy(() => import('@/features/public/pages/Equipos'));
+const DetalleEquipo = lazy(() => import('@/features/public/pages/DetalleEquipo'));
 const Jugadores = lazy(() => import('@/features/public/pages/Jugadores'));
+const DetalleJugador = lazy(() => import('@/features/public/pages/DetalleJugador'));
+const DetallePartido = lazy(() => import('@/features/public/pages/DetallePartido'));
+const Traspasos = lazy(() => import('@/features/public/pages/Traspasos'));
 const TotwTots = lazy(() => import('@/features/public/pages/TotwTots'));
 const Infografia = lazy(() => import('@/features/public/pages/Infografia'));
 const Contacto = lazy(() => import('@/features/public/pages/Contacto'));
 
-// 💎 Pantalla de Carga Global Premium (Ajustada al nuevo diseño HSL)
-const PageLoader = () => (
-  <div className="min-h-screen bg-background flex flex-col items-center justify-center overflow-hidden relative">
-    
-    {/* Resplandor ambiental de fondo para la pantalla de carga */}
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-primary/10 rounded-full blur-[100px] pointer-events-none z-0 animate-pulse"></div>
+import PageLoader from '@/components/ui/PageLoader';
 
-    <div className="flex flex-col items-center gap-6 animate-fade-in relative z-10">
-      {/* Logo R idéntico al del Login/Navbar */}
-      <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-destructive flex items-center justify-center text-primary-foreground font-display font-black text-4xl shadow-[0_0_20px_hsla(var(--primary),0.5)] animate-bounce">
-        R
-      </div>
-      <p className="text-xs font-bold text-muted-foreground tracking-[0.3em] uppercase animate-pulse">
-        Cargando Sistema...
-      </p>
-    </div>
-  </div>
-);
 
 export const router = createBrowserRouter([
   // Rutas Públicas
@@ -61,9 +49,13 @@ export const router = createBrowserRouter([
       { path: '/organizaciones/:orgId/temporadas/:tempId', element: <Competencias /> },
       { path: '/competencia-detalle/:compId', element: <DetalleCompetenciaPublica /> },
       { path: '/partidos', element: <Partidos /> },
+      { path: '/partidos/:id', element: <DetallePartido /> },
       { path: '/clasificacion', element: <Clasificacion /> },
       { path: '/equipos', element: <Equipos /> },
+      { path: '/equipos/:id', element: <DetalleEquipo /> },
       { path: '/jugadores', element: <Jugadores /> },
+      { path: '/jugadores/:id', element: <DetalleJugador /> },
+      { path: '/traspasos', element: <Traspasos /> },
       { path: '/totw-tots', element: <TotwTots /> },
       { path: '/infografia', element: <Infografia /> },
       { path: '/contacto', element: <Contacto /> },

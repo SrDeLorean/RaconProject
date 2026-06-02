@@ -24,43 +24,63 @@
 }
 
 @layer base {
-  /* MODO CLARO (Beige Cálido/Crema) */
+  /* MODO CLARO (Beige Cálido/Crema Suave y Relajante) */
   :root {
-    --background: 35 20% 98%;
-    --foreground: 20 15% 15%;
-    --card: 35 20% 96%;
-    --card-foreground: 20 15% 15%;
-    --muted: 35 10% 90%;
-    --muted-foreground: 20 10% 45%;
-    --border: 35 15% 85%;
-    --input: 35 15% 85%;
-    --primary: 352 100% 45%; 
+    --background: 40 8% 90%;
+    --foreground: 20 10% 15%;
+    --card: 40 8% 86%;
+    --card-foreground: 20 10% 15%;
+    --muted: 40 6% 80%;
+    --muted-foreground: 20 8% 42%;
+    --border: 40 8% 74%;
+    --input: 40 8% 74%;
+    --primary: 352 90% 42%; 
     --primary-foreground: 0 0% 100%;
-    --secondary: 35 15% 90%;
-    --secondary-foreground: 20 15% 15%;
-    --destructive: 0 70% 50%;
+    --secondary: 40 8% 82%;
+    --secondary-foreground: 20 10% 15%;
+    --destructive: 0 70% 45%;
     --destructive-foreground: 0 0% 100%;
-    --ring: 352 100% 45%;
+    --ring: 352 90% 42%;
     --radius: 0.75rem;
+
+    --gradient-primary:
+      linear-gradient(
+        135deg,
+        #ff002e 0%,
+        #ff3558 50%,
+        #ff6b81 100%
+      );
+      --shadow-neon:
+    0 0 40px rgba(255,0,46,.35);
+
+    --shadow-card:
+      0 10px 40px rgba(0,0,0,.45);
+    
+    --success: 142 76% 36%;      /* Competitive Green - Modo Claro */
+    --warning: 38 92% 50%;       /* Tournament Gold - Modo Claro */
+    --info: 217 91% 60%;         /* Electric Blue - Modo Claro */
   }
 
-  /* MODO OSCURO (Café Profundo / Gemini Style) */
+  /* MODO OSCURO (Racon Pro Premium Esports Style) */
   .dark {
-    --background: 24 15% 5%;     /* Café muy oscuro */
-    --foreground: 35 20% 90%;    /* Blanco cálido */
-    --card: 24 12% 8%;          /* Gris café suave */
-    --card-foreground: 35 20% 90%;
-    --muted: 24 10% 12%;        /* Café tierra para zonas mudas */
-    --muted-foreground: 35 10% 60%;
-    --border: 24 10% 18%;       /* Borde suave, no agresivo */
-    --input: 24 10% 18%;
-    --primary: 352 100% 50%; 
+    --background: 240 20% 2%;     /* Deep Black */
+    --foreground: 0 0% 98%;       /* Pure White */
+    --card: 240 10% 8%;           /* Graphite Black */
+    --card-foreground: 0 0% 98%;
+    --muted: 240 12% 6%;          /* Dark Slate */
+    --muted-foreground: 240 10% 65%;
+    --border: 240 10% 12%;        /* Borde sutil */
+    --input: 240 10% 14%;
+    --primary: 352 100% 45%;      /* Competition Red */
     --primary-foreground: 0 0% 100%;
-    --secondary: 24 10% 15%;
-    --secondary-foreground: 35 20% 90%;
-    --destructive: 0 60% 40%;
+    --secondary: 240 12% 12%;     /* Dark Steel */
+    --secondary-foreground: 0 0% 98%;
+    --destructive: 352 100% 58%;  /* Alert Red */
     --destructive-foreground: 0 0% 100%;
-    --ring: 352 100% 50%;
+    --ring: 352 100% 45%;
+    --success: 151 100% 45%;      /* Competitive Green */
+    --warning: 43 100% 50%;       /* Tournament Gold */
+    --info: 208 100% 50%;         /* Electric Blue */
   }
 }
 
@@ -88,22 +108,40 @@
   --color-accent-foreground: hsl(var(--accent-foreground));
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
+  --color-success: hsl(var(--success, 151 100% 45%));
+  --color-warning: hsl(var(--warning, 43 100% 50%));
+  --color-info: hsl(var(--info, 208 100% 50%));
   
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
 }
 
-/* 4. BASE Y UTILIDADES (El resto de tu lógica táctica) */
 @layer base {
+  html {
+    font-size: 110%; /* Escala un poco más pequeña y balanceada para no desbordar */
+    scroll-behavior: smooth;
+  }
+
   * { 
     @apply border-border selection:bg-primary/30 selection:text-primary-foreground; 
   }
-  
+
   body {
-    @apply bg-background text-foreground antialiased min-h-screen relative overflow-x-hidden;
+    @apply bg-background text-foreground antialiased min-h-screen relative overflow-x-hidden w-full;
     font-family: var(--font-sans);
-    background-image: radial-gradient(circle at 50% -10%, hsla(var(--primary), 0.08) 0%, transparent 70%);
+    font-size: 1rem;
+  }
+
+  /* Fondo premium para modo claro: gradiente cálido sutil */
+  :root body {
+    background: linear-gradient(180deg, hsl(40 8% 90%) 0%, hsl(40 6% 87%) 50%, hsl(40 4% 84%) 100%);
+    background-attachment: fixed;
+  }
+
+  /* Fondo premium para modo oscuro: gradiente profundo azulado */
+  .dark body {
+    background: linear-gradient(180deg, #020205 0%, #060a17 50%, #0b1530 100%);
     background-attachment: fixed;
   }
 
@@ -205,6 +243,17 @@
     background-image: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 100%) !important;
   }
 
+  /* Card hover premium con elevación + glow */
+  .glass-card-hover {
+    @apply bg-card/25 backdrop-blur-md border border-border/50 rounded-2xl shadow-lg;
+    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  .glass-card-hover:hover {
+    transform: translateY(-6px) scale(1.01);
+    border-color: hsla(var(--primary), 0.45);
+    box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.4), 0 0 30px hsla(var(--primary), 0.12);
+  }
+
   .neon-glow {
     @apply shadow-[0_8px_30px_rgba(232,0,29,0.15)] border-primary/30;
   }
@@ -247,7 +296,60 @@
 
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* --- INPUTS Y FILTROS PREMIUM (Reutilizables en páginas públicas) --- */
+  .input-premium {
+    @apply w-full border rounded-xl px-4 py-2.5 text-xs font-semibold text-foreground;
+    @apply focus:outline-none transition-all duration-300;
+    background: hsla(var(--background), 0.5);
+    border-color: hsla(var(--border), 0.5);
+  }
+  .input-premium:focus {
+    border-color: hsla(var(--primary), 0.6);
+    box-shadow: 0 0 0 3px hsla(var(--primary), 0.1), 0 0 20px hsla(var(--primary), 0.08);
+  }
+  .input-premium::placeholder {
+    @apply text-muted-foreground/60;
+  }
+
+  .filter-panel {
+    @apply border backdrop-blur-md rounded-2xl p-5 shadow-lg;
+    background: hsla(var(--card), 0.25);
+    border-color: hsla(var(--border), 0.5);
+  }
+
+  /* --- PAGINACIÓN PREMIUM --- */
+  .pagination-btn {
+    @apply px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl border text-foreground;
+    @apply disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300;
+    background: hsla(var(--card), 0.5);
+    border-color: hsla(var(--border), 0.5);
+  }
+  .pagination-btn:not(:disabled):hover {
+    border-color: hsla(var(--primary), 0.5);
+    background: hsla(var(--primary), 0.08);
+    color: hsl(var(--primary));
+    box-shadow: 0 0 15px hsla(var(--primary), 0.1);
+    transform: translateY(-1px);
+  }
+
+  /* --- SKELETON / SHIMMER LOADING --- */
+  .skeleton-shimmer {
+    @apply rounded-2xl relative overflow-hidden;
+    background: hsla(var(--muted), 0.3);
+  }
+  .skeleton-shimmer::after {
+    content: "";
+    @apply absolute inset-0;
+    background: linear-gradient(90deg, transparent, hsla(var(--foreground), 0.04), transparent);
+    animation: shimmer 1.8s infinite;
+    transform: translateX(-100%);
+  }
 }
+
+/* ========================================================================= */
+/* ANIMACIONES GLOBALES                                                      */
+/* ========================================================================= */
 
 @keyframes scanline {
   0% { transform: translateY(-100%); }
@@ -265,4 +367,427 @@
 
 .animate-pulse-glow {
   animation: pulse-glow 3s infinite ease-in-out;
+}
+
+/* Entrada progresiva desde abajo */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Stagger delays para cards (usar con style={{ animationDelay }}) */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+.stagger-9 { animation-delay: 0.45s; }
+
+/* Entrada por fade simple */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out both;
+}
+
+/* Slide down para dropdowns */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Contador de stats animado */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-count-up {
+  animation: countUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Barra de progreso animada */
+@keyframes fillBar {
+  from { width: 0%; }
+}
+
+.animate-fill-bar {
+  animation: fillBar 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Scroll to top button */
+@keyframes scrollTopBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.scroll-top-btn {
+  @apply fixed bottom-8 right-8 z-50 p-3 rounded-full border;
+  @apply transition-all duration-300 cursor-pointer;
+  background: hsla(var(--primary), 0.9);
+  border-color: hsla(var(--primary), 0.6);
+  color: hsl(var(--primary-foreground));
+  box-shadow: 0 4px 20px hsla(var(--primary), 0.4);
+}
+.scroll-top-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px hsla(var(--primary), 0.6);
+}
+
+/* ========================================================================= */
+/* ESTÁNDAR GLOBAL DE TELEMETRÍA E-SPORTS (TACTICAL HUD CLASSES)            */
+/* ========================================================================= */
+
+/* Ruido digital HUD */
+.hud-noise {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.038'/%3E%3C/svg%3E");
+}
+
+/* Scanlines de retransmisión */
+.broadcast-scanlines::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.15) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Panel Glassmorphic del HUD adaptable a Claro y Oscuro */
+.glass-hud-panel {
+  background: hsla(var(--card), 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid hsla(var(--border), 0.45);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.glass-hud-panel:hover {
+  border-color: hsla(var(--primary), 0.4);
+  box-shadow: 0 0 25px hsla(var(--primary), 0.08);
+}
+
+/* Resplandor para fechas activas */
+.active-date-glow {
+  box-shadow: 0 0 20px hsla(var(--primary), 0.45), inset 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+/* Parpadeo continuo para partidos en vivo (LIVE) */
+@keyframes pulse-live {
+  0%, 100% { border-color: hsla(var(--primary), 0.45); box-shadow: 0 0 10px hsla(var(--primary), 0.1); }
+  50% { border-color: hsla(var(--primary), 0.9); box-shadow: 0 0 25px hsla(var(--primary), 0.35); }
+}
+.live-match-flash {
+  animation: pulse-live 2.5s infinite alternate;
+}
+
+/* Animación de marquesina infinita para tickers */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee-slow {
+  display: flex;
+  width: max-content;
+  animation: marquee 75s linear infinite !important;
+}
+
+/* ========================================================================= */
+/* ESTÁNDAR GLOBAL DE INFOGRAFÍA Y PODIOS (INFOGRAPHY HUD CLASSES)           */
+/* ========================================================================= */
+
+.glass-cyber {
+  background: hsla(var(--card), 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid hsla(var(--border), 0.45);
+}
+
+@keyframes rotate-clockwise {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes rotate-counter {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(1); opacity: 0.35; }
+  50% { transform: scale(1.15); opacity: 0.65; }
+}
+@keyframes breathing-card {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.01); }
+}
+
+.anim-rotate-cw {
+  animation: rotate-clockwise 10s linear infinite;
+}
+.anim-rotate-ccw {
+  animation: rotate-counter 15s linear infinite;
+}
+.anim-pulse-ring {
+  animation: pulse-ring 3s ease-in-out infinite;
+}
+.anim-breathing-card {
+  animation: breathing-card 6s ease-in-out infinite;
+}
+
+.gold-glow {
+  box-shadow: 0 0 35px rgba(245, 158, 11, 0.35), inset 0 0 15px rgba(245, 158, 11, 0.1);
+}
+.silver-glow {
+  box-shadow: 0 0 35px rgba(59, 130, 246, 0.35), inset 0 0 15px rgba(59, 130, 246, 0.1);
+}
+.purple-glow {
+  box-shadow: 0 0 35px rgba(139, 92, 246, 0.35), inset 0 0 15px rgba(139, 92, 246, 0.1);
+}
+
+/* ========================================================================= */
+/* ESTÁNDAR GLOBAL DE ORGANIZACIONES Y BROADCAST (ORGANIZATIONS CLASSES)    */
+/* ========================================================================= */
+
+@keyframes float-brush-right {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(15px, -8px) rotate(1deg); }
+}
+@keyframes float-brush-left {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(-15px, 8px) rotate(-1deg); }
+}
+@keyframes shimmer-neon {
+  0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 10px hsla(var(--primary), 0.6)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 25px hsla(var(--primary), 0.95)) saturate(1.2); }
+}
+
+.animate-scroll-ticker {
+  display: flex;
+  width: max-content;
+  animation: scroll-infinite 350s linear infinite;
+}
+.animate-scroll-ticker:hover {
+  animation-play-state: paused;
+}
+
+@keyframes scroll-infinite {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.float-brush-1 {
+  animation: float-brush-right 12s ease-in-out infinite;
+}
+.float-brush-2 {
+  animation: float-brush-left 14s ease-in-out infinite;
+}
+
+.shimmer-text {
+  animation: shimmer-neon 4s ease-in-out infinite;
+}
+
+.scanlines {
+  position: relative;
+  overflow: hidden;
+}
+.scanlines::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.08;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.15) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.02),
+    rgba(0, 255, 0, 0.01),
+    rgba(0, 0, 255, 0.02)
+  );
+  background-size: 100% 4px, 6px 100%;
+}
+
+.dark .scanlines::before {
+  opacity: 1;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.25) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.03),
+    rgba(0, 255, 0, 0.01),
+    rgba(0, 0, 255, 0.03)
+  );
+}
+
+.tactical-noise {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.045'/%3E%3C/svg%3E");
+}
+
+.panel-tactical {
+  background: hsla(var(--card), 0.72);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid hsla(var(--border), 0.45);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.panel-tactical:hover {
+  border-color: hsla(var(--primary), 0.4);
+  box-shadow: 0 0 25px hsla(var(--primary), 0.08);
+}
+
+/* ========================================================================= */
+/* ESTÁNDAR DE TEMPORADAS Y COMPONENTES PÚBLICOS                            */
+/* ========================================================================= */
+
+.cyber-noise {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.035'/%3E%3C/svg%3E");
+}
+
+.ambient-glow-crimson {
+  background: radial-gradient(circle at center, rgba(232, 0, 29, 0.15) 0%, transparent 70%);
+}
+
+.glass-tactical {
+  background: rgba(22, 17, 15, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(232, 0, 29, 0.18);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.glass-tactical:hover {
+  border-color: rgba(232, 0, 29, 0.5);
+  box-shadow: 0 8px 30px rgba(232, 0, 29, 0.12);
+}
+
+@keyframes ticker-slide {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-animation {
+  display: flex;
+  width: max-content;
+  animation: ticker-slide 25s linear infinite;
+}
+.ticker-animation:hover {
+  animation-play-state: paused;
+}
+
+.tab-underline-glow {
+  box-shadow: 0 0 15px rgba(232, 0, 29, 0.8), 0 0 5px rgba(232, 0, 29, 0.5);
+}
+
+.glow-neon-navbar {
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4), inset 0 -1px 0 0 rgba(255, 255, 255, 0.05);
+}
+
+.btn-glossy {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsla(var(--primary), 0.75) 100%);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.btn-glossy:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px -3px hsla(var(--primary), 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Elevación interactiva de tarjetas */
+.league-card-interactive {
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.league-card-interactive:hover {
+  transform: translateY(-8px) scale(1.01);
+  border-color: hsla(var(--primary), 0.5);
+  box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.5), 0 0 25px hsla(var(--primary), 0.15);
+}
+
+/* ========================================================================= */
+/* GRADIENTES DE POSICIÓN / COLORES POR ROL (Para cards de jugadores)       */
+/* ========================================================================= */
+.pos-gk { border-left: 3px solid #f59e0b; }  /* Amarillo - Portero */
+.pos-def { border-left: 3px solid #3b82f6; } /* Azul - Defensa */
+.pos-med { border-left: 3px solid #10b981; } /* Verde - Mediocentro */
+.pos-del { border-left: 3px solid #ef4444; } /* Rojo - Delantero */
+.pos-other { border-left: 3px solid #8b5cf6; } /* Púrpura - Otro */
+
+/* Colores de plataforma */
+.plat-ps5 { color: #2563eb; }
+.plat-ps4 { color: #1d4ed8; }
+.plat-xbox { color: #16a34a; }
+.plat-pc { color: #f59e0b; }
+
+/* ========================================================================= */
+/* UNDERLINE ANIMADO PARA NAVBAR                                             */
+/* ========================================================================= */
+.nav-link-underline {
+  @apply relative;
+}
+.nav-link-underline::after {
+  content: "";
+  @apply absolute bottom-0 left-0 w-0 h-[2px] rounded-full;
+  background: linear-gradient(90deg, hsl(var(--primary)), hsla(var(--primary), 0.4));
+  transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.nav-link-underline:hover::after {
+  width: 100%;
+}
+
+/* Dropdown mejorado con slide */
+.dropdown-menu {
+  @apply absolute top-full left-0 mt-2 min-w-[180px] rounded-xl p-2 shadow-2xl z-50;
+  @apply flex flex-col gap-0.5;
+  @apply opacity-0 invisible;
+  background: hsla(var(--card), 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid hsla(var(--border), 0.6);
+  transform: translateY(-4px) scale(0.98);
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.group:hover > .dropdown-menu {
+  @apply opacity-100 visible;
+  transform: translateY(0) scale(1);
+}
+
+.dropdown-item {
+  @apply px-3 py-2.5 text-[10px] font-black tracking-widest uppercase rounded-lg transition-all duration-200;
+}
+.dropdown-item:hover {
+  @apply text-foreground;
+  background: hsla(var(--muted), 0.5);
+}
+.dropdown-item-active {
+  background: hsla(var(--primary), 0.1);
+  color: hsl(var(--primary));
 }

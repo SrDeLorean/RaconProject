@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import Badge from '@/components/ui/Badge';
 import api from '@/api/axios';
 
+
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
@@ -14,17 +16,27 @@ function computeStandings(partidos, seedTeams = []) {
 
   // Pre-seed from teams list so they appear even with 0 results
   seedTeams.forEach(t => {
-    if (t?.id) map[t.id] = { id: t.id, nombre: t.nombre, abreviatura: t.abreviatura, pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, pts:0 };
+    if (t?.id) map[t.id] = { id: t.id, nombre: t.nombre, abreviatura: t.abreviatura, logo: t.logo, pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, pts:0, ultimosCinco: [] };
   });
 
   // Seed any teams we encounter in partidos (even upcoming ones)
   partidos.forEach(p => {
-    if (p.local?.id  && !map[p.local.id])    map[p.local.id]    = { id: p.local.id,    nombre: p.local.nombre,    abreviatura: p.local.abreviatura,    pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, pts:0 };
-    if (p.visitante?.id && !map[p.visitante.id]) map[p.visitante.id] = { id: p.visitante.id, nombre: p.visitante.nombre, abreviatura: p.visitante.abreviatura, pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, pts:0 };
+    if (p.local?.id  && !map[p.local.id])    map[p.local.id]    = { id: p.local.id,    nombre: p.local.nombre,    abreviatura: p.local.abreviatura,    logo: p.local.logo,    pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, pts:0, ultimosCinco: [] };
+    if (p.visitante?.id && !map[p.visitante.id]) map[p.visitante.id] = { id: p.visitante.id, nombre: p.visitante.nombre, abreviatura: p.visitante.abreviatura, logo: p.visitante.logo, pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, pts:0, ultimosCinco: [] };
+  });
+
+  // Sort matches chronologically to calculate form order correctly
+  const sortedPartidos = [...partidos].sort((a, b) => {
+    const dateA = a.fecha || '';
+    const dateB = b.fecha || '';
+    if (dateA !== dateB) return dateA.localeCompare(dateB);
+    const timeA = a.hora || '';
+    const timeB = b.hora || '';
+    return timeA.localeCompare(timeB);
   });
 
   // Apply finished results
-  partidos.forEach(p => {
+  sortedPartidos.forEach(p => {
     if (p.goles_local == null || p.goles_visitante == null) return;
     const lid = p.local?.id, vid = p.visitante?.id;
     if (!lid || !vid || !map[lid] || !map[vid]) return;
@@ -33,9 +45,24 @@ function computeStandings(partidos, seedTeams = []) {
     tl.pj++; tv.pj++;
     tl.gf += gl; tl.gc += gv;
     tv.gf += gv; tv.gc += gl;
-    if      (gl > gv) { tl.pg++; tl.pts += 3; tv.pp++; }
-    else if (gl < gv) { tv.pg++; tv.pts += 3; tl.pp++; }
-    else              { tl.pe++; tl.pts++;     tv.pe++; tv.pts++; }
+    if (gl > gv) {
+      tl.pg++; tl.pts += 3; tv.pp++;
+      tl.ultimosCinco.push('v');
+      tv.ultimosCinco.push('x');
+    } else if (gl < gv) {
+      tv.pg++; tv.pts += 3; tl.pp++;
+      tl.ultimosCinco.push('x');
+      tv.ultimosCinco.push('v');
+    } else {
+      tl.pe++; tl.pts++; tv.pe++; tv.pts++;
+      tl.ultimosCinco.push('-');
+      tv.ultimosCinco.push('-');
+    }
+  });
+
+  // Limit to last 5 results
+  Object.values(map).forEach(t => {
+    t.ultimosCinco = t.ultimosCinco.slice(-5);
   });
 
   return Object.values(map).sort((a, b) =>
@@ -108,6 +135,7 @@ function StandingsTable({ standings, noResultsMsg }) {
             <th className="px-4 py-3 text-center w-12">GC</th>
             <th className="px-4 py-3 text-center w-14">DG</th>
             <th className="px-4 py-3 text-center w-16 text-primary">Pts</th>
+            <th className="px-4 py-3 text-center w-36">Últimos 5</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border/30 font-semibold text-xs">
@@ -128,9 +156,17 @@ function StandingsTable({ standings, noResultsMsg }) {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2.5">
-                    <div className={`w-8 h-8 rounded-lg border flex items-center justify-center font-display font-black text-[9px] shadow-inner uppercase shrink-0 ${
-                      idx === 0 && hasResults ? 'bg-primary/15 border-primary/40 text-primary' : 'bg-muted/40 border-border/50 text-foreground'
-                    }`}>{s.abreviatura}</div>
+                    {s.logo ? (
+                      <img 
+                        src={s.logo.startsWith('http') ? s.logo : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${s.logo}`} 
+                        alt={s.nombre} 
+                        className="w-8 h-8 rounded-lg object-cover border border-border/50 shadow-inner bg-card shrink-0"
+                      />
+                    ) : (
+                      <div className={`w-8 h-8 rounded-lg border flex items-center justify-center font-display font-black text-[9px] shadow-inner uppercase shrink-0 ${
+                        idx === 0 && hasResults ? 'bg-primary/15 border-primary/40 text-primary' : 'bg-muted/40 border-border/50 text-foreground'
+                      }`}>{s.abreviatura}</div>
+                    )}
                     <span className="font-black uppercase text-foreground tracking-wide">{s.nombre}</span>
                   </div>
                 </td>
@@ -144,6 +180,28 @@ function StandingsTable({ standings, noResultsMsg }) {
                   {dg > 0 ? `+${dg}` : dg}
                 </td>
                 <td className="px-4 py-3 text-center font-mono text-primary font-black text-sm">{s.pts}</td>
+                <td className="px-4 py-3 text-center">
+                  <div className="flex items-center justify-center gap-1.5">
+                    {s.ultimosCinco && s.ultimosCinco.length > 0 ? (
+                      s.ultimosCinco.map((res, rIdx) => {
+                        let bgColor = 'bg-slate-500/20 text-slate-400 border border-slate-500/30';
+                        if (res === 'v') bgColor = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+                        if (res === 'x') bgColor = 'bg-rose-500/20 text-rose-400 border border-rose-500/30';
+                        return (
+                          <span
+                            key={rIdx}
+                            className={`w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-black uppercase ${bgColor}`}
+                            title={res === 'v' ? 'Victoria' : res === 'x' ? 'Derrota' : 'Empate'}
+                          >
+                            {res}
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <span className="text-muted-foreground/40 text-[10px] font-mono">—</span>
+                    )}
+                  </div>
+                </td>
               </tr>
             );
           })}
@@ -585,12 +643,26 @@ function CompetenciaSection({ competencia, navigate }) {
   const fmtIcon  = isPlayoff ? '🏆' : isCopa ? '🥇' : '🏟️';
   const fmtLabel = isPlayoff ? 'Playoffs' : isCopa ? 'Copa' : 'Liga';
 
+  // Construct full logo URL
+  const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+  const logoUrl = competencia.logo 
+    ? (competencia.logo.startsWith('http') ? competencia.logo : `${backendBaseUrl}${competencia.logo}`) 
+    : '';
+
   return (
     <div className="space-y-4">
       {/* Header row */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="text-lg">{fmtIcon}</span>
+          {logoUrl ? (
+            <img 
+              src={logoUrl} 
+              alt={competencia.orgNombre || 'Logo'} 
+              className="w-7 h-7 rounded object-cover border border-border/40 shadow-inner bg-card"
+            />
+          ) : (
+            <span className="text-lg">{fmtIcon}</span>
+          )}
           <h2 className="text-base font-display font-black uppercase tracking-wider text-foreground">
             {competencia.nombre}
           </h2>
@@ -620,40 +692,53 @@ function CompetenciaSection({ competencia, navigate }) {
 export default function Clasificacion() {
   const navigate = useNavigate();
   const [partidos,   setPartidos]   = useState([]);
+  const [organizacionesList, setOrganizacionesList] = useState([]);
+  const [competenciasList, setCompetenciasList] = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [orgFiltro,  setOrgFiltro]  = useState(null);
   const [compFiltro, setCompFiltro] = useState(null);
 
   useEffect(() => {
-    api.get('/partidos')
-      .then(res => setPartidos(res.data || []))
-      .catch(err => console.error('Error al cargar partidos:', err))
-      .finally(() => setLoading(false));
+    const fetchAllData = async () => {
+      try {
+        const [partidosRes, orgsRes, compsRes] = await Promise.all([
+          api.get('/partidos'),
+          api.get('/organizaciones'),
+          api.get('/competencias', { params: { per_page: 100 } })
+        ]);
+        setPartidos(partidosRes.data || []);
+        setOrganizacionesList(orgsRes.data?.data || orgsRes.data || []);
+        setCompetenciasList(compsRes.data?.data || compsRes.data || []);
+      } catch (err) {
+        console.error('Error al cargar datos en clasificación:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAllData();
   }, []);
 
   // ── Derived options ────────────────────────────────────────────────────────
 
   const organizaciones = useMemo(() => {
-    const map = {};
-    partidos.forEach(p => {
-      const org = p.competencia?.temporada?.organizacion;
-      if (org && !map[org.id]) map[org.id] = { id: org.id, nombre: org.nombre };
-    });
-    return Object.values(map);
-  }, [partidos]);
+    return organizacionesList;
+  }, [organizacionesList]);
 
   const competencias = useMemo(() => {
-    const map = {};
-    partidos.forEach(p => {
-      const c = p.competencia;
-      if (!c) return;
-      const orgId = c.temporada?.organizacion?.id;
-      if (orgFiltro && orgId !== orgFiltro) return;
-      if (!map[c.id]) map[c.id] = { id: c.id, nombre: c.nombre, formato: c.formato, orgNombre: c.temporada?.organizacion?.nombre, count: 0 };
-      map[c.id].count++;
-    });
-    return Object.values(map);
-  }, [partidos, orgFiltro]);
+    return competenciasList.filter(c => {
+      const orgId = c.temporada?.organizacion?.id || c.temporada?.organizacion_id;
+      if (orgFiltro && orgId !== orgFiltro) return false;
+      return true;
+    }).map(c => ({
+      id: c.id,
+      nombre: c.nombre,
+      formato: c.formato,
+      orgNombre: c.temporada?.organizacion?.nombre,
+      logo: c.logo,
+      orgLogo: c.temporada?.organizacion?.logo,
+      count: partidos.filter(p => p.competencia_id === c.id || p.competencia?.id === c.id).length
+    }));
+  }, [competenciasList, orgFiltro, partidos]);
 
   const competenciasConPartidos = useMemo(() => {
     const map = {};
@@ -663,7 +748,7 @@ export default function Clasificacion() {
       const orgId = c.temporada?.organizacion?.id;
       if (orgFiltro  && orgId !== orgFiltro)  return;
       if (compFiltro && c.id  !== compFiltro) return;
-      if (!map[c.id]) map[c.id] = { id: c.id, nombre: c.nombre, formato: c.formato, orgNombre: c.temporada?.organizacion?.nombre, partidos: [] };
+      if (!map[c.id]) map[c.id] = { id: c.id, nombre: c.nombre, logo: c.logo, formato: c.formato, orgNombre: c.temporada?.organizacion?.nombre, orgLogo: c.temporada?.organizacion?.logo, partidos: [] };
       map[c.id].partidos.push(p);
     });
     return Object.values(map);
@@ -683,44 +768,111 @@ export default function Clasificacion() {
   const activeFiltersCount = [orgFiltro, compFiltro].filter(Boolean).length;
 
   return (
-    <div className="relative min-h-screen bg-background pt-28 pb-16 overflow-hidden">
+    <div className="relative min-h-screen bg-background pb-16 overflow-hidden text-foreground">
+      {/* Resplandores ambientales e-sports */}
+      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[350px] md:w-[600px] h-[350px] md:h-[600px] bg-primary/8 blur-[130px] rounded-full pointer-events-none z-10"></div>
+      <div className="absolute bottom-1/3 right-1/4 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-primary/5 blur-[120px] rounded-full pointer-events-none z-10"></div>
 
-      {/* Background */}
-      <div
-        className="absolute inset-0 bg-cover bg-center z-0"
-        style={{ backgroundImage: "url('https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1920&auto=format&fit=crop')" }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/70 to-background z-10" />
-      </div>
-      <div className="absolute top-1/3 right-1/4 w-[500px] h-[500px] bg-primary/15 blur-[140px] rounded-full pointer-events-none z-10" />
+      {/* ========================================================================= */}
+      {/* 1. HERO CENTRAL (Cinemático y Táctico)                                    */}
+      {/* ========================================================================= */}
+      <section className="relative z-20 max-w-7xl mx-auto px-6 lg:px-10 pt-32 md:pt-40 pb-16 overflow-hidden">
+        
+        {/* Palabras de fondo brush estilo editorial */}
+        <div className="absolute inset-0 pointer-events-none select-none overflow-hidden z-0">
+          <span className="absolute top-10 left-10 text-[9rem] md:text-[14rem] font-display font-black uppercase text-foreground/[0.015] dark:text-foreground/[0.025] blur-[2px] float-brush-1">
+            TABLA
+          </span>
+          <span className="absolute bottom-10 right-20 text-[9rem] md:text-[14rem] font-display font-black uppercase text-foreground/[0.015] dark:text-foreground/[0.025] blur-[3px] float-brush-2">
+            POSICIONES
+          </span>
+          <span className="absolute top-1/2 left-1/3 -translate-y-1/2 text-[10rem] md:text-[15rem] font-display font-black uppercase text-foreground/[0.01] dark:text-foreground/[0.02] blur-[4px]">
+            TORNEOS
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-10 gap-12 lg:gap-16 items-center relative z-10">
+          
+          {/* LADO IZQUIERDO — IMPACTO PRINCIPAL */}
+          <div className="lg:col-span-7 relative flex flex-col items-start gap-4">
+            
+            {/* Número gigante transparente de fondo */}
+            <div className="absolute -top-16 -left-12 text-[15rem] md:text-[23rem] font-display font-black text-foreground/[0.035] dark:text-foreground/[0.045] select-none leading-none pointer-events-none font-extrabold tracking-tighter">
+              {globalStandings.length || 45}
+            </div>
+
+            <Badge 
+              variant="primary" 
+              className="animate-fade-in-up px-5 py-2 text-[10px] font-condensed tracking-[0.2em] text-primary border border-primary/30 bg-primary/10 rounded-full shadow-[0_0_20px_hsla(var(--primary),0.15)] uppercase animate-pulse shrink-0 z-10"
+            >
+              🔥 Centro Oficial de Torneos
+            </Badge>
+
+            <h1 className="animate-fade-in-up text-6xl sm:text-8xl md:text-9xl font-display font-black text-foreground uppercase tracking-[0.01em] leading-[0.82] drop-shadow-2xl z-10 mt-2 select-none" style={{ animationDelay: '0.1s' }}>
+              TABLA DE <br />
+              <span className="text-primary tracking-tight font-black shimmer-text">
+                POSICIONES.
+              </span>
+            </h1>
+
+            <p className="animate-fade-in-up text-xs md:text-sm text-muted-foreground font-sans max-w-xl leading-relaxed tracking-wide font-light z-10 mt-2" style={{ animationDelay: '0.2s' }}>
+              Clasificaciones en tiempo real de Pro Clubs de todas las confederaciones. Ligas con tablas completas, fase de grupos de Copas y cuadros interactivos de Playoffs.
+            </p>
+          </div>
+
+          {/* DERECHA — INFORMACIÓN TÁCTICA */}
+          <div className="lg:col-span-3 flex flex-col justify-center items-start lg:items-stretch gap-6 z-10 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
+            <div className="border border-border/40 bg-card/45 backdrop-blur-md rounded-2xl p-6 w-full space-y-4 shadow-xl">
+              
+              <div className="flex justify-between items-center border-b border-border/30 pb-3">
+                <span className="text-[10px] font-condensed tracking-widest text-muted-foreground uppercase">TELEMETRÍA REAL</span>
+                <span className="text-[10px] font-mono text-primary font-bold">STANDINGS</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">JUGADOS</h4>
+                  <span className="text-3xl font-display font-black text-foreground">{totalJugados}</span>
+                </div>
+                <div>
+                  <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">COMPETENCIAS</h4>
+                  <span className="text-3xl font-display font-black text-primary">{competenciasConPartidos.length}</span>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-muted-foreground leading-relaxed font-sans font-light">
+                Tabla ponderada por partidos oficiales finalizados y reportados en el sistema de RaconPro.
+              </p>
+
+              <button 
+                onClick={() => { setOrgFiltro(null); setCompFiltro(null); }}
+                className="w-full py-4 text-xs font-condensed tracking-widest uppercase rounded-lg text-primary-foreground font-black cursor-pointer btn-glossy"
+              >
+                REINICIAR TABLAS
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
 
       <div className="relative z-20 max-w-7xl mx-auto px-6 lg:px-10 space-y-10">
 
-        {/* Hero */}
-        <div className="text-center max-w-2xl mx-auto space-y-4">
-          <Badge variant="primary" className="px-4 py-1.5 text-xs font-condensed tracking-widest text-primary border-primary/30 bg-primary/10 rounded-full animate-pulse-glow">
-            📊 Clasificación General
-          </Badge>
-          <h1 className="text-5xl md:text-7xl font-display font-extrabold uppercase tracking-tight leading-[0.85] text-foreground">
-            TABLA DE{' '}
-            <span className="bg-clip-text bg-gradient-to-r from-primary to-destructive text-transparent">
-              POSICIONES
-            </span>
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
-            Clasificaciones en tiempo real. Liga con tabla completa, Copa por grupos, Playoffs con cuadro de eliminación.
-          </p>
-        </div>
-
         {loading ? (
-          <div className="flex h-64 items-center justify-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
+          <div className="space-y-8">
+            <div className="skeleton-shimmer h-40 rounded-2xl"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="skeleton-shimmer h-64 rounded-2xl" style={{ animationDelay: `${i * 0.1}s` }}></div>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="space-y-8">
 
             {/* ── FILTER PANEL ── */}
-            <div className="border border-border/50 bg-card/20 backdrop-blur-md rounded-2xl p-5 shadow-lg space-y-5">
+            <div className="filter-panel space-y-5">
 
               {/* Global stats strip */}
               {totalJugados > 0 && (
@@ -739,11 +891,23 @@ export default function Clasificacion() {
                   <div className="flex flex-wrap gap-2">
                     <FilterChip label="Todas" active={orgFiltro === null}
                       onClick={() => { setOrgFiltro(null); setCompFiltro(null); }} />
-                    {organizaciones.map(org => (
-                      <FilterChip key={org.id} label={org.nombre} active={orgFiltro === org.id}
-                        count={partidos.filter(p => p.competencia?.temporada?.organizacion?.id === org.id).length}
-                        onClick={() => { setOrgFiltro(org.id); setCompFiltro(null); }} />
-                    ))}
+                    {organizaciones.map(org => {
+                      const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+                      const logoUrl = org.logo 
+                        ? (org.logo.startsWith('http') ? org.logo : `${backendBaseUrl}${org.logo}`) 
+                        : '';
+                      return (
+                        <FilterChip key={org.id} label={
+                          <span className="flex items-center gap-1.5">
+                            {logoUrl && (
+                              <img src={logoUrl} alt="" className="w-4.5 h-4.5 rounded object-cover" />
+                            )}
+                            <span>{org.nombre}</span>
+                          </span>
+                        } active={orgFiltro === org.id}
+                          onClick={() => { setOrgFiltro(org.id); setCompFiltro(null); }} />
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -758,9 +922,24 @@ export default function Clasificacion() {
                     {competencias.map(c => {
                       const fmt     = (c.formato || 'liga').toLowerCase();
                       const fmtIcon = fmt === 'copa' ? '🥇' : fmt.includes('playoff') ? '🏆' : '🏟️';
+                      
+                      const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+                      const logoUrl = c.logo 
+                        ? (c.logo.startsWith('http') ? c.logo : `${backendBaseUrl}${c.logo}`) 
+                        : '';
+                      
                       return (
-                        <FilterChip key={c.id} label={`${fmtIcon} ${c.nombre}`}
-                          active={compFiltro === c.id} count={c.count}
+                        <FilterChip key={c.id} label={
+                          <span className="flex items-center gap-1.5">
+                            {logoUrl ? (
+                              <img src={logoUrl} alt="" className="w-4.5 h-4.5 rounded object-cover" />
+                            ) : (
+                              <span>{fmtIcon}</span>
+                            )}
+                            <span>{c.nombre}</span>
+                          </span>
+                        }
+                          active={compFiltro === c.id}
                           onClick={() => setCompFiltro(c.id)} />
                       );
                     })}

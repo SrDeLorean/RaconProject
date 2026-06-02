@@ -25,6 +25,7 @@ class CompetenciaRequest extends FormRequest
             'slug'         => ['required', 'string', 'max:255', \Illuminate\Validation\Rule::unique('competencias', 'slug')->ignore($competenciaId)],
             'descripcion'  => ['nullable', 'string'],
             'reglas'       => ['nullable', 'string'],
+            'logo'         => ['nullable', 'string', 'max:255'],
             'banner'       => ['nullable', 'string', 'max:255'],
             'color_tema'   => ['nullable', 'string'], // Quité el Regex estricto por si el input color de HTML envía formatos raros
 

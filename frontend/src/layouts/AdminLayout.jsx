@@ -6,8 +6,9 @@ export default function AdminLayout() {
   const navLinks = [
     { path: '/admin', label: 'Dashboard Global', icon: '🌐' },
     { path: '/admin/organizaciones', label: 'Organizaciones', icon: '🏢' },
+    { path: '/admin/equipos', label: 'Equipos', icon: '🛡️' },
     { path: '/admin/usuarios', label: 'Gestión Usuarios', icon: '👥' },
-    { path: '/admin/config', label: 'Configuración', icon: '⚙️' },
+    { path: '/admin/configuracion', label: 'Configuración', icon: '⚙️' },
     { path: '/admin/design-system', label: 'Design System', icon: '🎨' },
   ];
 

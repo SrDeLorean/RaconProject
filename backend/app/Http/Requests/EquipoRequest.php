@@ -25,7 +25,8 @@ class EquipoRequest extends FormRequest
     {
         // Obtenemos el ID del equipo si estamos en una petición PUT/PATCH (actualización)
         // Esto permite que las reglas 'unique' ignoren el registro actual.
-        $equipoId = $this->route('equipo');
+        $routeParam = $this->route('equipo');
+        $equipoId = $routeParam ? (is_object($routeParam) ? $routeParam->id : $routeParam) : null;
 
         return [
             // El controlador debería asignar Auth::id() automáticamente, pero si se envía,

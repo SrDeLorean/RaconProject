@@ -3,6 +3,7 @@ import Drawer from '@/components/ui/Drawer';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import ImageUploader from '@/components/ui/ImageUploader';
 
 export default function CompetenciaFormDrawer({ 
   isOpen, onClose, onSave, isSaving, selectedCompetencia, formData, setFormData, formErrors = {}, 
@@ -64,6 +65,22 @@ export default function CompetenciaFormDrawer({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Color Tema (HEX)" type="color" className="h-10 p-1 cursor-pointer" value={formData.color_tema} onChange={(e) => setFormData({ ...formData, color_tema: e.target.value })} disabled={isSaving} />
             <Select label="Privacidad" value={formData.es_publico} onChange={(e) => setFormData({ ...formData, es_publico: e.target.value === 'true' })} disabled={isSaving} options={[{ value: 'true', label: '🌍 Público' }, { value: 'false', label: '🔒 Privado' }]} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ImageUploader 
+              label="Logo de la Competencia" 
+              value={formData.logo} 
+              onChange={(url) => setFormData({ ...formData, logo: url })} 
+              folder="competencias"
+              disabled={isSaving}
+            />
+            <ImageUploader 
+              label="Banner de la Competencia" 
+              value={formData.banner} 
+              onChange={(url) => setFormData({ ...formData, banner: url })} 
+              folder="competencias"
+              disabled={isSaving}
+            />
           </div>
         </div>
 

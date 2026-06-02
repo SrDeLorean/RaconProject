@@ -15,6 +15,8 @@ use App\Http\Controllers\Api\CompetenciaEquipoController;
 // 1. Rutas Públicas (No requieren token)
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
 // Rutas de consulta pública (lectura sin token)
 Route::get('/organizaciones', [OrganizacionController::class, 'index']);
@@ -24,7 +26,44 @@ Route::get('/equipos/{equipo}', [EquipoController::class, 'show']);
 Route::get('/users', [UserController::class, 'index']);
 Route::get('/usuarios', [UserController::class, 'index']);
 Route::get('/usuarios/{usuario}', [UserController::class, 'show']);
+Route::get('/competencias', [CompetenciaController::class, 'index']);
 Route::get('/competencias/{competencia}', [CompetenciaController::class, 'show']);
+Route::get('/traspasos/aprobados', [SolicitudFichajeController::class, 'aprobados']);
+Route::get('/analytics/totw-tots', [UserController::class, 'totwTots']);
+Route::get('/analytics/infografia', [UserController::class, 'infografia']);
+Route::get('/analytics/public-stats', [UserController::class, 'publicStats']);
+Route::post('/contacto', [UserController::class, 'contacto']);
+
+Route::get('/media', function (Illuminate\Http\Request $request) {
+    $path = $request->query('path');
+    if (!$path) {
+        return response()->json(['error' => 'Path is required'], 400);
+    }
+    
+    // Normalize path to prevent directory traversal
+    $path = ltrim($path, '/');
+    if (strpos($path, '..') !== false) {
+        return response()->json(['error' => 'Invalid path'], 400);
+    }
+    
+    $fullPath = public_path($path);
+    if (!file_exists($fullPath) || !is_file($fullPath)) {
+        // Return a default placeholder with CORS headers
+        $defaultUserPath = public_path('images/users/default-user.png');
+        if (file_exists($defaultUserPath)) {
+            return response()->file($defaultUserPath, [
+                'Access-Control-Allow-Origin' => '*',
+                'Cache-Control' => 'no-cache'
+            ]);
+        }
+        return response()->json(['error' => 'File not found'], 404);
+    }
+    
+    return response()->file($fullPath, [
+        'Access-Control-Allow-Origin' => '*',
+        'Cache-Control' => 'public, max-age=86400'
+    ]);
+});
 
 // 2. Rutas Protegidas (Requieren token de Sanctum)
 Route::middleware('auth:sanctum')->group(function () {
@@ -33,11 +72,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+    Route::get('/analytics/dashboard-stats', [UserController::class, 'dashboardStats']);
+
+    // Subida general de imágenes
+    Route::post('/upload', [\App\Http\Controllers\Api\UploadController::class, 'upload']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // Rutas de tus entidades (Protegemos escritura, permitimos lectura pública arriba)
-    Route::apiResource('organizaciones', OrganizacionController::class)->except(['index', 'show']);
+    Route::apiResource('organizaciones', OrganizacionController::class)
+        ->parameters(['organizaciones' => 'organizacion'])
+        ->except(['index', 'show']);
     Route::get('/mi-equipo', [EquipoController::class, 'miEquipo']);
     Route::get('/user/mis-equipos', [EquipoController::class, 'misEquiposInscritos']);
     Route::apiResource('equipos', EquipoController::class)->except(['index', 'show']);
@@ -45,7 +90,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('usuarios', UserController::class)->except(['index', 'show']);
     Route::post('/usuarios/disponibles', [UserController::class, 'disponibles']);
 
-    Route::apiResource('competencias', CompetenciaController::class)->except(['show']);
+    Route::apiResource('competencias', CompetenciaController::class)->except(['index', 'show']);
     Route::apiResource('equipo-jugador', EquipoJugadorController::class);
 
     Route::apiResource('solicitudes-fichaje', SolicitudFichajeController::class);
@@ -73,5 +118,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Rutas Públicas de Partidos
 Route::get('/partidos', [\App\Http\Controllers\Api\PartidoController::class, 'index']);
+Route::get('/partidos-fechas', [\App\Http\Controllers\Api\PartidoController::class, 'dates']);
+Route::get('/partidos-conteos', [\App\Http\Controllers\Api\PartidoController::class, 'counts']);
 Route::get('/partidos/{partido}', [\App\Http\Controllers\Api\PartidoController::class, 'show']);
+
+
 

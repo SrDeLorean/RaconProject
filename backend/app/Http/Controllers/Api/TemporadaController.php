@@ -18,10 +18,20 @@ class TemporadaController extends Controller
     public function index(Request $request)
     {
         // 1. Identificamos la organización del organizador logueado
-        $organizacion = \App\Models\Organizacion::where('owner_id', auth()->id())->firstOrFail();
+        $organizacion = \App\Models\Organizacion::where('owner_id', auth()->id())->first();
 
-        // 2. Iniciamos la consulta bloqueada estrictamente a su organización
-        $query = \App\Models\Temporada::where('organizacion_id', $organizacion->id);
+        if (!$organizacion) {
+            // Si es admin, dejamos ver todas; de lo contrario, listado vacío limpio en vez de 404
+            $role = auth()->user()->role;
+            if ($role === 'admin' || $role === 'administrador') {
+                $query = \App\Models\Temporada::query();
+            } else {
+                return response()->json(['data' => [], 'total' => 0]);
+            }
+        } else {
+            // 2. Iniciamos la consulta bloqueada estrictamente a su organización
+            $query = \App\Models\Temporada::where('organizacion_id', $organizacion->id);
+        }
 
         // 3. Filtro de Búsqueda de Texto (Search)
         // Usamos filled() en lugar de has() para ignorar strings vacíos ("")

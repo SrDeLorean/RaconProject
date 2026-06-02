@@ -12,12 +12,14 @@ export default function DashboardAdmin() {
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState(null);
   const [isProcessing, setIsProcessing] = useState(null);
+  const [realStats, setRealStats] = useState(null);
+  const [competenciasReales, setCompetenciasReales] = useState([]);
 
   const fetchPendingApprovals = async () => {
     setLoading(true);
     try {
       const response = await api.get('/solicitudes-fichaje');
-      setSolicitudesAdmin(response.data || []);
+      setSolicitudesAdmin(response.data?.data || response.data || []);
     } catch (error) {
       console.error("Error al obtener solicitudes pendientes de admin:", error);
     } finally {
@@ -25,8 +27,29 @@ export default function DashboardAdmin() {
     }
   };
 
+  const fetchDashboardStats = async () => {
+    try {
+      const response = await api.get('/analytics/dashboard-stats');
+      setRealStats(response.data);
+    } catch (error) {
+      console.error("Error al obtener estadísticas del dashboard:", error);
+    }
+  };
+
+  const fetchCompetenciasDestacadas = async () => {
+    try {
+      const response = await api.get('/competencias', { params: { per_page: 5 } });
+      const dataArray = response.data.data ? response.data.data : (Array.isArray(response.data) ? response.data : []);
+      setCompetenciasReales(dataArray);
+    } catch (error) {
+      console.error("Error al obtener competencias destacadas:", error);
+    }
+  };
+
   useEffect(() => {
     fetchPendingApprovals();
+    fetchDashboardStats();
+    fetchCompetenciasDestacadas();
   }, []);
 
   const handleDecidirAdmin = async (id, respuesta) => {
@@ -38,6 +61,7 @@ export default function DashboardAdmin() {
       });
       setNotification({ variant: 'success', text: response.data.message || 'Operación registrada.' });
       await fetchPendingApprovals();
+      await fetchDashboardStats();
     } catch (error) {
       setNotification({ variant: 'error', text: error.response?.data?.message || 'Error al procesar la decisión.' });
     } finally {
@@ -46,26 +70,23 @@ export default function DashboardAdmin() {
   };
 
   const stats = [
-    { title: 'Torneos Activos', value: '24', icon: '🏆', trend: 12, trendLabel: 'vs mes pasado' },
-    { title: 'Organizaciones', value: '48', icon: '🏢', trend: 5, trendLabel: 'vs mes pasado' },
-    { title: 'Jugadores', value: '1,420', icon: '👥', trend: 22, trendLabel: 'vs mes pasado' },
-    { title: 'Partidas (Hoy)', value: '86', icon: '🎮', trend: -2, trendLabel: 'vs ayer' },
-  ];
-
-  const torneosRecientes = [
-    { id: 1, nombre: 'Copa Racon Pro Series', juego: 'Valorant', org: 'Racon E-sports', estado: 'En Curso', variant: 'success' },
-    { id: 2, nombre: 'Liga Nacional de Verano', juego: 'League of Legends', org: 'LVP Chile', estado: 'Inscripciones', variant: 'warning' },
-    { id: 3, nombre: 'Torneo Relámpago 2v2', juego: 'Rocket League', org: 'Comunidad RL', estado: 'Finalizado', variant: 'neutral' },
-    { id: 4, nombre: 'Clasificatorias Master', juego: 'CS:GO 2', org: 'Racon E-sports', estado: 'Pendiente', variant: 'primary' },
+    { title: 'Competencias / Divisiones', value: realStats?.global?.competencias || '—', icon: '🏆', trend: 0, trendLabel: 'en vivo' },
+    { title: 'Organizaciones', value: realStats?.global?.organizaciones || '—', icon: '🏢', trend: 0, trendLabel: 'registradas' },
+    { title: 'Jugadores Registrados', value: realStats?.global?.jugadores || '—', icon: '👥', trend: 0, trendLabel: 'competidores' },
+    { title: 'Partidos Totales', value: realStats?.global?.partidos || '—', icon: '🎮', trend: 0, trendLabel: 'programados' },
   ];
 
   const columnasTorneos = [
-    { header: 'Torneo', render: (row) => <span className="font-bold">{row.nombre}</span> },
-    { header: 'Juego', accessor: 'juego' },
-    { header: 'Organización', accessor: 'org' },
+    { header: 'División / Torneo', render: (row) => <span className="font-bold text-foreground">{row.nombre}</span> },
+    { header: 'Formato', render: (row) => <span className="font-mono uppercase">{row.formato}</span> },
+    { header: 'Plataforma', render: (row) => <span className="uppercase text-muted-foreground">{row.plataforma}</span> },
+    { header: 'Premios', render: (row) => <span className="text-primary font-bold font-mono">${row.prize_pool}</span> },
     { 
       header: 'Estado', 
-      render: (row) => <Badge variant={row.variant}>{row.estado}</Badge> 
+      render: (row) => {
+        const variant = row.estado === 'en_curso' ? 'success' : row.estado === 'inscripciones' ? 'brand' : row.estado === 'finalizada' ? 'error' : 'neutral';
+        return <Badge variant={variant} className="uppercase text-[10px]">{row.estado}</Badge>;
+      }
     },
   ];
 
@@ -179,7 +200,7 @@ export default function DashboardAdmin() {
           
           <Table 
             columns={columnasTorneos} 
-            data={torneosRecientes} 
+            data={competenciasReales} 
             onRowClick={(row) => console.log('Clic en torneo:', row.nombre)}
           />
         </div>

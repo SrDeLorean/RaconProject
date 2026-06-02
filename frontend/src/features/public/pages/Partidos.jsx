@@ -2,570 +2,844 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Badge from '@/components/ui/Badge';
 import api from '@/api/axios';
+import { useAuthStore } from '@/store/useAuthStore';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+import Spinner from '@/components/ui/Spinner';
 
+// Helper to get today's date in local YYYY-MM-DD format
+function getTodayStr() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// Helper to classify match state dynamically based on actual real date and database reports
 function classifyMatch(p) {
-  if (p.goles_local != null && p.goles_visitante != null) return 'finished';
-  const now = new Date();
-  if (p.fecha) {
-    const matchDate = new Date(`${p.fecha}T${p.hora || '00:00'}:00`);
-    const diffMin = (now - matchDate) / 60000;
-    if (diffMin >= 0 && diffMin < 110) return 'live';
+  const today = getTodayStr();
+  // 1. En vivo: Consiste en revisar la fecha del partido con la fecha real del pc/servidor. Si coincide, son en vivo.
+  if (p.fecha && p.fecha === today) {
+    return 'live';
   }
+  // 2. Finalizados: son los partidos ya reportados en el sistema
+  if (p.goles_local != null && p.goles_visitante != null) {
+    return 'finished';
+  }
+  // 3. Próximos: todo el resto
   return 'upcoming';
 }
 
-// ─── Match Card ───────────────────────────────────────────────────────────────
+const getImageUrl = (path) => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+  return `${backendBaseUrl}${path}`;
+};
 
-function MatchCard({ partido, view }) {
-  const status    = classifyMatch(partido);
-  const hasResult = status === 'finished';
-  const isLive    = status === 'live';
-  const localW    = hasResult && partido.goles_local  > partido.goles_visitante;
-  const visitaW   = hasResult && partido.goles_visitante > partido.goles_local;
-
-  const org  = partido.competencia?.temporada?.organizacion?.nombre;
-  const comp = partido.competencia?.nombre;
-
-  if (view === 'list') {
-    return (
-      <div className="border border-border/50 bg-card/20 backdrop-blur-md rounded-xl px-5 py-3.5 flex items-center gap-4 hover:border-primary/40 hover:bg-card/35 transition-all duration-200 group">
-        {/* Status dot */}
-        <div className="shrink-0">
-          {isLive ? (
-            <span className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-emerald-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />LIVE
-            </span>
-          ) : hasResult ? (
-            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">FIN</span>
-          ) : (
-            <span className="text-[9px] font-black uppercase tracking-widest text-primary">{partido.hora || '??:??'}</span>
-          )}
-        </div>
-
-        {/* Teams + score */}
-        <div className="flex-1 flex items-center gap-3 min-w-0">
-          <span className={`text-xs font-black uppercase truncate text-right flex-1 ${localW ? 'text-primary' : 'text-foreground'}`}>
-            {partido.local?.nombre || 'TBD'}
-          </span>
-          <div className="shrink-0 min-w-[52px] text-center">
-            {hasResult || isLive ? (
-              <span className="text-sm font-black font-mono tracking-widest">
-                <span className={localW ? 'text-primary' : 'text-foreground'}>{partido.goles_local}</span>
-                <span className="text-muted-foreground/40 mx-1">-</span>
-                <span className={visitaW ? 'text-primary' : 'text-foreground'}>{partido.goles_visitante}</span>
-              </span>
-            ) : (
-              <span className="text-[10px] text-muted-foreground font-bold bg-muted/30 px-1.5 py-0.5 rounded">VS</span>
-            )}
-          </div>
-          <span className={`text-xs font-black uppercase truncate text-left flex-1 ${visitaW ? 'text-primary' : 'text-foreground'}`}>
-            {partido.visitante?.nombre || 'TBD'}
-          </span>
-        </div>
-
-        {/* Meta */}
-        <div className="shrink-0 text-right hidden sm:block">
-          {comp && <p className="text-[9px] font-bold text-primary uppercase truncate max-w-[140px]">{comp}</p>}
-          <p className="text-[9px] text-muted-foreground font-mono">{partido.fecha || 'Sin fecha'}</p>
-        </div>
-      </div>
-    );
-  }
-
-  // GRID view
-  return (
-    <div className="border border-border/50 bg-card/20 backdrop-blur-md rounded-2xl p-5 flex flex-col gap-4 hover:border-primary/40 hover:bg-card/35 transition-all duration-300 shadow-md group relative overflow-hidden">
-      {/* Glow accent on hover */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/0 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl" />
-
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2 relative">
-        <div className="min-w-0">
-          {comp && <p className="text-[9px] font-black uppercase tracking-widest text-primary truncate">{comp}</p>}
-          {partido.jornada && (
-            <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-wider">
-              {partido.jornada}{partido.grupo ? ` · Grupo ${partido.grupo}` : ''}
-            </p>
-          )}
-        </div>
-        <div className="shrink-0">
-          {isLive ? (
-            <span className="flex items-center gap-1 text-[8px] font-black uppercase text-emerald-400 bg-emerald-400/10 border border-emerald-400/30 px-2 py-0.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> EN VIVO
-            </span>
-          ) : hasResult ? (
-            <span className="text-[8px] font-black uppercase text-muted-foreground bg-muted/30 px-2 py-0.5 rounded-full">FINAL</span>
-          ) : (
-            <span className="text-[8px] font-black uppercase text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">PRÓXIMO</span>
-          )}
-        </div>
-      </div>
-
-      {/* Score area */}
-      <div className="flex items-center justify-between gap-2 relative">
-        {/* Local */}
-        <div className="flex flex-col items-center gap-1.5 flex-1">
-          <div className={`w-11 h-11 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border flex items-center justify-center font-display font-black text-xs uppercase shadow-inner ${localW ? 'border-primary/50 text-primary' : 'border-border/40 text-foreground'}`}>
-            {partido.local?.abreviatura || '?'}
-          </div>
-          <span className="text-[9px] font-black uppercase tracking-wide text-center leading-none max-w-[72px] truncate text-foreground">
-            {partido.local?.nombre || 'TBD'}
-          </span>
-        </div>
-
-        {/* Center */}
-        <div className="flex flex-col items-center shrink-0 px-1">
-          {hasResult || isLive ? (
-            <div className="text-2xl font-black font-mono tracking-widest leading-none">
-              <span className={localW ? 'text-primary' : 'text-foreground'}>{partido.goles_local}</span>
-              <span className="text-muted-foreground/30 mx-1.5 font-light">-</span>
-              <span className={visitaW ? 'text-primary' : 'text-foreground'}>{partido.goles_visitante}</span>
-            </div>
-          ) : (
-            <div className="text-center">
-              <p className="text-base font-black font-mono text-primary leading-none">{partido.hora || '--:--'}</p>
-              <p className="text-[8px] font-bold text-muted-foreground uppercase mt-1 bg-muted/30 px-1.5 py-0.5 rounded">
-                {partido.fecha || 'Por definir'}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Visitante */}
-        <div className="flex flex-col items-center gap-1.5 flex-1">
-          <div className={`w-11 h-11 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border flex items-center justify-center font-display font-black text-xs uppercase shadow-inner ${visitaW ? 'border-primary/50 text-primary' : 'border-border/40 text-foreground'}`}>
-            {partido.visitante?.abreviatura || '?'}
-          </div>
-          <span className="text-[9px] font-black uppercase tracking-wide text-center leading-none max-w-[72px] truncate text-foreground">
-            {partido.visitante?.nombre || 'TBD'}
-          </span>
-        </div>
-      </div>
-
-      {/* Footer */}
-      {org && (
-        <div className="relative border-t border-border/30 pt-2 flex items-center justify-between">
-          <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider truncate">{org}</span>
-          {partido.fecha && (
-            <span className="text-[8px] font-mono text-muted-foreground shrink-0">{partido.fecha}</span>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Filter Chip ──────────────────────────────────────────────────────────────
-
-function FilterChip({ label, active, onClick, count }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wide whitespace-nowrap transition-all duration-200 border ${
-        active
-          ? 'bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20'
-          : 'bg-card/25 text-muted-foreground border-border/40 hover:border-primary/40 hover:text-foreground backdrop-blur-sm'
-      }`}
-    >
-      {label}
-      {count != null && (
-        <span className={`text-[8px] px-1.5 py-0.5 rounded font-black ${active ? 'bg-white/20' : 'bg-muted/50'}`}>
-          {count}
-        </span>
-      )}
-    </button>
-  );
-}
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
-
-export default function Partidos() {
+export default function Partidos({ forOrganizer = false, forPlayer = false, forTeam = false, hideHero = false, playerId = null, teamId = null }) {
+  const { user } = useAuthStore();
   const navigate = useNavigate();
-  const [partidos,  setPartidos]  = useState([]);
-  const [loading,   setLoading]   = useState(true);
+  const [allPartidos, setAllPartidos] = useState([]);
+  const [profileData, setProfileData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const targetUserId = playerId || user?.id;
 
   // Filters
-  const [statusTab,     setStatusTab]     = useState('all');
-  const [orgFiltro,     setOrgFiltro]     = useState(null);   // organizacion id
-  const [compFiltro,    setCompFiltro]    = useState(null);   // competencia id
-  const [jornadaFiltro, setJornadaFiltro] = useState(null);
-  const [searchText,    setSearchText]    = useState('');
-  const [viewMode,      setViewMode]      = useState('grid'); // 'grid' | 'list'
+  const [statusTab, setStatusTab] = useState('all');
+  const [orgFiltro, setOrgFiltro] = useState(null); // org ID
+  const [compFiltro, setCompFiltro] = useState(null); // comp ID
+  const [searchText, setSearchText] = useState('');
+  const [debouncedSearchText, setDebouncedSearchText] = useState('');
+  const [dateIndex, setDateIndex] = useState(0);
 
+  const [sortedDates, setSortedDates] = useState([]);
+  const [statusCounts, setStatusCounts] = useState({ all: 0, live: 0, upcoming: 0, finished: 0 });
+
+  const [organizaciones, setOrganizaciones] = useState([]);
+  const [competencias, setCompetencias] = useState([]);
+
+  // Debounce search query to prevent hammering the server
   useEffect(() => {
-    api.get('/partidos')
-      .then(res => setPartidos(res.data || []))
-      .catch(err => console.error('Error al traer partidos:', err))
-      .finally(() => setLoading(false));
+    const timer = setTimeout(() => {
+      setDebouncedSearchText(searchText);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  // Load organizations
+  useEffect(() => {
+    api.get('/organizaciones')
+      .then(res => setOrganizaciones(res.data.data || res.data || []))
+      .catch(err => console.error("Error loading organizations:", err));
   }, []);
 
-  // ── Derived filter options ─────────────────────────────────────────────────
+  // Load competitions based on organization selection
+  useEffect(() => {
+    if (orgFiltro) {
+      api.get(`/organizaciones/${orgFiltro}`)
+        .then(res => {
+          setCompetencias(res.data?.temporadas?.flatMap(t => t.competencias || []) || []);
+        })
+        .catch(err => console.error("Error loading competitions:", err));
+    } else {
+      api.get('/competencias')
+        .then(res => setCompetencias(res.data.data || res.data || []))
+        .catch(err => console.error("Error loading all competitions:", err));
+    }
+  }, [orgFiltro]);
 
-  const organizaciones = useMemo(() => {
+  // Fetch player profile data to obtain team contracts if user is a player
+  useEffect(() => {
+    if (targetUserId && forPlayer) {
+      api.get(`/usuarios/${targetUserId}`)
+        .then(res => {
+          setProfileData(res.data || null);
+        })
+        .catch(err => console.error("Error al cargar perfil de jugador:", err));
+    }
+  }, [targetUserId, forPlayer]);
+
+  // Fetch distinct calendar dates from backend matching filters
+  useEffect(() => {
+    const fetchDates = async () => {
+      try {
+        const params = {};
+        if (orgFiltro) params.organizacion_id = orgFiltro;
+        if (compFiltro) params.competencia_id = compFiltro;
+        if (debouncedSearchText) params.search = debouncedSearchText;
+        if (forTeam && teamId) params.equipo_id = teamId;
+        
+        const response = await api.get('/partidos-fechas', { params });
+        const fetchedDates = response.data || [];
+        
+        if (fetchedDates.length === 0) {
+          const today = new Date();
+          const fallback = [...Array(7)].map((_, i) => {
+            const nextDay = new Date(today);
+            nextDay.setDate(today.getDate() + i - 2);
+            return nextDay.toISOString().split('T')[0];
+          });
+          setSortedDates(fallback);
+        } else {
+          setSortedDates(fetchedDates);
+        }
+      } catch (error) {
+        console.error("Error al obtener fechas del servidor:", error);
+      }
+    };
+    fetchDates();
+  }, [orgFiltro, compFiltro, debouncedSearchText, forTeam, teamId]);
+
+  const activeDate = useMemo(() => {
+    if (sortedDates.length === 0) return null;
+    const item = sortedDates[dateIndex];
+    return typeof item === 'string' ? item : item?.fecha;
+  }, [sortedDates, dateIndex]);
+
+  // Sync dateIndex when statusTab changes to 'live' or when dates load
+  useEffect(() => {
+    if (sortedDates.length > 0) {
+      if (statusTab === 'live') {
+        const today = getTodayStr();
+        const datesArray = sortedDates.map(d => typeof d === 'string' ? d : d.fecha);
+        const idx = datesArray.indexOf(today);
+        if (idx !== -1) {
+          setDateIndex(idx);
+          return;
+        }
+      }
+    }
+  }, [statusTab, sortedDates]);
+
+  // Set initial dateIndex to today's date (or closest) once dates load
+  useEffect(() => {
+    if (sortedDates.length > 0) {
+      const today = getTodayStr();
+      const datesArray = sortedDates.map(d => typeof d === 'string' ? d : d.fecha);
+      const idx = datesArray.indexOf(today);
+      if (idx !== -1) {
+        setDateIndex(idx);
+      } else {
+        // Find closest date to today chronologically
+        let closestIdx = 0;
+        let minDiff = Infinity;
+        const todayMs = new Date(today).getTime();
+        datesArray.forEach((dStr, i) => {
+          const diff = Math.abs(new Date(dStr).getTime() - todayMs);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestIdx = i;
+          }
+        });
+        setDateIndex(closestIdx);
+      }
+    }
+  }, [sortedDates]);
+
+  // Fetch status counts matching current filter selection
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const params = {
+          today: getTodayStr(),
+          fecha: activeDate
+        };
+        if (orgFiltro) params.organizacion_id = orgFiltro;
+        if (compFiltro) params.competencia_id = compFiltro;
+        if (debouncedSearchText) params.search = debouncedSearchText;
+        if (forTeam && teamId) params.equipo_id = teamId;
+        
+        const response = await api.get('/partidos-conteos', { params });
+        setStatusCounts(response.data || { all: 0, live: 0, upcoming: 0, finished: 0 });
+      } catch (error) {
+        console.error("Error al obtener conteos de partidos:", error);
+      }
+    };
+    fetchCounts();
+  }, [activeDate, orgFiltro, compFiltro, debouncedSearchText, forTeam, teamId]);
+
+  // Lazy-load matches from backend based on active date or tab and active filters
+  useEffect(() => {
+    const fetchPartidos = async () => {
+      setLoading(true);
+      try {
+        const params = {
+          today: getTodayStr()
+        };
+        if (orgFiltro) params.organizacion_id = orgFiltro;
+        if (compFiltro) params.competencia_id = compFiltro;
+        if (debouncedSearchText) params.search = debouncedSearchText;
+        
+        if (forOrganizer && targetUserId) {
+          params.for_organizer = true;
+        }
+        
+        if (forPlayer && targetUserId) {
+          const equipoId = profileData?.contrato_activo?.equipo_id;
+          if (equipoId) {
+            params.equipo_id = equipoId;
+          } else {
+            setAllPartidos([]);
+            setLoading(false);
+            return;
+          }
+        }
+        
+        if (forTeam && teamId) {
+          params.equipo_id = teamId;
+        }
+
+        if (statusTab === 'all') {
+          if (activeDate) {
+            params.fecha = activeDate;
+          }
+        } else {
+          params.status = statusTab;
+        }
+
+        const response = await api.get('/partidos', { params });
+        setAllPartidos(response.data || []);
+      } catch (error) {
+        console.error('Error al traer partidos de la BD:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (forPlayer && !profileData) return;
+
+    fetchPartidos();
+  }, [activeDate, statusTab, orgFiltro, compFiltro, debouncedSearchText, forOrganizer, forPlayer, profileData, forTeam, teamId, targetUserId]);
+
+  const partidos = allPartidos;
+  const filteredMatches = allPartidos;
+
+  // Auto scroll to keep selected date centered in viewport horizontally
+  useEffect(() => {
+    const activeEl = document.getElementById(`date-btn-${dateIndex}`);
+    if (activeEl) {
+      activeEl.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center'
+      });
+    }
+  }, [dateIndex]);
+
+  // Format dates for the broadcast strip (Spanish labels LUN/MAY, VIE/JUN, etc.)
+  const formattedDates = useMemo(() => {
+    const weekdays = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+    const months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+    
+    return sortedDates.map(item => {
+      const dateStr = typeof item === 'string' ? item : item.fecha;
+      const count = typeof item === 'string' ? 0 : (item.count || 0);
+
+      const d = new Date(`${dateStr}T00:00:00`);
+      const weekdayStr = weekdays[d.getDay()].toLowerCase();
+      const monthStr = months[d.getMonth()].toLowerCase();
+      
+      return {
+        dateStr,
+        dayNum: d.getDate(),
+        label: `${weekdayStr}/${monthStr}`, // e.g. "vie/jun"
+        count
+      };
+    });
+  }, [sortedDates]);
+
+  // Group matches inside organization node -> competition node
+  const nestedGrouped = useMemo(() => {
     const map = {};
-    partidos.forEach(p => {
+    filteredMatches.forEach(p => {
       const org = p.competencia?.temporada?.organizacion;
-      if (org && !map[org.id]) map[org.id] = { id: org.id, nombre: org.nombre };
-    });
-    return Object.values(map);
-  }, [partidos]);
+      const orgId = org?.id || 0;
+      const orgNom = org?.nombre || 'Circuito Independiente';
+      const orgLogo = org?.logo || '';
+      const comp = p.competencia;
+      const compId = comp?.id || 0;
+      const compNom = comp?.nombre || 'División General';
 
-  const competencias = useMemo(() => {
-    const map = {};
-    partidos.forEach(p => {
-      const c = p.competencia;
-      if (!c) return;
-      const orgId = c.temporada?.organizacion?.id;
-      if (orgFiltro && orgId !== orgFiltro) return;
-      if (!map[c.id]) map[c.id] = { id: c.id, nombre: c.nombre };
-    });
-    return Object.values(map);
-  }, [partidos, orgFiltro]);
-
-  const jornadas = useMemo(() => {
-    const set = new Set();
-    partidos.forEach(p => {
-      if (p.jornada) {
-        const orgId = p.competencia?.temporada?.organizacion?.id;
-        const cId   = p.competencia?.id;
-        if (orgFiltro  && orgId !== orgFiltro)  return;
-        if (compFiltro && cId   !== compFiltro) return;
-        set.add(p.jornada);
-      }
-    });
-    return [...set];
-  }, [partidos, orgFiltro, compFiltro]);
-
-  // ── Filter & classify ──────────────────────────────────────────────────────
-
-  const filtered = useMemo(() => {
-    return partidos.filter(p => {
-      const orgId  = p.competencia?.temporada?.organizacion?.id;
-      const cId    = p.competencia?.id;
-      const status = classifyMatch(p);
-
-      if (orgFiltro     && orgId       !== orgFiltro)     return false;
-      if (compFiltro    && cId         !== compFiltro)    return false;
-      if (jornadaFiltro && p.jornada   !== jornadaFiltro) return false;
-      if (statusTab     !== 'all'      && status         !== statusTab) return false;
-
-      if (searchText.trim()) {
-        const q = searchText.toLowerCase();
-        const localNom   = p.local?.nombre?.toLowerCase()    || '';
-        const visitaNom  = p.visitante?.nombre?.toLowerCase() || '';
-        const compNom    = p.competencia?.nombre?.toLowerCase() || '';
-        const orgNom     = orgId && organizaciones.find(o => o.id === orgId)?.nombre?.toLowerCase() || '';
-        if (![localNom, visitaNom, compNom, orgNom].some(v => v.includes(q))) return false;
+      if (!map[orgId]) {
+        map[orgId] = {
+          id: orgId,
+          nombre: orgNom,
+          logo: orgLogo,
+          competencias: {}
+        };
       }
 
-      return true;
+      if (!map[orgId].competencias[compId]) {
+        map[orgId].competencias[compId] = {
+          id: compId,
+          nombre: compNom,
+          partidos: []
+        };
+      }
+
+      map[orgId].competencias[compId].partidos.push(p);
     });
-  }, [partidos, orgFiltro, compFiltro, jornadaFiltro, statusTab, searchText, organizaciones]);
 
-  const counts = useMemo(() => {
-    let all = 0, live = 0, upcoming = 0, finished = 0;
-    filtered.forEach(p => {
-      const s = classifyMatch(p);
-      all++;
-      if (s === 'live')     live++;
-      if (s === 'upcoming') upcoming++;
-      if (s === 'finished') finished++;
-    });
-    return { all, live, upcoming, finished };
-  }, [filtered]);
+    return Object.values(map).map(orgGroup => ({
+      ...orgGroup,
+      competencias: Object.values(orgGroup.competencias)
+    }));
+  }, [filteredMatches]);
 
-  // ── Grouped for display ────────────────────────────────────────────────────
-
-  const grouped = useMemo(() => {
-    // Group by competencia + jornada for better readability
-    const map = {};
-    filtered.forEach(p => {
-      const compNom = p.competencia?.nombre || 'Sin Competencia';
-      const jornada = p.jornada || 'Sin Jornada';
-      const key = `${compNom}||${jornada}`;
-      if (!map[key]) map[key] = { compNom, jornada, partidos: [] };
-      map[key].partidos.push(p);
-    });
-    return Object.values(map);
-  }, [filtered]);
-
-  const activeFiltersCount = [orgFiltro, compFiltro, jornadaFiltro, searchText.trim()].filter(Boolean).length;
+  const activeFiltersCount = [orgFiltro, compFiltro, searchText.trim()].filter(Boolean).length;
 
   function resetFilters() {
-    setOrgFiltro(null); setCompFiltro(null); setJornadaFiltro(null); setSearchText('');
+    setOrgFiltro(null);
+    setCompFiltro(null);
+    setSearchText('');
+    setDateIndex(0);
+    setStatusTab('all');
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-
   return (
-    <div className="relative min-h-screen bg-background pt-28 pb-16 overflow-hidden">
+    <div className={hideHero ? "relative w-full text-foreground selection:bg-primary selection:text-primary-foreground transition-colors duration-300" : "relative min-h-screen bg-background pt-28 pb-16 overflow-hidden text-foreground selection:bg-primary selection:text-primary-foreground transition-colors duration-300"}>
+      
 
-      {/* Background */}
-      <div
-        className="absolute inset-0 bg-cover bg-center z-0"
-        style={{ backgroundImage: "url('https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1920&auto=format&fit=crop')" }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/70 to-background z-10" />
-      </div>
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/15 blur-[140px] rounded-full pointer-events-none z-10" />
 
-      <div className="relative z-20 max-w-7xl mx-auto px-6 lg:px-10 space-y-10">
+      {/* Tácticos HUD overlays */}
+      <div className="absolute inset-0 hud-noise pointer-events-none z-10 opacity-70"></div>
+      
+      {!hideHero && (
+        <>
+          {/* Resplandores ambientales e-sports */}
+          <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[350px] md:w-[600px] h-[350px] md:h-[600px] bg-primary/8 blur-[130px] rounded-full pointer-events-none z-10"></div>
+          <div className="absolute bottom-1/3 right-1/4 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-primary/5 blur-[120px] rounded-full pointer-events-none z-10"></div>
 
-        {/* Hero */}
-        <div className="text-center max-w-2xl mx-auto space-y-4">
-          <Badge
-            variant="primary"
-            className="px-4 py-1.5 text-xs font-condensed tracking-widest text-primary border-primary/30 bg-primary/10 rounded-full animate-pulse-glow"
-          >
-            🔥 Fixture & Cronograma
-          </Badge>
-          <h1 className="text-5xl md:text-7xl font-display font-extrabold uppercase tracking-tight leading-[0.85] text-foreground">
-            PARTIDOS Y{' '}
-            <span className="bg-clip-text bg-gradient-to-r from-primary to-destructive text-transparent">
-              CALENDARIO
-            </span>
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
-            Sigue el cronograma oficial de enfrentamientos, resultados en vivo y duelos finalizados del circuito.
-          </p>
+          {/* ========================================================================= */}
+          {/* 1. HERO CENTRAL (Cinemático y Táctico)                                    */}
+          {/* ========================================================================= */}
+          <section className="relative z-20 max-w-7xl mx-auto px-6 lg:px-10 pt-32 md:pt-40 pb-16 overflow-hidden">
+            
+            {/* Palabras de fondo brush estilo editorial */}
+            <div className="absolute inset-0 pointer-events-none select-none overflow-hidden z-0">
+              <span className="absolute top-10 left-10 text-[9rem] md:text-[14rem] font-display font-black uppercase text-foreground/[0.015] dark:text-foreground/[0.025] blur-[2px] float-brush-1">
+                PARTIDOS
+              </span>
+              <span className="absolute bottom-10 right-20 text-[9rem] md:text-[14rem] font-display font-black uppercase text-foreground/[0.015] dark:text-foreground/[0.025] blur-[3px] float-brush-2">
+                TRANSMISIÓN
+              </span>
+              <span className="absolute top-1/2 left-1/3 -translate-y-1/2 text-[10rem] md:text-[15rem] font-display font-black uppercase text-foreground/[0.01] dark:text-foreground/[0.02] blur-[4px]">
+                JUEGO
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-10 gap-12 lg:gap-16 items-center relative z-10">
+              
+              {/* LADO IZQUIERDO — IMPACTO PRINCIPAL */}
+              <div className="lg:col-span-7 relative flex flex-col items-start gap-4">
+                
+                {/* Número gigante transparente de fondo */}
+                <div className="absolute -top-16 -left-12 text-[15rem] md:text-[23rem] font-display font-black text-foreground/[0.035] dark:text-foreground/[0.045] select-none leading-none pointer-events-none font-extrabold tracking-tighter">
+                  {allPartidos.length || 90}
+                </div>
+
+                <Badge 
+                  variant="primary" 
+                  className="animate-fade-in-up px-5 py-2 text-[10px] font-condensed tracking-[0.2em] text-primary border border-primary/30 bg-primary/10 rounded-full shadow-[0_0_20px_hsla(var(--primary),0.15)] uppercase animate-pulse shrink-0 z-10"
+                >
+                  🔥 Centro Oficial de Torneos
+                </Badge>
+
+                <h1 className="animate-fade-in-up text-6xl sm:text-8xl md:text-9xl font-display font-black text-foreground uppercase tracking-[0.01em] leading-[0.82] drop-shadow-2xl z-10 mt-2 select-none" style={{ animationDelay: '0.1s' }}>
+                  CENTRO DE <br />
+                  <span className="text-primary tracking-tight font-black shimmer-text">
+                    PARTIDOS.
+                  </span>
+                </h1>
+
+                <p className="animate-fade-in-up text-xs md:text-sm text-muted-foreground font-sans max-w-xl leading-relaxed tracking-wide font-light z-10 mt-2" style={{ animationDelay: '0.2s' }}>
+                  Sigue cada partido de Pro Clubs de todas las confederaciones. Estadísticas, fixtures, marcadores oficiales y streaming broadcast en directo en tiempo real.
+                </p>
+              </div>
+
+              {/* DERECHA — INFORMACIÓN TÁCTICA */}
+              <div className="lg:col-span-3 flex flex-col justify-center items-start lg:items-stretch gap-6 z-10 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
+                <div className="border border-border/40 bg-card/45 backdrop-blur-md rounded-2xl p-6 w-full space-y-4 shadow-xl">
+                  
+                  <div className="flex justify-between items-center border-b border-border/30 pb-3">
+                    <span className="text-[10px] font-condensed tracking-widest text-muted-foreground uppercase">TELEMETRÍA REAL</span>
+                    <span className="text-[10px] font-mono text-primary font-bold">LIVE MATCHES</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">EN VIVO</h4>
+                      <span className="text-3xl font-display font-black text-foreground">{statusCounts.live}</span>
+                    </div>
+                    <div>
+                      <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">TOTAL PROGRAMADOS</h4>
+                      <span className="text-3xl font-display font-black text-primary">{allPartidos.length}</span>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-muted-foreground leading-relaxed font-sans font-light">
+                    Marcadores oficiales en directo, cronometraje sincronizado y retransmisión oficial de Pro Clubs.
+                  </p>
+
+                  <button 
+                    onClick={resetFilters}
+                    className="w-full py-4 text-xs font-condensed tracking-widest uppercase rounded-lg text-primary-foreground font-black cursor-pointer btn-glossy"
+                  >
+                    REINICIAR FILTROS
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+          </section>
+        </>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 3. TOURNAMENT & COMPETITION FILTERS (Dos niveles reales desde la BD)       */}
+      {/* ========================================================================= */}
+      <section className="relative z-20 max-w-7xl mx-auto px-6 lg:px-10 mb-6">
+        <div className="flex flex-col gap-5 bg-card/75 dark:bg-[#16110f]/75 border border-border/40 dark:border-white/[0.06] rounded-2xl p-5 shadow-lg backdrop-blur-md">
+          
+          {/* Fila de Búsqueda */}
+          <div className="relative w-full">
+            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Buscar equipo, competencia o circuito eSports..."
+              value={searchText}
+              onChange={e => setSearchText(e.target.value)}
+              className="input-premium pl-11 py-3.5"
+            />
+            {searchText && (
+              <button
+                onClick={() => setSearchText('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Estado de Partido Filtros */}
+          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border/20 dark:border-white/[0.05] pt-4.5">
+            <div className="flex gap-1.5 bg-background p-1 rounded-xl border border-border/40 dark:border-white/[0.06] overflow-x-auto">
+              {[
+                { id: 'all', label: 'Todos', icon: '🌐' },
+                { id: 'live', label: 'En Vivo', icon: '🔴' },
+                { id: 'upcoming', label: 'Próximos', icon: '📅' },
+                { id: 'finished', label: 'Finalizados', icon: '🏁' },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setStatusTab(tab.id)}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-condensed font-black uppercase tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
+                    statusTab === tab.id
+                      ? 'bg-primary text-primary-foreground shadow-lg active-date-glow'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-card'
+                  }`}
+                >
+                  <span>{tab.icon}</span> {tab.label}
+                  <span className={`text-[9px] px-2 py-0.5 rounded font-black font-mono ${statusTab === tab.id ? 'bg-white/20 text-white' : 'bg-muted/30 dark:bg-white/5'}`}>
+                    {statusCounts[tab.id]}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Limpiar Filtros */}
+            {activeFiltersCount > 0 && (
+              <button
+                onClick={resetFilters}
+                className="text-xs font-condensed font-black text-primary hover:text-red-400 transition-colors uppercase tracking-widest flex items-center gap-1.5 cursor-pointer"
+              >
+                ✕ Limpiar Filtros
+              </button>
+            )}
+          </div>
+
+          {/* PRIMER NIVEL: Circuitos / Organizaciones Habilitados */}
+          {organizaciones.length > 0 && (
+            <div className="space-y-2.5 border-t border-border/20 dark:border-white/[0.05] pt-4.5 font-sans">
+              <p className="text-[9px] font-condensed font-black uppercase tracking-[0.2em] text-muted-foreground">CIRCUITOS DISPONIBLES</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => { setOrgFiltro(null); setCompFiltro(null); }}
+                  className={`px-4.5 py-2 rounded-xl text-[10px] font-condensed font-black uppercase tracking-widest border transition-all duration-300 cursor-pointer ${
+                    orgFiltro === null
+                      ? 'bg-primary/15 text-primary border-primary/40'
+                      : 'bg-card/35 dark:bg-[#16110f] text-muted-foreground border-border/30 dark:border-white/[0.06] hover:border-primary/45 hover:text-foreground'
+                  }`}
+                >
+                  TODOS ({partidos.length})
+                </button>
+                {organizaciones.map(org => (
+                  <button
+                    key={org.id}
+                    onClick={() => { setOrgFiltro(org.id); setCompFiltro(null); }}
+                    className={`px-4.5 py-2 rounded-xl text-[10px] font-condensed font-black uppercase tracking-widest border transition-all duration-300 cursor-pointer ${
+                      orgFiltro === org.id
+                        ? 'bg-primary/15 text-primary border-primary/40'
+                        : 'bg-card/35 dark:bg-[#16110f] text-muted-foreground border-border/30 dark:border-white/[0.06] hover:border-primary/45 hover:text-foreground'
+                    }`}
+                  >
+                    {org.nombre}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SEGUNDO NIVEL: Competencias Directas del Circuito Seleccionado */}
+          {competencias.length > 0 && (
+            <div className="space-y-2.5 border-t border-border/20 dark:border-white/[0.05] pt-4.5 font-sans animate-fade-in">
+              <p className="text-[9px] font-condensed font-black uppercase tracking-[0.2em] text-muted-foreground">
+                {orgFiltro ? 'COMPETENCIAS DEL CIRCUITO' : 'COMPETENCIAS DISPONIBLES'}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setCompFiltro(null)}
+                  className={`px-4 py-1.5 rounded-lg text-[9px] font-condensed font-black uppercase tracking-widest border transition-all duration-300 cursor-pointer ${
+                    compFiltro === null
+                      ? 'bg-primary/10 text-primary border-primary/30'
+                      : 'bg-card/25 dark:bg-black/20 text-muted-foreground border-border/30 dark:border-white/[0.05] hover:border-primary/30 hover:text-foreground'
+                  }`}
+                >
+                  TODAS LAS COMPETENCIAS
+                </button>
+                {competencias.map(comp => (
+                  <button
+                    key={comp.id}
+                    onClick={() => setCompFiltro(comp.id)}
+                    className={`px-4 py-1.5 rounded-lg text-[9px] font-condensed font-black uppercase tracking-widest border transition-all duration-300 cursor-pointer ${
+                      compFiltro === comp.id
+                        ? 'bg-primary/10 text-primary border-primary/30 shadow-sm'
+                        : 'bg-card/25 dark:bg-black/20 text-muted-foreground border-border/30 dark:border-white/[0.05] hover:border-primary/30 hover:text-foreground'
+                    }`}
+                  >
+                    {comp.nombre}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
+      </section>
 
+      {/* ========================================================================= */}
+      {/* 4. DATE NAVIGATION STRIP (Con Día/Mes en vie/jun y coloreando conteos)     */}
+      {/* ========================================================================= */}
+      <section className="relative z-20 max-w-7xl mx-auto px-6 lg:px-10 mb-10">
+        <div className="flex items-center gap-3">
+          
+          {/* Flecha Izquierda */}
+          <button
+            disabled={dateIndex === 0}
+            onClick={() => {
+              setDateIndex(prev => Math.max(0, prev - 1));
+              setStatusTab('all');
+            }}
+            className="p-3.5 rounded-xl border border-border/40 dark:border-white/[0.06] bg-card/85 text-muted-foreground hover:text-foreground disabled:opacity-20 hover:border-primary/40 transition-all duration-300 cursor-pointer shrink-0"
+          >
+            ◀
+          </button>
+
+          {/* Carrusel de Fechas */}
+          <div className="flex-1 flex gap-3 overflow-x-auto pb-1.5 custom-scrollbar">
+            {formattedDates.map((item, idx) => {
+              const isActive = dateIndex === idx;
+              return (
+                <button
+                  key={idx}
+                  id={`date-btn-${idx}`}
+                  onClick={() => {
+                    setDateIndex(idx);
+                    setStatusTab('all');
+                  }}
+                  className={`flex-1 min-w-[84px] py-3.5 px-2.5 rounded-2xl border flex flex-col items-center gap-1.5 transition-all duration-300 cursor-pointer ${
+                    isActive
+                      ? 'bg-primary text-primary-foreground border-primary active-date-glow scale-105'
+                      : 'bg-card/70 text-muted-foreground border-border/45 dark:border-white/[0.06] hover:border-primary/30 hover:text-foreground'
+                  }`}
+                >
+                  {/* Etiqueta Día/Mes en español, ej: vie/jun */}
+                  <span className="text-[9px] font-condensed font-black tracking-widest uppercase">{item.label}</span>
+                  <span className="text-xl font-display font-black leading-none">{item.dayNum}</span>
+                  
+                  {/* Conteo de Partidos Coloreados */}
+                  <span className={`text-[8px] font-condensed font-black px-1.5 py-0.5 rounded-full mt-1.5 transition-colors ${
+                    isActive 
+                      ? 'bg-white/20 text-white' 
+                      : item.count > 0 
+                      ? 'bg-primary/10 text-primary border border-primary/20' 
+                      : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {item.count} {item.count === 1 ? 'partido' : 'partidos'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Flecha Derecha */}
+          <button
+            disabled={dateIndex === sortedDates.length - 1}
+            onClick={() => {
+              setDateIndex(prev => Math.min(sortedDates.length - 1, prev + 1));
+              setStatusTab('all');
+            }}
+            className="p-3.5 rounded-xl border border-border/40 dark:border-white/[0.06] bg-card/85 text-muted-foreground hover:text-foreground disabled:opacity-20 hover:border-primary/40 transition-all duration-300 cursor-pointer shrink-0"
+          >
+            ▶
+          </button>
+
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 5. MATCH LIST (Dynamic broadcast nested layout)                           */}
+      {/* ========================================================================= */}
+      <main className="relative z-20 max-w-7xl mx-auto px-6 lg:px-10 min-h-[400px]">
         {loading ? (
-          <div className="flex h-64 items-center justify-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
+          <div className="flex flex-col items-center justify-center py-24 min-h-[300px] border border-border/40 bg-card/25 backdrop-blur-md rounded-2xl">
+            <Spinner size="xl" />
+            <p className="mt-4 text-xs font-condensed font-bold text-muted-foreground tracking-[0.2em] uppercase animate-pulse">
+              Recuperando transmisiones de partidos...
+            </p>
+          </div>
+        ) : filteredMatches.length === 0 ? (
+          <div className="glass-hud-panel border border-primary/25 rounded-3xl p-20 flex flex-col items-center text-center max-w-2xl mx-auto gap-6 scanlines">
+            <div className="absolute inset-0 hud-noise pointer-events-none z-10 opacity-30"></div>
+            <span className="text-4xl animate-bounce">⚽</span>
+            <div className="space-y-3">
+              <h2 className="text-2xl font-display font-black tracking-wide text-foreground uppercase">Sin Partidos Programados</h2>
+              <p className="text-xs text-muted-foreground max-w-md">
+                No se registran duelos o transmisiones oficiales para la fecha elegida ({activeDate || 'Hoy'}) bajo los filtros aplicados.
+              </p>
+            </div>
+            <button
+              onClick={resetFilters}
+              className="px-6 py-3 text-xs font-condensed font-black tracking-widest uppercase bg-primary/15 text-primary border border-primary/30 rounded-xl hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
+            >
+              🔄 Restablecer Filtros
+            </button>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-12">
+            {nestedGrouped.map(orgGroup => (
+              <div key={orgGroup.id} className="space-y-8 animate-fade-in relative z-10">
+                
+                {/* Organization Header */}
+                <div className="flex items-center justify-between border-b border-border/20 dark:border-white/[0.08] pb-4">
+                  <h2 className="text-2xl md:text-3xl font-display font-black text-foreground uppercase tracking-wider flex items-center gap-3">
+                    {orgGroup.logo ? (
+                      <img 
+                        src={getImageUrl(orgGroup.logo)} 
+                        alt={orgGroup.nombre} 
+                        className="w-8 h-8 rounded-lg object-cover border border-border/40 bg-card"
+                      />
+                    ) : (
+                      <span>🛡️</span>
+                    )}
+                    {orgGroup.nombre}
+                  </h2>
+                  <span className="text-[10px] font-condensed tracking-widest font-black text-primary bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-lg uppercase">
+                    {orgGroup.competencias.reduce((sum, c) => sum + c.partidos.length, 0)} ENCUENTROS
+                  </span>
+                </div>
 
-            {/* ── FILTER PANEL ── */}
-            <div className="border border-border/50 bg-card/20 backdrop-blur-md rounded-2xl p-5 shadow-lg space-y-5">
+                {/* Competitions */}
+                <div className="space-y-8 pl-1 md:pl-4">
+                  {orgGroup.competencias.map(compGroup => (
+                    <div key={compGroup.id} className="space-y-4">
+                      
+                      {/* Competition Title */}
+                      <div className="flex items-center gap-3 pl-3 border-l-2 border-primary">
+                        <span className="text-xs font-condensed font-black text-muted-foreground tracking-widest uppercase">
+                          🏆 {compGroup.nombre}
+                        </span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-border/40" />
+                        <span className="text-[9px] font-mono text-primary font-bold">
+                          FECHA: {activeDate}
+                        </span>
+                      </div>
 
-              {/* Row 1: Status tabs + view toggle */}
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                {/* Status tabs */}
-                <div className="flex gap-1 bg-muted/30 p-1 rounded-lg border border-border/30 overflow-x-auto">
-                  {[
-                    { id: 'all',      label: 'Todos',    emoji: '🌐' },
-                    { id: 'live',     label: 'En Vivo',  emoji: '🔴' },
-                    { id: 'upcoming', label: 'Próximos', emoji: '📅' },
-                    { id: 'finished', label: 'Finales',  emoji: '🏁' },
-                  ].map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setStatusTab(tab.id)}
-                      className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-bold whitespace-nowrap transition-all duration-200 ${
-                        statusTab === tab.id
-                          ? 'bg-background text-primary shadow-sm border border-border/40'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
-                      }`}
-                    >
-                      {tab.emoji} {tab.label}
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-black ${statusTab === tab.id ? 'bg-primary/15 text-primary' : 'bg-muted/50'}`}>
-                        {counts[tab.id]}
-                      </span>
-                    </button>
+                      {/* Matches Rows Grid */}
+                      <div className="space-y-3.5">
+                        {compGroup.partidos.map(p => {
+                          const status = classifyMatch(p, activeDate);
+                          const isFinished = status === 'finished';
+                          const isLive = status === 'live';
+                          const teamL = p.local?.nombre || 'Por definir';
+                          const teamV = p.visitante?.nombre || 'Por definir';
+                          const score = isFinished || isLive ? `${p.goles_local} – ${p.goles_visitante}` : 'VS';
+                          const localWinner = isFinished && p.goles_local > p.goles_visitante;
+                          const visitaWinner = isFinished && p.goles_visitante > p.goles_local;
+
+                          return (
+                            <div
+                              key={p.id}
+                              className={`relative overflow-hidden rounded-2xl glass-hud-panel p-5 flex flex-col md:flex-row justify-between items-center gap-6 md:gap-10 border transition-all duration-300 scanlines select-none ${
+                                isLive ? 'live-match-flash border-primary/50 bg-primary/5' : 'border-border/45'
+                              }`}
+                            >
+                              <div className="absolute inset-0 hud-noise pointer-events-none opacity-40"></div>
+
+                              {/* LEFT: Hora + Estado */}
+                              <div className="flex md:flex-col items-center md:items-start justify-between w-full md:w-auto shrink-0 gap-2 border-b md:border-b-0 md:border-r border-border/30 dark:border-white/[0.08] pb-3 md:pb-0 md:pr-8">
+                                <div className="text-center md:text-left">
+                                  <span className="text-[9px] font-condensed text-muted-foreground font-black tracking-widest block uppercase">HORA DE TRANSMISIÓN</span>
+                                  <span className="text-xl font-display font-black text-foreground tracking-widest leading-none mt-1 block">
+                                    {p.hora || 'Por definir'}
+                                  </span>
+                                </div>
+                                <div className="mt-1">
+                                  {isLive ? (
+                                    <span className="inline-flex items-center gap-1.5 text-[9px] font-condensed font-black tracking-widest text-primary bg-primary/10 border border-primary/35 px-3 py-1 rounded">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" /> EN VIVO
+                                    </span>
+                                  ) : isFinished ? (
+                                    <span className="inline-flex items-center gap-1.5 text-[9px] font-condensed font-black tracking-widest text-muted-foreground bg-muted border border-border/50 px-3 py-1 rounded">
+                                      FINALIZADO
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1.5 text-[9px] font-condensed font-black tracking-widest text-primary/95 bg-primary/5 border border-primary/20 px-3 py-1 rounded">
+                                      PROGRAMADO
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* CENTER: Team A - Score - Team B (Aligned like eSports broadcast banner) */}
+                              <div className="flex-1 flex items-center justify-between gap-6 md:gap-10 w-full min-w-0">
+                                
+                                {/* Local Team */}
+                                <div className="flex-1 flex items-center justify-end gap-3 min-w-0 text-right">
+                                  <span className={`text-xs md:text-sm font-condensed font-black uppercase tracking-wider truncate ${localWinner ? 'text-primary' : 'text-foreground'}`}>
+                                    {teamL}
+                                  </span>
+                                  {p.local?.logo ? (
+                                    <img 
+                                      src={getImageUrl(p.local.logo)} 
+                                      alt={teamL} 
+                                      className="w-9 h-9 rounded-xl object-cover border bg-background shadow-inner shrink-0" 
+                                    />
+                                  ) : (
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-background font-display font-black text-sm uppercase ${
+                                      localWinner ? 'border-primary text-primary shadow-[0_0_10px_rgba(232,0,29,0.15)]' : 'border-border/50 text-muted-foreground'
+                                    }`}>
+                                      {p.local?.abreviatura || teamL.charAt(0)}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Score in Center */}
+                                <div className="shrink-0 min-w-[84px] text-center">
+                                  <span className="text-2xl md:text-3xl font-display font-black tracking-widest leading-none block">
+                                    <span className={localWinner ? 'text-primary' : 'text-foreground'}>{isFinished || isLive ? p.goles_local : ''}</span>
+                                    <span className="text-muted-foreground/30 mx-2">{isFinished || isLive ? '–' : 'VS'}</span>
+                                    <span className={visitaWinner ? 'text-primary' : 'text-foreground'}>{isFinished || isLive ? p.goles_visitante : ''}</span>
+                                  </span>
+                                  {p.jornada && (
+                                    <span className="text-[8px] font-condensed font-bold text-muted-foreground uppercase tracking-widest mt-1 block">
+                                      {p.jornada}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Visitante Team */}
+                                <div className="flex-1 flex items-center justify-start gap-3 min-w-0 text-left">
+                                  {p.visitante?.logo ? (
+                                    <img 
+                                      src={getImageUrl(p.visitante.logo)} 
+                                      alt={teamV} 
+                                      className="w-9 h-9 rounded-xl object-cover border bg-background shadow-inner shrink-0" 
+                                    />
+                                  ) : (
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-background font-display font-black text-sm uppercase ${
+                                      visitaWinner ? 'border-primary text-primary shadow-[0_0_10px_rgba(232,0,29,0.15)]' : 'border-border/50 text-muted-foreground'
+                                    }`}>
+                                      {p.visitante?.abreviatura || teamV.charAt(0)}
+                                    </div>
+                                  )}
+                                  <span className={`text-xs md:text-sm font-condensed font-black uppercase tracking-wider truncate ${visitaWinner ? 'text-primary' : 'text-foreground'}`}>
+                                    {teamV}
+                                  </span>
+                                </div>
+
+                              </div>
+
+                              {/* RIGHT: Watch / Detalle Button */}
+                              <div className="shrink-0 w-full md:w-auto border-t md:border-t-0 md:border-l border-border/30 dark:border-white/[0.08] pt-4 md:pt-0 md:pl-8 flex justify-center">
+                                <button
+                                  onClick={() => navigate(`/partidos/${p.id}`)}
+                                  className="w-full md:w-32 py-3 px-6 text-[10px] font-condensed font-black tracking-widest uppercase bg-primary/15 text-primary border border-primary/35 rounded-xl hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_15px_rgba(232,0,29,0.45)] transition-all duration-300 cursor-pointer font-black"
+                                >
+                                  {isLive ? '🔴 VER DUELO' : isFinished ? 'ANALIZAR' : 'VER DETALLES'}
+                                </button>
+                              </div>
+
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                    </div>
                   ))}
                 </div>
 
-                {/* View mode toggle */}
-                <div className="flex gap-1 bg-muted/30 p-1 rounded-lg border border-border/30">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    title="Vista cuadrícula"
-                    className={`p-2 rounded-md transition-all duration-200 ${viewMode === 'grid' ? 'bg-background text-primary border border-border/40 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    title="Vista lista"
-                    className={`p-2 rounded-md transition-all duration-200 ${viewMode === 'list' ? 'bg-background text-primary border border-border/40 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                  </button>
-                </div>
               </div>
-
-              {/* Row 2: Search */}
-              <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Buscar equipo, competencia u organización..."
-                  value={searchText}
-                  onChange={e => setSearchText(e.target.value)}
-                  className="w-full bg-muted/20 border border-border/40 rounded-xl pl-10 pr-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:bg-muted/30 transition-all"
-                />
-                {searchText && (
-                  <button
-                    onClick={() => setSearchText('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-
-              {/* Row 3: Organization filter chips */}
-              {organizaciones.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Organización</p>
-                  <div className="flex flex-wrap gap-2">
-                    <FilterChip
-                      label="Todas"
-                      active={orgFiltro === null}
-                      onClick={() => { setOrgFiltro(null); setCompFiltro(null); setJornadaFiltro(null); }}
-                    />
-                    {organizaciones.map(org => (
-                      <FilterChip
-                        key={org.id}
-                        label={org.nombre}
-                        active={orgFiltro === org.id}
-                        count={partidos.filter(p => p.competencia?.temporada?.organizacion?.id === org.id).length}
-                        onClick={() => { setOrgFiltro(org.id); setCompFiltro(null); setJornadaFiltro(null); }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Row 4: Competition chips (shown when org is selected or there are few comps) */}
-              {competencias.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Competencia</p>
-                  <div className="flex flex-wrap gap-2">
-                    <FilterChip
-                      label="Todas"
-                      active={compFiltro === null}
-                      onClick={() => { setCompFiltro(null); setJornadaFiltro(null); }}
-                    />
-                    {competencias.map(c => (
-                      <FilterChip
-                        key={c.id}
-                        label={c.nombre}
-                        active={compFiltro === c.id}
-                        count={partidos.filter(p => p.competencia?.id === c.id).length}
-                        onClick={() => { setCompFiltro(c.id); setJornadaFiltro(null); }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Row 5: Jornada chips (only when competition is filtered) */}
-              {compFiltro && jornadas.length > 1 && (
-                <div className="space-y-2">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Jornada</p>
-                  <div className="flex flex-wrap gap-2">
-                    <FilterChip
-                      label="Todas"
-                      active={jornadaFiltro === null}
-                      onClick={() => setJornadaFiltro(null)}
-                    />
-                    {jornadas.map(j => (
-                      <FilterChip
-                        key={j}
-                        label={j}
-                        active={jornadaFiltro === j}
-                        onClick={() => setJornadaFiltro(j)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Active filters summary */}
-              {activeFiltersCount > 0 && (
-                <div className="flex items-center justify-between border-t border-border/30 pt-3">
-                  <span className="text-[10px] text-muted-foreground">
-                    Mostrando <span className="text-foreground font-bold">{filtered.length}</span> de{' '}
-                    <span className="text-foreground font-bold">{partidos.length}</span> partidos
-                  </span>
-                  <button
-                    onClick={resetFilters}
-                    className="text-[10px] font-bold text-destructive hover:text-destructive/80 transition-colors flex items-center gap-1"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Limpiar filtros
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* ── RESULTS ── */}
-            {filtered.length === 0 ? (
-              <div className="text-center py-20 space-y-3">
-                <div className="text-5xl">🔍</div>
-                <p className="text-base font-black uppercase tracking-wider text-foreground">Sin resultados</p>
-                <p className="text-sm text-muted-foreground">Prueba ajustando los filtros o busca otro término.</p>
-                <button onClick={resetFilters} className="text-xs text-primary underline underline-offset-2 hover:no-underline font-bold">
-                  Limpiar todos los filtros
-                </button>
-              </div>
-            ) : viewMode === 'list' ? (
-              /* LIST VIEW — grouped by competencia + jornada */
-              <div className="space-y-8">
-                {grouped.map(group => (
-                  <div key={`${group.compNom}||${group.jornada}`} className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <div className="h-px flex-1 bg-border/30" />
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-primary">{group.compNom}</span>
-                        <span className="text-[9px] text-muted-foreground">·</span>
-                        <span className="text-[9px] font-bold text-muted-foreground uppercase">{group.jornada}</span>
-                      </div>
-                      <div className="h-px flex-1 bg-border/30" />
-                    </div>
-                    <div className="space-y-1.5">
-                      {group.partidos.map(p => (
-                        <MatchCard key={p.id} partido={p} view="list" />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              /* GRID VIEW — grouped */
-              <div className="space-y-10">
-                {grouped.map(group => (
-                  <div key={`${group.compNom}||${group.jornada}`} className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-px flex-1 bg-border/30" />
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-primary px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
-                          {group.compNom}
-                        </span>
-                        <span className="text-[9px] font-bold text-muted-foreground uppercase px-2 py-1 bg-muted/20 border border-border/30 rounded-full">
-                          {group.jornada}
-                        </span>
-                      </div>
-                      <div className="h-px flex-1 bg-border/30" />
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {group.partidos.map(p => (
-                        <MatchCard key={p.id} partido={p} view="grid" />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
+            ))}
           </div>
         )}
-      </div>
+      </main>
+
     </div>
   );
 }

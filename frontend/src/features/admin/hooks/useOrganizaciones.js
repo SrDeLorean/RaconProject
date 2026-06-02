@@ -31,7 +31,17 @@ export const useOrganizaciones = () => {
     slug: '', 
     owner_id: '', 
     is_verified: false, 
-    estado: 'activo' 
+    estado: 'activo',
+    descripcion: '',
+    logo: '',
+    banner: '',
+    color_hex: '#ef4444',
+    email_contacto: '',
+    discord_url: '',
+    twitter_url: '',
+    twitch_url: '',
+    website: '',
+    pais: ''
   });
 
   const triggerNotification = (variant, text) => {
@@ -135,8 +145,40 @@ export const useOrganizaciones = () => {
     setSelectedOrganizacion(org);
     setFormErrors({}); // 🔥 Limpiamos el feedback visual al abrir
     setFormData(org 
-      ? { nombre: org.nombre, slug: org.slug, owner_id: org.owner_id, is_verified: org.is_verified, estado: org.estado }
-      : { nombre: '', slug: '', owner_id: '', is_verified: false, estado: 'activo' }
+      ? { 
+          nombre: org.nombre || '', 
+          slug: org.slug || '', 
+          owner_id: org.owner_id || '', 
+          is_verified: org.is_verified || false, 
+          estado: org.estado || 'activo',
+          descripcion: org.descripcion || '',
+          logo: org.logo || '',
+          banner: org.banner || '',
+          color_hex: org.color_hex || '#ef4444',
+          email_contacto: org.email_contacto || '',
+          discord_url: org.discord_url || '',
+          twitter_url: org.twitter_url || '',
+          twitch_url: org.twitch_url || '',
+          website: org.website || '',
+          pais: org.pais || ''
+        }
+      : { 
+          nombre: '', 
+          slug: '', 
+          owner_id: '', 
+          is_verified: false, 
+          estado: 'activo',
+          descripcion: '',
+          logo: '',
+          banner: '',
+          color_hex: '#ef4444',
+          email_contacto: '',
+          discord_url: '',
+          twitter_url: '',
+          twitch_url: '',
+          website: '',
+          pais: ''
+        }
     );
     setIsDrawerOpen(true);
   };

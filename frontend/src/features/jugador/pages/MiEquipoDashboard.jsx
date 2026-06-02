@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useMiEquipo } from '../hooks/useMiEquipo';
+import api from '@/api/axios';
 
 // Componentes UI de Uso Común (Shared)
 import Badge from '@/components/ui/Badge';
@@ -64,8 +65,16 @@ export default function MiEquipoDashboard() {
           {/* BANNER PRINCIPAL DE MARCA */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-border/50 pb-6">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-destructive/20 border border-primary/30 flex items-center justify-center font-display font-black text-primary text-xl shadow-inner">
-                {data.equipo.abreviatura}
+              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-destructive/20 border border-primary/30 flex items-center justify-center font-display font-black text-primary text-xl shadow-inner overflow-hidden">
+                {data.equipo.logo ? (
+                  <img 
+                    src={data.equipo.logo.startsWith('http') ? data.equipo.logo : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${data.equipo.logo}`} 
+                    alt="Escudo" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  data.equipo.abreviatura
+                )}
               </div>
               <div>
                 <h1 className="text-2xl font-display font-black text-foreground tracking-wide uppercase flex items-center gap-2">

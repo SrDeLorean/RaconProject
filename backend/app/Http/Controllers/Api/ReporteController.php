@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Partido;
 use App\Models\EstadisticaJugador;
 use App\Models\EstadisticaJugadorLog;
+use App\Models\EstadisticaEquipo;
 use App\Models\User;
 use App\Services\EaProClubsService;
 use App\Services\EaPlayerStatsMapper;
@@ -13,6 +14,7 @@ use App\Services\EaTeamStatsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ReporteController extends Controller
 {
@@ -149,20 +151,45 @@ class ReporteController extends Controller
 
                 $user = $users[$playername] ?? null;
 
-                EstadisticaJugadorLog::firstOrCreate(
-                    [
-                        'playername'    => $playername,
-                        'partido_id'    => $partido->id,
-                    ],
-                    [
-                        'jugador_id'     => $user?->id,
-                        'equipo_id'      => $equipoId,
-                        'competencia_id' => $partido->competencia_id,
-                        'jugo'           => true,
-                        'procesado'      => (bool) $user,
-                        'estado'         => $user ? 'ok' : 'error',
-                    ]
-                );
+                // Determinar el estado detallado de cumplimiento
+                $estado = 'ok';
+                $procesado = false;
+
+                if (!$user) {
+                    $estado = 'no_existe_sistema'; // Jugador jugó pero no existe en el sistema
+                } else {
+                    // Verificar si está inscrito activamente en la plantilla del equipo en esta organización
+                    $isInRoster = DB::table('organizacion_equipo_usuario')
+                        ->where('user_id', $user->id)
+                        ->where('equipo_id', $equipoId)
+                        ->where('organizacion_id', $partido->competencia->temporada->organizacion_id)
+                        ->where('estado_fichaje', 'activo')
+                        ->exists();
+
+                    if (!$isInRoster) {
+                        $estado = 'no_inscrito_equipo'; // Existe en el sistema pero no en el roster de este equipo
+                    } else {
+                        $estado = 'ok';
+                        $procesado = true;
+                    }
+                }
+
+                // Limpiar previo log por si es reporte corregido
+                EstadisticaJugadorLog::where([
+                    'playername' => $playername,
+                    'partido_id' => $partido->id
+                ])->delete();
+
+                EstadisticaJugadorLog::create([
+                    'playername'     => $playername,
+                    'partido_id'     => $partido->id,
+                    'jugador_id'     => $user?->id,
+                    'equipo_id'      => $equipoId,
+                    'competencia_id' => $partido->competencia_id,
+                    'jugo'           => true,
+                    'procesado'      => $procesado,
+                    'estado'         => $estado,
+                ]);
 
                 if (!$user) {
                     continue;
@@ -199,41 +226,60 @@ class ReporteController extends Controller
         );
 
         // Registrar jugadores que NO jugaron en plantilla vinculada
-        $jugadoresEquipo = User::whereHas('equipos', function ($q) use ($partido) {
-            $q->whereIn('equipo_id', [
-                $partido->local->id,
-                $partido->visitante->id,
-            ]);
-        })->get();
+        $rosterUsers = DB::table('organizacion_equipo_usuario')
+            ->where('organizacion_id', $partido->competencia->temporada->organizacion_id)
+            ->whereIn('equipo_id', [$partido->local->id, $partido->visitante->id])
+            ->where('estado_fichaje', 'activo')
+            ->pluck('user_id');
 
+        $jugadoresEquipo = User::whereIn('id', $rosterUsers)->get();
         $eaPlayersGlobal = $eaPlayersGlobal->unique();
 
+        // Limpiar previos logs de no_jugo/sin_gamertag por si es reporte corregido
+        EstadisticaJugadorLog::where('partido_id', $partido->id)->where('jugo', false)->delete();
+
         foreach ($jugadoresEquipo as $jugador) {
-            if (!$jugador->id_ea || $eaPlayersGlobal->contains($jugador->id_ea)) {
+            // Encontrar el equipo al que pertenece en la relacion pivot de organizacion_equipo_usuario
+            $equipoPivot = DB::table('organizacion_equipo_usuario')
+                ->where('organizacion_id', $partido->competencia->temporada->organizacion_id)
+                ->where('user_id', $jugador->id)
+                ->whereIn('equipo_id', [$partido->local->id, $partido->visitante->id])
+                ->where('estado_fichaje', 'activo')
+                ->first();
+
+            if (!$equipoPivot) {
                 continue;
             }
 
-            // Encontrar el equipo al que pertenece en la relacion pivot de organizacion_equipo_usuario
-            $equipoPivot = $jugador->equipos()->whereIn('equipo_id', [
-                $partido->local->id,
-                $partido->visitante->id,
-            ])->first();
+            // Caso A: El jugador no tiene Gamertag / ID EA registrado
+            if (!$jugador->id_ea && !$jugador->gamertag) {
+                EstadisticaJugadorLog::create([
+                    'playername'     => null,
+                    'partido_id'     => $partido->id,
+                    'jugador_id'     => $jugador->id,
+                    'equipo_id'      => $equipoPivot->equipo_id,
+                    'competencia_id' => $partido->competencia_id,
+                    'jugo'           => false,
+                    'procesado'      => false,
+                    'estado'         => 'sin_gamertag',
+                ]);
+                continue;
+            }
 
-            if ($equipoPivot) {
-                EstadisticaJugadorLog::firstOrCreate(
-                    [
-                        'playername'    => null, // no jugó
-                        'partido_id'    => $partido->id,
-                        'jugador_id'    => $jugador->id,
-                    ],
-                    [
-                        'equipo_id'      => $equipoPivot->id,
-                        'competencia_id' => $partido->competencia_id,
-                        'jugo'           => false,
-                        'procesado'      => false,
-                        'estado'         => 'no_jugo',
-                    ]
-                );
+            $idEa = $jugador->id_ea ?: $jugador->gamertag;
+
+            // Caso B: El jugador tiene gamertag registrado pero no jugó en este partido
+            if (!$eaPlayersGlobal->contains($idEa)) {
+                EstadisticaJugadorLog::create([
+                    'playername'     => $idEa,
+                    'partido_id'     => $partido->id,
+                    'jugador_id'     => $jugador->id,
+                    'equipo_id'      => $equipoPivot->equipo_id,
+                    'competencia_id' => $partido->competencia_id,
+                    'jugo'           => false,
+                    'procesado'      => false,
+                    'estado'         => 'no_jugo',
+                ]);
             }
         }
 

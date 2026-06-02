@@ -4,6 +4,7 @@ import api from '@/api/axios';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Alert from '@/components/shared/Alert';
+import Partidos from '@/features/public/pages/Partidos';
 
 export default function DetalleClubInscrito() {
   const { id } = useParams();
@@ -289,20 +290,9 @@ export default function DetalleClubInscrito() {
                   )}
                 </div>
 
-                {/* CALENDARIO DE PARTIDOS MOCK */}
+                {/* CALENDARIO DE PARTIDOS DE VERDAD */}
                 <div className="space-y-4 pt-2">
-                  <div className="border-b border-border/40 pb-2">
-                    <h3 className="text-base font-bold uppercase text-foreground tracking-wide flex items-center gap-2">
-                      📅 Calendario de Partidos y Fechas
-                    </h3>
-                  </div>
-                  <div className="border border-border/50 bg-card/25 backdrop-blur-md rounded-2xl p-6 text-center space-y-2">
-                    <span className="text-2xl">⚡</span>
-                    <h4 className="font-bold text-sm text-foreground uppercase">Cronograma de Enfrentamientos</h4>
-                    <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
-                      El organizador del circuito está estructurando las fechas y el fixture. Tan pronto como el calendario de partidos sea publicado, aparecerán aquí las fechas, horarios y rivales oficiales.
-                    </p>
-                  </div>
+                  <Partidos forTeam={true} hideHero={true} teamId={id} />
                 </div>
               </div>
             )}
