@@ -29,6 +29,7 @@ export default function MatchmakerCalendario({ equipos = [], competenciaId = nul
   const [eaClubLocalId, setEaClubLocalId] = useState('');
   const [eaClubVisitanteId, setEaClubVisitanteId] = useState('');
   const [eaProcessing, setEaProcessing] = useState(false);
+  const [eaWarnings, setEaWarnings] = useState(null);
 
   // Roster ficticio del equipo para estadísticas de jugadores
   const mockRoster = [
@@ -380,6 +381,7 @@ export default function MatchmakerCalendario({ equipos = [], competenciaId = nul
     setSelectedEaMatchId('');
     setEaClubLocalId('');
     setEaClubVisitanteId('');
+    setEaWarnings(null);
 
     if (match.stats) {
       setTeamAStats(match.stats.teamA);
@@ -497,7 +499,7 @@ export default function MatchmakerCalendario({ equipos = [], competenciaId = nul
     setIsStatsModalOpen(false);
   };
 
-  const handleEaReportSubmit = async () => {
+  const handleEaReportSubmit = async (forceReport = false) => {
     if (!selectedEaMatchId || !eaClubLocalId || !eaClubVisitanteId) {
       alert("⚠️ Selecciona un partido de EA y confirma los IDs de Club de EA local y visitante.");
       return;
@@ -518,11 +520,13 @@ export default function MatchmakerCalendario({ equipos = [], competenciaId = nul
     }
 
     setEaProcessing(true);
+    setEaWarnings(null);
     try {
       const res = await api.post(`/partidos/${selectedMatch.id}/ea-report`, {
         ea_match_id: selectedEaMatchId,
         club_local_id: eaClubLocalId,
-        club_visitante_id: eaClubVisitanteId
+        club_visitante_id: eaClubVisitanteId,
+        force: forceReport
       });
 
       if (res.data && res.data.success) {
@@ -597,7 +601,11 @@ export default function MatchmakerCalendario({ equipos = [], competenciaId = nul
         setIsStatsModalOpen(false);
       }
     } catch (err) {
-      alert("❌ Error al procesar reporte de EA: " + (err.response?.data?.message || err.message));
+      if (err.response?.status === 422 && err.response?.data?.code === 'VALIDATION_WARNING') {
+        setEaWarnings(err.response.data.players);
+      } else {
+        alert("❌ Error al procesar reporte de EA: " + (err.response?.data?.message || err.message));
+      }
     } finally {
       setEaProcessing(false);
     }
@@ -1357,15 +1365,58 @@ export default function MatchmakerCalendario({ equipos = [], competenciaId = nul
                   </div>
                 )}
 
+                {/* Warnings de Jugadores No Registrados / Desalineados */}
+                {eaWarnings && (
+                  <div className="border border-red-500/30 bg-red-500/5 rounded-xl p-4 space-y-3 animate-fade-in text-left">
+                    <p className="text-xs font-bold text-red-400 flex items-center gap-1.5 uppercase font-display tracking-wide">
+                      🚨 Advertencia de Inscripción de Jugadores
+                    </p>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Los siguientes jugadores que participaron en el encuentro de EA Sports no están inscritos correctamente en el sistema:
+                    </p>
+                    
+                    <ul className="text-[10px] space-y-1.5 font-mono bg-black/35 p-3 rounded-lg divide-y divide-white/5 max-h-36 overflow-y-auto">
+                      {eaWarnings.map((w, idx) => (
+                        <li key={idx} className="pt-1.5 first:pt-0 flex flex-col sm:flex-row sm:justify-between gap-1">
+                          <span className="text-primary font-black uppercase">{w.playername} ({w.club})</span>
+                          <span className="text-destructive/90 italic font-sans text-right">{w.reason}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <p className="text-[10px] text-yellow-500 font-semibold leading-relaxed">
+                      💡 Hablar con un administrador u organizador para actualizar este tema, de lo contrario el equipo rival puede reclamar los puntos por no jugar en las condiciones pactadas.
+                    </p>
+
+                    <div className="flex gap-2 justify-end pt-1.5 border-t border-border/20">
+                      <Button 
+                        size="sm"
+                        onClick={() => setEaWarnings(null)}
+                        variant="outline"
+                        className="h-8 text-[9px] uppercase tracking-wider font-bold"
+                      >
+                        Cancelar
+                      </Button>
+                      <Button 
+                        size="sm"
+                        onClick={() => handleEaReportSubmit(true)}
+                        className="h-8 text-[9px] uppercase tracking-wider font-black bg-gradient-to-r from-red-600 to-amber-600 text-white border-none shadow-md hover:shadow-red-900/40"
+                      >
+                        Reportar de todas formas
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Botones de acción */}
                 <div className="flex gap-2 justify-end pt-3">
                   <Button onClick={() => setIsStatsModalOpen(false)} variant="outline" className="h-10 text-[10px]">
                     Cancelar
                   </Button>
                   <Button 
-                    onClick={handleEaReportSubmit}
+                    onClick={() => handleEaReportSubmit(false)}
                     isLoading={eaProcessing}
-                    disabled={!selectedEaMatchId || eaLoading}
+                    disabled={!selectedEaMatchId || eaLoading || eaWarnings !== null}
                     className="h-10 text-[10px] bg-gradient-to-r from-primary to-destructive text-primary-foreground border-none font-display font-black uppercase tracking-widest shadow-lg"
                   >
                     ⚽ Procesar Reporte EA Sports

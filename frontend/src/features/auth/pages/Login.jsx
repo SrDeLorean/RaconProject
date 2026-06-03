@@ -33,7 +33,7 @@ export default function Login() {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
 
   // Estados para el flujo de recuperación de contraseña
-  const [view, setView] = useState('login'); // 'login' | 'forgot' | 'reset'
+  const [view, setView] = useState('login'); // 'login' | 'forgot' | 'reset' | 'verify_pending'
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [recoveryToken, setRecoveryToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -41,6 +41,13 @@ export default function Login() {
   const [recoveryError, setRecoveryError] = useState('');
   const [recoverySuccess, setRecoverySuccess] = useState('');
   const [isRecovering, setIsRecovering] = useState(false);
+
+  // Estados para activación de cuenta desde el login
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verifyingCode, setVerifyingCode] = useState(false);
+  const [verificationError, setVerificationError] = useState('');
+  const [verificationSuccess, setVerificationSuccess] = useState('');
 
   const navigateToDashboard = (currentUser) => {
     const role = currentUser?.role || 'jugador';
@@ -71,6 +78,54 @@ export default function Login() {
     if (result.success) {
       const currentUser = useAuthStore.getState().user;
       navigateToDashboard(currentUser);
+    } else if (result.isUnverified) {
+      setUnverifiedEmail(result.email || credentials.email);
+      setVerificationCode('');
+      setVerificationError('');
+      setVerificationSuccess('');
+      setView('verify_pending');
+    }
+  };
+
+  const handleVerifyCodeSubmit = async (e) => {
+    e.preventDefault();
+    setVerifyingCode(true);
+    setVerificationError('');
+    setVerificationSuccess('');
+    try {
+      const response = await api.post('/verify-email', { token: verificationCode.trim() });
+      setVerificationSuccess(response.data.message || '¡Cuenta activada con éxito! Iniciando sesión...');
+      
+      // Auto-login since credentials are preserved in local state
+      setTimeout(async () => {
+        const loginResult = await login(credentials);
+        if (loginResult.success) {
+          const currentUser = useAuthStore.getState().user;
+          navigateToDashboard(currentUser);
+        } else {
+          setView('login');
+          setVerificationSuccess('');
+          setVerificationCode('');
+        }
+      }, 2000);
+    } catch (err) {
+      setVerificationError(err.response?.data?.message || 'El código es inválido o ha expirado.');
+    } finally {
+      setVerifyingCode(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setIsRecovering(true);
+    setVerificationError('');
+    setVerificationSuccess('');
+    try {
+      const response = await api.post('/resend-verification', { email: unverifiedEmail });
+      setVerificationSuccess(response.data.message || 'Código de activación reenviado.');
+    } catch (err) {
+      setVerificationError(err.response?.data?.message || 'Error al reenviar el código.');
+    } finally {
+      setIsRecovering(false);
     }
   };
 
@@ -432,6 +487,88 @@ export default function Login() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                     Volver al login
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* VISTA 4: CUENTA NO VERIFICADA (verify_pending)                           */}
+            {/* ========================================================================= */}
+            {view === 'verify_pending' && (
+              <div className="animate-fade-in space-y-5">
+                <div className="mb-6 relative">
+                  <h2 className="text-2xl sm:text-3xl font-display font-black tracking-tight text-foreground uppercase">
+                    Activar <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-destructive">Cuenta</span>
+                  </h2>
+                  <p className="text-xs font-mono text-muted-foreground mt-1 uppercase tracking-widest flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                    Tu cuenta requiere verificación
+                  </p>
+                  <div className="h-[1px] w-full bg-gradient-to-r from-border/80 via-border/20 to-transparent mt-4"></div>
+                </div>
+
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Tu cuenta no ha sido verificada todavía. Hemos enviado un código de seguridad a tu correo:
+                  <br />
+                  <span className="text-primary font-bold font-mono text-[12px]">{unverifiedEmail}</span>
+                  <br />
+                  Ingresa el código enviado a continuación para activar tu cuenta e ingresar al sistema:
+                </p>
+
+                {verificationError && (
+                  <Alert variant="destructive" className="py-2.5 text-xs" onClose={() => setVerificationError('')}>
+                    {verificationError}
+                  </Alert>
+                )}
+
+                {verificationSuccess && (
+                  <Alert variant="success" className="py-2.5 text-xs">
+                    {verificationSuccess}
+                  </Alert>
+                )}
+
+                <form onSubmit={handleVerifyCodeSubmit} className="space-y-4 pt-2">
+                  <Input 
+                    label="Código de Activación" 
+                    name="verificationCode" 
+                    value={verificationCode} 
+                    onChange={(e) => setVerificationCode(e.target.value)} 
+                    required 
+                    disabled={verifyingCode} 
+                    placeholder="Pega el código de tu correo..."
+                    className="text-center font-mono tracking-widest text-base uppercase"
+                  />
+
+                  <Button 
+                    type="submit" 
+                    className="w-full py-3.5 font-bold tracking-widest uppercase hover:shadow-[0_0_20px_hsla(var(--primary),0.6)] transition-all bg-gradient-to-r from-primary to-destructive text-primary-foreground border-none rounded-md" 
+                    isLoading={verifyingCode}
+                  >
+                    Activar e Ingresar
+                  </Button>
+                </form>
+
+                <div className="flex flex-col gap-2.5 pt-2 text-center border-t border-border/20 mt-4">
+                  <button 
+                    onClick={handleResendCode}
+                    disabled={isRecovering || verifyingCode}
+                    className="text-[10px] font-bold text-muted-foreground hover:text-primary transition-colors uppercase tracking-wider disabled:opacity-50"
+                  >
+                    {isRecovering ? 'Reenviando...' : '¿No recibiste el correo? Reenviar correo de activación'}
+                  </button>
+
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setView('login');
+                      setVerificationError('');
+                      setVerificationSuccess('');
+                      setVerificationCode('');
+                    }}
+                    className="text-[10px] font-black text-primary hover:text-destructive transition-colors uppercase tracking-widest pt-2"
+                  >
+                    ← Cancelar y volver al Login
                   </button>
                 </div>
               </div>

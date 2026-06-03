@@ -28,6 +28,15 @@ class OrganizacionController extends Controller
             $query->where('owner_id', $request->owner_id);
         }
 
+        if ($request->filled('player_id')) {
+            $query->whereIn('id', function($q) use ($request) {
+                $q->select('organizacion_id')
+                  ->from('organizacion_equipo_usuario')
+                  ->where('user_id', $request->player_id)
+                  ->where('estado_fichaje', 'activo');
+            });
+        }
+
         if ($request->filled('search')) {
             $query->where('nombre', 'LIKE', "%{$request->search}%");
         }

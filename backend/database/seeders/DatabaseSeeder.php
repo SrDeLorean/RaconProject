@@ -72,6 +72,7 @@ class DatabaseSeeder extends Seeder
 
         $organizaciones = [];
         $competencias = [];
+        $temporadas = [];
 
         for ($i = 0; $i < 4; $i++) {
             $orgName = $nombresOrgs[$i];
@@ -107,6 +108,7 @@ class DatabaseSeeder extends Seeder
                 'fecha_fin' => '2026-12-31',
                 'activa' => true,
             ]);
+            $temporadas[] = $temporada;
 
             // 4 competencias específicas por organización
             $formatos = ['liga', 'copa', 'eliminatoria', 'liga'];
@@ -165,6 +167,7 @@ class DatabaseSeeder extends Seeder
                 'plataforma' => $plataformasEquipos[$i % 3],
                 'logo' => $teamLogos[$i % 4],
                 'banner' => $orgBanners[$i % 4],
+                'club_id_ea' => (string) (50000 + $i),
                 'estado' => true,
             ]);
             $equipos[] = $equipo;
@@ -241,7 +244,7 @@ class DatabaseSeeder extends Seeder
                 [
                     'user_id' => $jugadoresParaFichar[0]->id,
                     'organizacion_id' => $organizaciones[0]->id,
-                    'temporada_id' => 1,
+                    'temporada_id' => $temporadas[0]->id,
                     'equipo_id' => $equipos[0]->id,       // Valhalla
                     'equipo_origen_id' => $equipos[4]->id, // Dragons
                     'posicion' => 'DEL',
@@ -253,7 +256,7 @@ class DatabaseSeeder extends Seeder
                 [
                     'user_id' => $jugadoresParaFichar[1]->id,
                     'organizacion_id' => $organizaciones[0]->id,
-                    'temporada_id' => 1,
+                    'temporada_id' => $temporadas[0]->id,
                     'equipo_id' => $equipos[1]->id,       // Krypton
                     'equipo_origen_id' => null,            // Agente Libre
                     'posicion' => 'MC',
@@ -265,7 +268,7 @@ class DatabaseSeeder extends Seeder
                 [
                     'user_id' => $jugadoresParaFichar[2]->id,
                     'organizacion_id' => $organizaciones[1]->id,
-                    'temporada_id' => 2,
+                    'temporada_id' => $temporadas[1]->id,
                     'equipo_id' => $equipos[5]->id,       // Phoenix
                     'equipo_origen_id' => $equipos[9]->id, // Knights
                     'posicion' => 'DFC',
@@ -277,7 +280,7 @@ class DatabaseSeeder extends Seeder
                 [
                     'user_id' => $jugadoresParaFichar[3]->id,
                     'organizacion_id' => $organizaciones[1]->id,
-                    'temporada_id' => 2,
+                    'temporada_id' => $temporadas[1]->id,
                     'equipo_id' => $equipos[6]->id,       // Titans
                     'equipo_origen_id' => null,            // Agente Libre
                     'posicion' => 'POR',
@@ -289,7 +292,7 @@ class DatabaseSeeder extends Seeder
                 [
                     'user_id' => $jugadoresParaFichar[4]->id,
                     'organizacion_id' => $organizaciones[2]->id,
-                    'temporada_id' => 3,
+                    'temporada_id' => $temporadas[2]->id,
                     'equipo_id' => $equipos[10]->id,      // Monarchs
                     'equipo_origen_id' => $equipos[14]->id,// Tempest
                     'posicion' => 'MCO',
@@ -301,7 +304,7 @@ class DatabaseSeeder extends Seeder
                 [
                     'user_id' => $jugadoresParaFichar[5]->id,
                     'organizacion_id' => $organizaciones[3]->id,
-                    'temporada_id' => 4,
+                    'temporada_id' => $temporadas[3]->id,
                     'equipo_id' => $equipos[15]->id,      // Royals
                     'equipo_origen_id' => $equipos[19]->id,// Grizzlies
                     'posicion' => 'DEL',

@@ -29,8 +29,15 @@ export const useAuthStore = create(
           return { success: true };
         } catch (error) {
           const mensajeError = error.response?.data?.message || 'Credenciales inválidas o error de servidor.';
+          const isUnverified = error.response?.status === 403 && error.response?.data?.status === 'unverified';
+          const email = error.response?.data?.email;
           set({ authError: mensajeError, authLoading: false });
-          return { success: false, error: mensajeError };
+          return { 
+            success: false, 
+            error: mensajeError, 
+            isUnverified, 
+            email 
+          };
         }
       },
 
@@ -40,16 +47,12 @@ export const useAuthStore = create(
         try {
           // Solicitud POST a Laravel (ej: /register)
           const response = await api.post('/register', userData);
-          const { user, token } = response.data;
-
+          
           set({ 
-            user, 
-            token, 
-            isAuthenticated: true, 
             authLoading: false,
             authError: null 
           });
-          return { success: true };
+          return { success: true, email: response.data.email, message: response.data.message };
         } catch (error) {
           const mensajeError = error.response?.data?.message || 'Error al crear la cuenta. Inténtalo de nuevo.';
           set({ authError: mensajeError, authLoading: false });

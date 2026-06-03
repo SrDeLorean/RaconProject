@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
+import api from '@/api/axios';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
@@ -39,7 +40,6 @@ const ShieldIcon = () => (
   </svg>
 );
 
-
 export default function Register() {
   const navigate = useNavigate();
   const { user, register, authLoading, authError, clearAuthError, isAuthenticated } = useAuthStore();
@@ -47,13 +47,22 @@ export default function Register() {
   const [userData, setUserData] = useState({ 
     name: '', 
     email: '', 
-    role: 'jugador', // Siempre tipo jugador por defecto
+    role: 'jugador', 
     password: '', 
     password_confirmation: '',
     gamertag: '',
     id_ea: '',
     plataforma: 'ps5'
   });
+
+  // Estados para la verificación de correo posterior al registro
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [resendMessage, setResendMessage] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verifyingCode, setVerifyingCode] = useState(false);
+  const [verificationError, setVerificationError] = useState('');
+  const [verificationSuccess, setVerificationSuccess] = useState('');
 
   const navigateToDashboard = (currentUser) => {
     const role = currentUser?.role || 'jugador';
@@ -88,7 +97,7 @@ export default function Register() {
     const payload = {
       name: userData.name,
       email: userData.email,
-      role: 'jugador', // Forzado a jugador
+      role: 'jugador', 
       password: userData.password,
       password_confirmation: userData.password_confirmation,
       plataforma: userData.plataforma
@@ -98,15 +107,44 @@ export default function Register() {
 
     const result = await register(payload); 
     if (result.success) {
-      const currentUser = useAuthStore.getState().user;
-      navigateToDashboard(currentUser);
+      setRegisteredEmail(result.email || userData.email);
     } 
+  };
+
+  const handleResend = async () => {
+    setResendLoading(true);
+    setResendMessage('');
+    try {
+      const response = await api.post('/resend-verification', { email: registeredEmail });
+      setResendMessage(response.data.message || 'Código de activación reenviado.');
+    } catch (err) {
+      setResendMessage(err.response?.data?.message || 'Error al reenviar el correo de activación.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async (e) => {
+    e.preventDefault();
+    setVerifyingCode(true);
+    setVerificationError('');
+    setVerificationSuccess('');
+    try {
+      const response = await api.post('/verify-email', { token: verificationCode.trim() });
+      setVerificationSuccess(response.data.message || '¡Cuenta verificada y activa!');
+      setTimeout(() => {
+        navigate('/login');
+      }, 2500);
+    } catch (err) {
+      setVerificationError(err.response?.data?.message || 'El código es inválido o ha expirado.');
+    } finally {
+      setVerifyingCode(false);
+    }
   };
 
   return (
     <div className="flex min-h-screen bg-background text-foreground font-sans overflow-hidden transition-colors duration-300">
       
-      {/* Panel Izquierdo: Estadio Nocturno (Siempre Oscuro para estilo e-sports premium) */}
       <div 
         className="hidden lg:flex lg:w-1/2 relative bg-cover bg-center bg-[#07070a]" 
         style={{ backgroundImage: `url(${bgRegister})` }}      
@@ -130,17 +168,13 @@ export default function Register() {
         </div>
       </div>
 
-      {/* Panel Derecho: Formulario */}
       <div className="w-full lg:w-1/2 flex items-start lg:items-center justify-center pt-24 pb-12 lg:py-8 px-4 sm:px-8 lg:px-12 relative overflow-y-auto h-screen custom-scrollbar">
-        {/* Glow ambient de fondo para acentuar el diseño de Esports */}
         <div className="absolute top-1/4 right-1/4 w-[300px] sm:w-[450px] h-[300px] sm:h-[450px] bg-primary/10 rounded-full blur-[100px] sm:blur-[130px] pointer-events-none z-0"></div>
         <div className="absolute bottom-1/4 left-1/4 w-[250px] sm:w-[350px] h-[250px] sm:h-[350px] bg-destructive/5 rounded-full blur-[80px] sm:blur-[110px] pointer-events-none z-0"></div>
 
         <div className="w-full max-w-lg relative z-10 my-auto">
           
-          {/* Card HUD Contenedora con Glassmorphism y Brackets */}
           <div className="relative bg-card/60 dark:bg-card/25 backdrop-blur-md border border-border/60 dark:border-border/30 rounded-2xl p-6 sm:p-8 shadow-xl dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] border-t-primary/20 border-l-primary/20 transition-all duration-300">
-            {/* Brackets tácticos cibernéticos */}
             <div className="absolute top-0 left-0 w-3.5 h-3.5 border-t-2 border-l-2 border-primary/40 dark:border-primary/50 rounded-tl-md pointer-events-none"></div>
             <div className="absolute top-0 right-0 w-3.5 h-3.5 border-t-2 border-r-2 border-primary/40 dark:border-primary/50 rounded-tr-md pointer-events-none"></div>
             <div className="absolute bottom-0 left-0 w-3.5 h-3.5 border-b-2 border-l-2 border-primary/40 dark:border-primary/50 rounded-bl-md pointer-events-none"></div>
@@ -157,115 +191,187 @@ export default function Register() {
               <div className="h-[1px] w-full bg-gradient-to-r from-border/80 via-border/20 to-transparent mt-4"></div>
             </div>
 
-            {authError && (
-              <Alert variant="destructive" className="mb-5 py-3 text-xs">
-                {authError}
-              </Alert>
-            )}
-
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              
-              {/* 1. Información General (Dos columnas en desktop) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input 
-                  label="Nombre de Usuario" 
-                  name="name" 
-                  value={userData.name} 
-                  onChange={handleChange} 
-                  required 
-                  disabled={authLoading} 
-                  icon={<UserIcon />} 
-                  placeholder="Tu apodo"
-                />
-                
-                <Input 
-                  label="Correo Electrónico" 
-                  type="email" 
-                  name="email" 
-                  value={userData.email} 
-                  onChange={handleChange} 
-                  required 
-                  disabled={authLoading} 
-                  icon={<MailIcon />} 
-                  placeholder="correo@ejemplo.com"
-                />
-              </div>
-
-              {/* 2. Sección Gamer Obligatoria (Siempre visible, optimizada) */}
-              <div className="p-4 rounded-xl bg-card/40 backdrop-blur border border-border/30 flex flex-col gap-4">
-                <p className="text-[10px] sm:text-xs font-mono font-bold text-primary uppercase tracking-wider flex items-center gap-1.5 border-b border-border/20 pb-2">
-                  <GamepadIcon /> Datos del Jugador / Identidad EA
-                </p>
-                
-                <div>
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span className="text-technical text-muted-foreground">GamerTAG (EA Nickname)</span>
-                    <div className="group relative cursor-pointer text-primary hover:text-destructive transition-colors text-[10px] font-bold bg-primary/10 w-4 h-4 rounded-full flex items-center justify-center">
-                      ?
-                      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 sm:w-56 p-2 text-[9px] leading-normal bg-card border border-border text-foreground rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 text-center font-normal font-sans">
-                        Nombre exacto con el que apareces dentro de los partidos en EA.
-                      </span>
-                    </div>
+            {registeredEmail ? (
+              <div className="animate-fade-in space-y-5">
+                <div className="text-center space-y-2 pb-2">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-2">
+                    <svg className="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 19v-8.93a2 2 0 01.89-1.664l8-5.333a2 2 0 012.22 0l8 5.333A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-2.25-1.5a2 2 0 00-2.22 0l-2.25 1.5" />
+                    </svg>
                   </div>
-                  <Input 
-                    name="gamertag" 
-                    value={userData.gamertag} 
-                    onChange={handleChange} 
-                    disabled={authLoading} 
-                    placeholder="Ej: Racon_Nickname"
-                    className="!gap-0"
-                    icon={<GamepadIcon />}
-                  />
+                  <h3 className="text-lg font-display font-black text-foreground uppercase tracking-wide">¡Registro Completado!</h3>
+                  <p className="text-xs text-muted-foreground leading-normal max-w-sm mx-auto">
+                    Hemos enviado un enlace de activación y un código de seguridad a:
+                    <br />
+                    <span className="text-primary font-bold font-mono text-[13px]">{registeredEmail}</span>
+                  </p>
+                  <p className="text-[10px] text-destructive font-bold uppercase tracking-wider font-mono">
+                    ⚠ Plazo límite de activación: 24 horas
+                  </p>
                 </div>
 
-                <p className="text-[9px] text-primary/80 leading-normal italic pl-1 font-mono">
-                  * El GamerTAG debe ser idéntico al de EA para sincronizar tus estadísticas de juego correctamente.
+                {verificationError && (
+                  <Alert variant="destructive" className="py-2.5 text-xs" onClose={() => setVerificationError('')}>
+                    {verificationError}
+                  </Alert>
+                )}
+
+                {verificationSuccess && (
+                  <Alert variant="success" className="py-2.5 text-xs">
+                    {verificationSuccess}
+                  </Alert>
+                )}
+
+                {resendMessage && (
+                  <Alert variant="info" className="py-2.5 text-xs" onClose={() => setResendMessage('')}>
+                    {resendMessage}
+                  </Alert>
+                )}
+
+                <form onSubmit={handleVerifyCode} className="space-y-4 pt-2">
+                  <Input 
+                    label="Código de Activación" 
+                    name="verificationCode" 
+                    value={verificationCode} 
+                    onChange={(e) => setVerificationCode(e.target.value)} 
+                    required 
+                    disabled={verifyingCode} 
+                    placeholder="Pega el código de tu correo o verifica desde el enlace..."
+                    className="text-center font-mono tracking-widest text-base uppercase"
+                  />
+
+                  <Button 
+                    type="submit" 
+                    className="w-full py-3 font-bold tracking-widest uppercase bg-gradient-to-r from-primary to-destructive text-primary-foreground border-none rounded-md" 
+                    isLoading={verifyingCode}
+                  >
+                    Activar Cuenta
+                  </Button>
+                </form>
+
+                <div className="flex flex-col gap-2.5 pt-2 text-center border-t border-border/20 mt-4">
+                  <button 
+                    onClick={handleResend}
+                    disabled={resendLoading || verifyingCode}
+                    className="text-[10px] font-bold text-muted-foreground hover:text-primary transition-colors uppercase tracking-wider disabled:opacity-50"
+                  >
+                    {resendLoading ? 'Reenviando...' : '¿No recibiste el correo? Reenviar correo de activación'}
+                  </button>
+
+                  <Link to="/login" className="text-[10px] font-black text-primary hover:text-destructive transition-colors uppercase tracking-widest pt-2">
+                    ← Volver al Iniciar Sesión
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <>
+                {authError && (
+                  <Alert variant="destructive" className="mb-5 py-3 text-xs">
+                    {authError}
+                  </Alert>
+                )}
+
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input 
+                      label="Nombre de Usuario" 
+                      name="name" 
+                      value={userData.name} 
+                      onChange={handleChange} 
+                      required 
+                      disabled={authLoading} 
+                      icon={<UserIcon />} 
+                      placeholder="Tu apodo"
+                    />
+                    
+                    <Input 
+                      label="Correo Electrónico" 
+                      type="email" 
+                      name="email" 
+                      value={userData.email} 
+                      onChange={handleChange} 
+                      required 
+                      disabled={authLoading} 
+                      icon={<MailIcon />} 
+                      placeholder="correo@ejemplo.com"
+                    />
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-card/40 backdrop-blur border border-border/30 flex flex-col gap-4">
+                    <p className="text-[10px] sm:text-xs font-mono font-bold text-primary uppercase tracking-wider flex items-center gap-1.5 border-b border-border/20 pb-2">
+                      <GamepadIcon /> Datos del Jugador / Identidad EA
+                    </p>
+                    
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <span className="text-technical text-muted-foreground">GamerTAG (EA Nickname)</span>
+                        <div className="group relative cursor-pointer text-primary hover:text-destructive transition-colors text-[10px] font-bold bg-primary/10 w-4 h-4 rounded-full flex items-center justify-center">
+                          ?
+                          <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 sm:w-56 p-2 text-[9px] leading-normal bg-card border border-border text-foreground rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 text-center font-normal font-sans">
+                            Nombre exacto con el que apareces dentro de los partidos en EA.
+                          </span>
+                        </div>
+                      </div>
+                      <Input 
+                        name="gamertag" 
+                        value={userData.gamertag} 
+                        onChange={handleChange} 
+                        disabled={authLoading} 
+                        placeholder="Ej: Racon_Nickname"
+                        className="!gap-0"
+                        icon={<GamepadIcon />}
+                      />
+                    </div>
+
+                    <p className="text-[9px] text-primary/80 leading-normal italic pl-1 font-mono">
+                      * El GamerTAG debe ser idéntico al de EA para sincronizar tus estadísticas de juego correctamente.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input 
+                      label="Contraseña" 
+                      type="password" 
+                      name="password" 
+                      value={userData.password} 
+                      onChange={handleChange} 
+                      required 
+                      disabled={authLoading} 
+                      icon={<LockIcon />} 
+                      placeholder="••••••••"
+                    />
+                    <Input 
+                      label="Confirmar Contraseña" 
+                      type="password" 
+                      name="password_confirmation" 
+                      value={userData.password_confirmation} 
+                      onChange={handleChange} 
+                      required 
+                      disabled={authLoading} 
+                      icon={<ShieldIcon />} 
+                      placeholder="••••••••"
+                    />
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full mt-2 py-3.5 font-bold tracking-widest uppercase hover:shadow-[0_0_20px_hsla(var(--primary),0.6)] transition-all bg-gradient-to-r from-primary to-destructive text-primary-foreground border-none rounded-md" 
+                    isLoading={authLoading}
+                  >
+                    Registrarme Ahora
+                  </Button>
+                </form>
+
+                <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-border/30 to-transparent my-6"></div>
+
+                <p className="text-center text-xs font-semibold text-muted-foreground">
+                  ¿Ya tienes una cuenta?{' '}
+                  <Link to="/login" className="text-primary hover:text-destructive font-bold transition-colors uppercase tracking-wider">
+                    Inicia sesión
+                  </Link>
                 </p>
-              </div>
-
-              {/* 3. Contraseñas (Dos columnas) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input 
-                  label="Contraseña" 
-                  type="password" 
-                  name="password" 
-                  value={userData.password} 
-                  onChange={handleChange} 
-                  required 
-                  disabled={authLoading} 
-                  icon={<LockIcon />} 
-                  placeholder="••••••••"
-                />
-                <Input 
-                  label="Confirmar Contraseña" 
-                  type="password" 
-                  name="password_confirmation" 
-                  value={userData.password_confirmation} 
-                  onChange={handleChange} 
-                  required 
-                  disabled={authLoading} 
-                  icon={<ShieldIcon />} 
-                  placeholder="••••••••"
-                />
-              </div>
-
-              <Button 
-                type="submit" 
-                className="w-full mt-2 py-3.5 font-bold tracking-widest uppercase hover:shadow-[0_0_20px_hsla(var(--primary),0.6)] transition-all bg-gradient-to-r from-primary to-destructive text-primary-foreground border-none rounded-md" 
-                isLoading={authLoading}
-              >
-                Registrarme Ahora
-              </Button>
-            </form>
-
-            <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-border/30 to-transparent my-6"></div>
-
-            <p className="text-center text-xs font-semibold text-muted-foreground">
-              ¿Ya tienes una cuenta?{' '}
-              <Link to="/login" className="text-primary hover:text-destructive font-bold transition-colors uppercase tracking-wider">
-                Inicia sesión
-              </Link>
-            </p>
+              </>
+            )}
           </div>
         </div>
       </div>

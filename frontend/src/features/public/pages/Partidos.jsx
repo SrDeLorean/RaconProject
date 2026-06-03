@@ -74,21 +74,22 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
 
   // Load organizations
   useEffect(() => {
-    api.get('/organizaciones')
+    const params = { per_page: 100 };
+    if (forOrganizer && user) {
+      params.owner_id = user.id;
+    } else if (forPlayer && targetUserId) {
+      params.player_id = targetUserId;
+    }
+    api.get('/organizaciones', { params })
       .then(res => {
         const list = res.data.data || res.data || [];
-        if (forOrganizer && user) {
-          const filtered = list.filter(org => org.owner_id === user.id);
-          setOrganizaciones(filtered);
-          if (filtered.length > 0) {
-            setOrgFiltro(filtered[0].id);
-          }
-        } else {
-          setOrganizaciones(list);
+        setOrganizaciones(list);
+        if ((forOrganizer || forPlayer) && list.length > 0) {
+          setOrgFiltro(list[0].id);
         }
       })
       .catch(err => console.error("Error loading organizations:", err));
-  }, [forOrganizer, user]);
+  }, [forOrganizer, forPlayer, user, targetUserId]);
 
   // Load competitions based on organization selection
   useEffect(() => {
@@ -422,10 +423,10 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
     }));
   }, [filteredMatches]);
 
-  const activeFiltersCount = [(forOrganizer ? null : orgFiltro), compFiltro, searchText.trim()].filter(Boolean).length;
+  const activeFiltersCount = [((forOrganizer || forPlayer) ? null : orgFiltro), compFiltro, searchText.trim()].filter(Boolean).length;
 
   function resetFilters() {
-    if (forOrganizer && organizaciones.length > 0) {
+    if ((forOrganizer || forPlayer) && organizaciones.length > 0) {
       setOrgFiltro(organizaciones[0].id);
     } else {
       setOrgFiltro(null);
@@ -602,11 +603,11 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
           </div>
 
           {/* PRIMER NIVEL: Circuitos / Organizaciones Habilitados */}
-          {organizaciones.length > (forOrganizer ? 1 : 0) && (
+          {organizaciones.length > ((forOrganizer || forPlayer) ? 1 : 0) && (
             <div className="space-y-2.5 border-t border-border/20 dark:border-white/[0.05] pt-4.5 font-sans">
               <p className="text-[9px] font-condensed font-black uppercase tracking-[0.2em] text-muted-foreground">CIRCUITOS DISPONIBLES</p>
               <div className="flex flex-wrap gap-2">
-                {!forOrganizer && (
+                {!(forOrganizer || forPlayer) && (
                   <button
                     onClick={() => { setOrgFiltro(null); setCompFiltro(null); }}
                     className={`px-4.5 py-2 rounded-xl text-[10px] font-condensed font-black uppercase tracking-widest border transition-all duration-300 cursor-pointer ${

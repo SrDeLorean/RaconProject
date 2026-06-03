@@ -129,6 +129,78 @@ class ReporteController extends Controller
             return response()->json(['message' => 'Las estadísticas del partido no corresponden a los clubes seleccionados.'], 422);
         }
 
+        // --- INICIO VALIDACIÓN DE GAMERTAGS Y ID_EA ---
+        $warningPlayers = [];
+
+        $validatePlayers = function (array $playersEA, int $equipoId, string $clubName) use ($partido, &$warningPlayers) {
+            $eaNames = array_column($playersEA, 'playername');
+            $users = User::whereIn('id_ea', $eaNames)
+                ->orWhereIn('gamertag', $eaNames)
+                ->get();
+
+            foreach ($playersEA as $playerEA) {
+                $playername = $playerEA['playername'];
+                $user = $users->first(function($u) use ($playername) {
+                    return strtolower($u->id_ea) === strtolower($playername) || strtolower($u->gamertag) === strtolower($playername);
+                });
+
+                if (!$user) {
+                    $warningPlayers[] = [
+                        'playername' => $playername,
+                        'club' => $clubName,
+                        'reason' => 'El jugador no está registrado en el sistema.'
+                    ];
+                } else {
+                    // Verificar si está inscrito en la plantilla
+                    $isInRoster = DB::table('organizacion_equipo_usuario')
+                        ->where('user_id', $user->id)
+                        ->where('equipo_id', $equipoId)
+                        ->where('organizacion_id', $partido->competencia->temporada->organizacion_id)
+                        ->where('estado_fichaje', 'activo')
+                        ->exists();
+
+                    if (!$isInRoster) {
+                        $warningPlayers[] = [
+                            'playername' => $playername,
+                            'club' => $clubName,
+                            'reason' => 'El jugador no pertenece a la plantilla activa de este equipo.'
+                        ];
+                    }
+
+                    // Verificar si el EA ID y el Gamertag coinciden en el sistema
+                    if (!empty($user->id_ea) && !empty($user->gamertag) && strtolower($user->id_ea) !== strtolower($user->gamertag)) {
+                        $warningPlayers[] = [
+                            'playername' => $playername,
+                            'club' => $clubName,
+                            'reason' => "Discrepancia de identidad: EA ID ({$user->id_ea}) y Gamertag ({$user->gamertag}) no coinciden."
+                        ];
+                    }
+
+                    // Si no tiene gamertag
+                    if (empty($user->gamertag)) {
+                        $warningPlayers[] = [
+                            'playername' => $playername,
+                            'club' => $clubName,
+                            'reason' => 'El jugador no tiene un Gamertag registrado en su perfil.'
+                        ];
+                    }
+                }
+            }
+        };
+
+        $validatePlayers($players[$clubLocalId], $partido->local->id, $partido->local->nombre);
+        $validatePlayers($players[$clubVisitanteId], $partido->visitante->id, $partido->visitante->nombre);
+
+        if (!empty($warningPlayers) && !$request->boolean('force')) {
+            return response()->json([
+                'success' => false,
+                'code' => 'VALIDATION_WARNING',
+                'players' => $warningPlayers,
+                'message' => 'Algunos jugadores no están inscritos correctamente.'
+            ], 422);
+        }
+        // --- FIN VALIDACIÓN DE GAMERTAGS Y ID_EA ---
+
         $eaPlayersGlobal = collect();
 
         // Función anonima para procesar estadísticas individuales de jugadores
@@ -142,14 +214,16 @@ class ReporteController extends Controller
             $eaNames = array_column($playersEA, 'playername');
 
             $users = User::whereIn('id_ea', $eaNames)
-                ->get()
-                ->keyBy('id_ea');
+                ->orWhereIn('gamertag', $eaNames)
+                ->get();
 
             foreach ($playersEA as $playerEA) {
                 $playername = $playerEA['playername'];
                 $eaPlayersGlobal->push($playername);
 
-                $user = $users[$playername] ?? null;
+                $user = $users->first(function($u) use ($playername) {
+                    return strtolower($u->id_ea) === strtolower($playername) || strtolower($u->gamertag) === strtolower($playername);
+                });
 
                 // Determinar el estado detallado de cumplimiento
                 $estado = 'ok';
@@ -158,6 +232,12 @@ class ReporteController extends Controller
                 if (!$user) {
                     $estado = 'no_existe_sistema'; // Jugador jugó pero no existe en el sistema
                 } else {
+                    // Auto-inscribir ID EA si no lo tiene
+                    if (empty($user->id_ea)) {
+                        $user->id_ea = $playername;
+                        $user->save();
+                    }
+
                     // Verificar si está inscrito activamente en la plantilla del equipo en esta organización
                     $isInRoster = DB::table('organizacion_equipo_usuario')
                         ->where('user_id', $user->id)

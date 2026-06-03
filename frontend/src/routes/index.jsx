@@ -13,6 +13,7 @@ const PublicLayout = lazy(() => import('@/layouts/PublicLayout'));
 const Home = lazy(() => import('@/features/public/pages/Home'));
 const Login = lazy(() => import('@/features/auth/pages/Login'));
 const Register = lazy(() => import('@/features/auth/pages/Register'));
+const VerificarCorreo = lazy(() => import('@/features/auth/pages/VerificarCorreo'));
 const ProtectedRoute = lazy(() => import('@/components/ProtectedRoute'));
 
 // Nuevas Páginas Públicas
@@ -46,6 +47,7 @@ export const router = createBrowserRouter([
       { path: '/', element: <Home /> },
       { path: '/login', element: <Login /> },
       { path: '/registro', element: <Register /> }, 
+      { path: '/verificar-correo', element: <VerificarCorreo /> }, 
       { path: '/organizaciones', element: <Organizaciones /> },
       { path: '/organizaciones/:orgId', element: <Temporadas /> },
       { path: '/organizaciones/:orgId/temporadas/:tempId', element: <Competencias /> },
