@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useNavigate } from 'react-router-dom';
 import Card from '@/components/shared/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -9,6 +10,7 @@ import Partidos from '@/features/public/pages/Partidos';
 
 export default function DashboardJugador() {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [solicitudes, setSolicitudes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState(null);
@@ -94,6 +96,99 @@ export default function DashboardJugador() {
       ) : (
         <div className="space-y-8">
           
+          {/* Panel de Estado y Cumplimiento (Auditoría del Jugador) */}
+          <div className="border border-border/40 dark:border-white/[0.06] bg-white/40 dark:bg-card/75 rounded-3xl p-5 shadow-xl space-y-4">
+            <div>
+              <h2 className="text-lg font-display font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+                🛡️ Panel de Estado y Cumplimiento
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Supervisa el estado reglamentario de tu ficha de deportista, contratos y ofertas de clubes.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              {/* Auditoría 1: Identidad Deportiva */}
+              <div className="p-4 bg-white/60 dark:bg-card/85 border border-border/30 dark:border-white/[0.05] rounded-2xl flex flex-col justify-between gap-3">
+                <div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1">Identidad Deportiva</span>
+                  {(() => {
+                    const missing = [];
+                    if (!profileData?.gamertag) missing.push('Gamertag');
+                    if (!profileData?.id_ea) missing.push('EA ID');
+                    if (!profileData?.plataforma) missing.push('Plataforma');
+                    if (!profileData?.nacionalidad) missing.push('Nacionalidad');
+                    
+                    if (missing.length > 0) {
+                      return (
+                        <div className="space-y-1">
+                          <span className="text-xs text-amber-500 font-bold flex items-center gap-1">⚠️ Ficha Incompleta</span>
+                          <p className="text-[11px] text-muted-foreground">Falta configurar: <strong className="text-foreground">{missing.join(', ')}</strong>.</p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="space-y-1">
+                        <span className="text-xs text-green-500 font-bold flex items-center gap-1">✅ Ficha Completa</span>
+                        <p className="text-[11px] text-muted-foreground">Tus datos reglamentarios de jugador se encuentran actualizados.</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+                <Button size="sm" variant="outline" className="text-xs font-bold w-full h-8" onClick={() => navigate('/organizador/perfil')}>
+                  Editar mi Perfil
+                </Button>
+              </div>
+
+              {/* Auditoría 2: Estado Contrato */}
+              <div className="p-4 bg-white/60 dark:bg-card/85 border border-border/30 dark:border-white/[0.05] rounded-2xl flex flex-col justify-between gap-3">
+                <div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1">Vinculación Deportiva</span>
+                  {contrato ? (
+                    <div className="space-y-1">
+                      <span className="text-xs text-green-500 font-bold flex items-center gap-1">🟢 Contrato Activo</span>
+                      <p className="text-[11px] text-muted-foreground">Fichado en <strong className="text-foreground">{contrato.equipo_nombre}</strong> con dorsal <strong className="text-primary font-mono">#{contrato.dorsal || 'N/A'}</strong>.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <span className="text-xs text-amber-500 font-bold flex items-center gap-1">🏃‍♂️ Agente Libre</span>
+                      <p className="text-[11px] text-muted-foreground">No tienes contrato activo. Disponible en la bolsa de fichajes.</p>
+                    </div>
+                  )}
+                </div>
+                <Button size="sm" variant="outline" className="text-xs font-bold w-full h-8" onClick={() => navigate('/equipos')}>
+                  Buscar Clubes
+                </Button>
+              </div>
+
+              {/* Auditoría 3: Ofertas Recibidas */}
+              <div className="p-4 bg-white/60 dark:bg-card/85 border border-border/30 dark:border-white/[0.05] rounded-2xl flex flex-col justify-between gap-3">
+                <div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1">Propuestas y Fichajes</span>
+                  {solicitudes.length > 0 ? (
+                    <div className="space-y-1">
+                      <span className="text-xs text-primary font-bold flex items-center gap-1 animate-pulse">✉️ Nuevas Ofertas ({solicitudes.length})</span>
+                      <p className="text-[11px] text-muted-foreground">Tienes ofertas de contrato pendientes de aceptación en tu buzón.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <span className="text-xs text-muted-foreground font-bold flex items-center gap-1">📭 Buzón Vacío</span>
+                      <p className="text-[11px] text-muted-foreground">No tienes propuestas contractuales pendientes de respuesta.</p>
+                    </div>
+                  )}
+                </div>
+                <Button size="sm" variant="outline" className="text-xs font-bold w-full h-8" onClick={() => {
+                  const el = document.getElementById('ofertas-seccion');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}>
+                  Revisar Ofertas
+                </Button>
+              </div>
+
+            </div>
+          </div>
+
           {/* Fila de Estadísticas de Rendimiento */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             
@@ -133,14 +228,14 @@ export default function DashboardJugador() {
             
             {/* COLUMNA PRINCIPAL (2/3): SOLICITUDES DE FICHAJE PENDIENTES */}
             <div className="lg:col-span-2 space-y-6">
-              <h3 className="text-lg font-black text-foreground uppercase tracking-wide flex items-center gap-2">
+              <h3 id="ofertas-seccion" className="text-lg font-black text-foreground uppercase tracking-wide flex items-center gap-2">
                 ✉️ Ofertas Recibidas ({solicitudes.length})
               </h3>
 
               {solicitudes.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {solicitudes.map((sol) => (
-                    <div key={sol.id} className="border border-border/50 bg-card/40 backdrop-blur-md rounded-2xl p-5 flex flex-col justify-between gap-5 relative overflow-hidden shadow-lg hover:border-primary/40 transition-colors">
+                    <div key={sol.id} className="border border-border/50 dark:border-white/[0.06] bg-white/60 dark:bg-card/75 backdrop-blur-md rounded-2xl p-5 flex flex-col justify-between gap-5 relative overflow-hidden shadow-lg hover:border-primary/40 transition-colors">
                       <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
                       
                       <div className="space-y-3">
@@ -202,7 +297,7 @@ export default function DashboardJugador() {
                 🛡️ Club Actual
               </h3>
               
-              <div className="border border-border/50 bg-card/30 p-5 rounded-2xl space-y-4 shadow-xl relative overflow-hidden">
+              <div className="border border-border/50 dark:border-white/[0.06] bg-white/50 dark:bg-card/75 p-5 rounded-2xl space-y-4 shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl"></div>
                 
                 {contrato ? (
@@ -260,7 +355,7 @@ export default function DashboardJugador() {
             <h3 className="text-xl font-display font-black text-foreground uppercase tracking-wider flex items-center gap-2">
               🏟️ Mi Calendario de Partidos Asignados
             </h3>
-            <div className="bg-card/25 border border-border/40 rounded-3xl p-4 md:p-6 shadow-inner">
+            <div className="bg-white/40 dark:bg-card/75 border border-border/40 dark:border-white/[0.06] rounded-3xl p-4 md:p-6 shadow-inner">
               <Partidos forPlayer={true} hideHero={true} />
             </div>
           </div>

@@ -99,18 +99,18 @@ export default function Contacto() {
             <div className="border border-border/40 bg-card/45 backdrop-blur-md rounded-2xl p-6 w-full space-y-4 shadow-xl">
               
               <div className="flex justify-between items-center border-b border-border/30 pb-3">
-                <span className="text-[10px] font-condensed tracking-widest text-muted-foreground uppercase">CANALES RÁPIDOS</span>
-                <span className="text-[10px] font-mono text-primary font-bold">INFO BOX</span>
+                <span className="text-[9px] sm:text-[10px] font-condensed tracking-widest text-muted-foreground uppercase">CANALES RÁPIDOS</span>
+                <span className="text-[9px] sm:text-[10px] font-mono text-primary font-bold">INFO BOX</span>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">CORREO</h4>
+                  <h4 className="text-[8px] sm:text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">CORREO</h4>
                   <span className="text-xs font-mono font-bold text-foreground">CONTACTO@</span>
                 </div>
                 <div>
-                  <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">ATENCIÓN</h4>
-                  <span className="text-3xl font-display font-black text-primary">24/7</span>
+                  <h4 className="text-[8px] sm:text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">ATENCIÓN</h4>
+                  <span className="text-xl sm:text-2xl md:text-3xl font-display font-black text-primary">24/7</span>
                 </div>
               </div>
 

@@ -5,6 +5,7 @@ import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
 import Input from '@/components/ui/Input';
+import Modal from '@/components/ui/Modal';
 import api from '@/api/axios';
 
 export default function TraspasosCRUD() {
@@ -19,8 +20,10 @@ export default function TraspasosCRUD() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Estado para rechazo
-  const [rejectingId, setRejectingId] = useState(null);
+  // Estado para la toma de decisiones en Modal
+  const [selectedTraspaso, setSelectedTraspaso] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [decisionType, setDecisionType] = useState(null); // 'aprobar' | 'rechazar'
   const [observaciones, setObservaciones] = useState('');
   const [processingId, setProcessingId] = useState(null);
 
@@ -28,7 +31,6 @@ export default function TraspasosCRUD() {
     setLoading(true);
     setError(null);
     try {
-      // tipo mapping to match the backend index filtering
       const res = await api.get(`/solicitudes-fichaje?tipo=${activeTab}`);
       setSolicitudes(res.data?.data || res.data || []);
     } catch (err) {
@@ -54,7 +56,8 @@ export default function TraspasosCRUD() {
         observaciones: obsText
       });
       setSuccessMsg(res.data.message || `Operación completada con éxito.`);
-      setRejectingId(null);
+      setIsModalOpen(false);
+      setSelectedTraspaso(null);
       setObservaciones('');
       fetchSolicitudes();
     } catch (err) {
@@ -118,7 +121,7 @@ export default function TraspasosCRUD() {
       header: 'Detalles del Fichaje',
       render: (row) => (
         <div className="flex flex-col text-xs font-semibold">
-          <span className="text-foreground uppercase">🛡️ {row.equipo?.nombre || 'Club'}</span>
+          <span className="text-foreground uppercase">🛡️ {row.equipo?.nombre || 'JUGADOR LIBRE'}</span>
           <span className="text-muted-foreground text-[10px]">
             Posición: {row.posicion || 'PO'} • Dorsal: <strong className="font-mono text-primary">#{row.dorsal || '??'}</strong>
           </span>
@@ -163,48 +166,16 @@ export default function TraspasosCRUD() {
           return <span className="text-[10px] text-muted-foreground font-mono">Registro cerrado</span>;
         }
 
-        if (rejectingId === row.id) {
-          return (
-            <div className="flex flex-col gap-2 p-1 min-w-[200px] animate-fade-in">
-              <Input 
-                type="text"
-                placeholder="Motivo del rechazo..."
-                value={observaciones}
-                onChange={(e) => setObservaciones(e.target.value)}
-                className="h-8 text-[10px]"
-              />
-              <div className="flex gap-1 justify-end">
-                <Button 
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setRejectingId(null);
-                    setObservaciones('');
-                  }}
-                  className="h-7 px-2 text-[9px]"
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  size="sm"
-                  className="h-7 px-2 text-[9px] bg-destructive text-white hover:bg-destructive/80 border-none"
-                  onClick={() => handleDecision(row.id, 'rechazar', observaciones)}
-                  disabled={!observaciones.trim() || processingId === row.id}
-                >
-                  Confirmar
-                </Button>
-              </div>
-            </div>
-          );
-        }
-
         return (
           <div className="flex items-center gap-2">
             <Button
               size="sm"
               className="h-8 px-2.5 text-[10px] bg-emerald-500 hover:bg-emerald-600 text-white border-none shadow-sm"
-              onClick={() => handleDecision(row.id, 'aprobar')}
-              isLoading={processingId === row.id}
+              onClick={() => {
+                setSelectedTraspaso(row);
+                setDecisionType('aprobar');
+                setIsModalOpen(true);
+              }}
               disabled={processingId !== null}
             >
               ✅ Autorizar
@@ -213,7 +184,11 @@ export default function TraspasosCRUD() {
               size="sm"
               variant="outline"
               className="h-8 px-2.5 text-[10px] border-destructive/30 text-destructive hover:bg-destructive/10"
-              onClick={() => setRejectingId(row.id)}
+              onClick={() => {
+                setSelectedTraspaso(row);
+                setDecisionType('rechazar');
+                setIsModalOpen(true);
+              }}
               disabled={processingId !== null}
             >
               ❌ Rechazar
@@ -222,7 +197,7 @@ export default function TraspasosCRUD() {
         );
       }
     }
-  ], [processingId, rejectingId, observaciones]);
+  ], [processingId]);
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in relative">
@@ -275,6 +250,121 @@ export default function TraspasosCRUD() {
           onPageChange={(page) => setCurrentPage(page)}
         />
       </div>
+
+      {/* 🔄 MODAL DE AUDITORÍA Y TOMA DE DECISIONES DE TRASPASOS */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedTraspaso(null);
+          setObservaciones('');
+        }}
+        title={decisionType === 'aprobar' ? 'Confirmar Autorización' : 'Confirmar Rechazo'}
+      >
+        {selectedTraspaso && (
+          <div className="space-y-4 font-sans text-xs">
+            
+            {/* Informe de Auditoría Rápida */}
+            <div className="bg-background/80 border border-border/40 p-4 rounded-xl space-y-3">
+              <div className="flex items-center gap-3 border-b border-border/20 pb-2.5">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center font-display text-primary shadow-inner shrink-0">
+                  ⚽
+                </div>
+                <div>
+                  <h4 className="font-bold text-foreground text-sm uppercase">{selectedTraspaso.jugador?.name || 'Jugador'}</h4>
+                  {selectedTraspaso.jugador?.gamertag && (
+                    <span className="text-[10px] font-mono text-primary font-bold block">🎮 ID: {selectedTraspaso.jugador.gamertag}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <span className="text-[8px] text-muted-foreground uppercase tracking-widest block font-mono">Club de Origen</span>
+                  <span className="text-foreground font-bold uppercase truncate block">
+                    🛡️ {selectedTraspaso.equipo_origen?.nombre || 'AGENTE LIBRE'}
+                  </span>
+                </div>
+                <div className="space-y-1 text-right">
+                  <span className="text-[8px] text-muted-foreground uppercase tracking-widest block font-mono">Club de Destino (Fichador)</span>
+                  <span className="text-primary font-bold uppercase truncate block">
+                    🛡️ {selectedTraspaso.equipo?.nombre || 'JUGADOR LIBRE'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="h-px bg-border/20"></div>
+
+              <div className="flex justify-between items-center text-[9px] font-mono text-muted-foreground uppercase">
+                <span>Posición Ideal: {selectedTraspaso.posicion || 'MC'}</span>
+                <span>Dorsal Asignado: #{selectedTraspaso.dorsal || 'N/A'}</span>
+              </div>
+            </div>
+
+            {/* Cuadro de Advertencia Táctica sobre Renegociación */}
+            <div className="bg-amber-500/10 border border-amber-500/25 p-3.5 rounded-xl space-y-1">
+              <span className="text-[10px] font-bold text-amber-500 flex items-center gap-1.5 uppercase font-mono">
+                ⚠️ INFORME DE PROCEDENCIA Y NEGOCIACIÓN
+              </span>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                El competidor proviene de <strong>{selectedTraspaso.equipo_origen?.nombre || 'Agente Libre'}</strong> y solicita incorporarse a <strong>{selectedTraspaso.equipo?.nombre || 'un nuevo club'}</strong>.
+                Evalúa si la desvinculación previa cumple con la reglamentación para evitar saltos deliberados de escuadras con el fin de evadir presupuestos.
+              </p>
+            </div>
+
+            {/* Input para notas de rechazo */}
+            {decisionType === 'rechazar' && (
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block font-mono">Observaciones / Motivo de Rechazo</span>
+                <textarea
+                  placeholder="Explica las razones del rechazo (esta información será visible para el club y jugador)..."
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  className="w-full bg-background/50 border border-border/50 rounded-xl p-3 text-xs text-foreground focus:outline-none focus:border-primary/50 min-h-[80px] resize-none"
+                />
+              </div>
+            )}
+
+            {/* Botones del Modal */}
+            <div className="flex gap-2 justify-end pt-3 border-t border-border/20">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setSelectedTraspaso(null);
+                  setObservaciones('');
+                }}
+                className="h-9 px-4 text-[10px] uppercase font-condensed tracking-widest font-black"
+              >
+                Cancelar
+              </Button>
+
+              {decisionType === 'aprobar' ? (
+                <Button
+                  size="sm"
+                  onClick={() => handleDecision(selectedTraspaso.id, 'aprobar')}
+                  isLoading={processingId === selectedTraspaso.id}
+                  className="h-9 px-4 text-[10px] uppercase font-condensed tracking-widest font-black bg-emerald-500 hover:bg-emerald-600 text-white border-none"
+                >
+                  Autorizar Traspaso
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => handleDecision(selectedTraspaso.id, 'rechazar', observaciones)}
+                  disabled={!observaciones.trim() || processingId === selectedTraspaso.id}
+                  isLoading={processingId === selectedTraspaso.id}
+                  className="h-9 px-4 text-[10px] uppercase font-condensed tracking-widest font-black bg-destructive hover:bg-destructive/80 text-white border-none"
+                >
+                  Confirmar Rechazo
+                </Button>
+              )}
+            </div>
+
+          </div>
+        )}
+      </Modal>
 
     </div>
   );

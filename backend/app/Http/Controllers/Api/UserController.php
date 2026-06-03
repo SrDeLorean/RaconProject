@@ -168,10 +168,18 @@ class UserController extends Controller
             ->join('organizaciones', 'organizacion_equipo_usuario.organizacion_id', '=', 'organizaciones.id')
             ->where('organizacion_equipo_usuario.user_id', $user->id)
             ->where('organizacion_equipo_usuario.estado_fichaje', 'activo')
-            ->select('equipos.id as equipo_id', 'equipos.nombre as equipo_nombre', 'equipos.logo as equipo_logo', 'organizaciones.nombre as organizacion_nombre', 'organizacion_equipo_usuario.dorsal', 'organizacion_equipo_usuario.posicion_bloque')
+            ->select('equipos.id as equipo_id', 'equipos.nombre as equipo_nombre', 'equipos.logo as equipo_logo', 'organizaciones.id as organizacion_id', 'organizaciones.nombre as organizacion_nombre', 'organizacion_equipo_usuario.dorsal', 'organizacion_equipo_usuario.posicion_bloque')
             ->first();
 
         // 2. Historial de Traspasos Aprobados
+        $traspasos = \App\Models\SolicitudFichaje::with([
+            'equipo:id,nombre,logo,abreviatura',
+            'equipoOrigen:id,nombre,logo,abreviatura',
+            'organizaciones:id,nombre,logo' // Note: change relation name back to organization if needed, wait, let's keep original
+        ]);
+        // Wait, let's check what the original relation was. Original was:
+        // 'equipo:id,nombre,logo,abreviatura', 'equipoOrigen:id,nombre,logo,abreviatura', 'organizacion:id,nombre,logo'
+        // Let's keep it exact:
         $traspasos = \App\Models\SolicitudFichaje::with([
             'equipo:id,nombre,logo,abreviatura',
             'equipoOrigen:id,nombre,logo,abreviatura',
@@ -182,26 +190,209 @@ class UserController extends Controller
         ->orderBy('updated_at', 'desc')
         ->get();
 
-        // 3. Estadísticas Acumuladas
-        $statsAcumuladas = DB::table('estadisticas_jugadores')
-            ->where('jugador_id', $user->id)
-            ->select(
-                DB::raw('COUNT(id) as partidos_jugados'),
-                DB::raw('SUM(goles) as total_goles'),
-                DB::raw('SUM(asistencias) as total_asistencias'),
-                DB::raw('AVG(valoracion) as promedio_valoracion'),
-                DB::raw('SUM(tarjetas_rojas) as total_rojas'),
-                DB::raw('SUM(jugador_partido) as total_mvp'),
-                DB::raw('SUM(entradas_exitosas) as total_entradas'),
-                DB::raw('AVG(tasa_exito_entradas) as avg_exito_entradas'),
-                DB::raw('AVG(precision_pases) as avg_precision_pases'),
-                DB::raw('AVG(precision_tiro) as avg_precision_tiro'),
-                DB::raw('SUM(atajadas) as total_atajadas'),
-                DB::raw('SUM(goles_recibidos) as total_goles_recibidos')
-            )
-            ->first();
+        $orgId = request()->query('organizacion_id', 'todas');
+        $compId = request()->query('competencia_id', 'todas');
 
-        // 4. Competencias del jugador (Inscripciones de su equipo actual)
+        // 3. Estadísticas Acumuladas
+        $queryStats = DB::table('estadisticas_jugadores')
+            ->where('estadisticas_jugadores.jugador_id', $user->id);
+
+        if ($orgId && $orgId !== 'todas') {
+            $queryStats->join('competencias as c_stats', 'estadisticas_jugadores.competencia_id', '=', 'c_stats.id')
+                ->join('temporadas as t_stats', 'c_stats.temporada_id', '=', 't_stats.id')
+                ->where('t_stats.organizacion_id', $orgId);
+        }
+        if ($compId && $compId !== 'todas') {
+            $queryStats->where('estadisticas_jugadores.competencia_id', $compId);
+        }
+
+        $statsAcumuladas = $queryStats->select(
+            DB::raw('COUNT(estadisticas_jugadores.id) as partidos_jugados'),
+            DB::raw('SUM(estadisticas_jugadores.goles) as total_goles'),
+            DB::raw('SUM(estadisticas_jugadores.asistencias) as total_asistencias'),
+            DB::raw('AVG(estadisticas_jugadores.valoracion) as promedio_valoracion'),
+            DB::raw('SUM(estadisticas_jugadores.tarjetas_rojas) as total_rojas'),
+            DB::raw('SUM(estadisticas_jugadores.jugador_partido) as total_mvp'),
+            DB::raw('SUM(estadisticas_jugadores.entradas_exitosas) as total_entradas'),
+            DB::raw('AVG(estadisticas_jugadores.tasa_exito_entradas) as avg_exito_entradas'),
+            DB::raw('AVG(estadisticas_jugadores.precision_pases) as avg_precision_pases'),
+            DB::raw('AVG(estadisticas_jugadores.precision_tiro) as avg_precision_tiro'),
+            DB::raw('SUM(estadisticas_jugadores.atajadas) as total_atajadas'),
+            DB::raw('SUM(estadisticas_jugadores.goles_recibidos) as total_goles_recibidos')
+        )->first();
+
+        // Calcular comparativas y rankings posicionales
+        $pos = strtoupper($user->posicion ?: ($contratoActivo ? $contratoActivo->posicion_bloque : 'MC'));
+        if (in_array($pos, ['POR', 'GK', 'PO', 'GOALKEEPER'])) {
+            $posGroup = 'POR';
+            $posLabels = ['POR', 'GK', 'PO', 'goalkeeper', 'por', 'gk', 'po'];
+        } elseif (in_array($pos, ['DFC', 'DFI', 'DFD', 'CB', 'LB', 'RB', 'DF', 'DEF', 'LI', 'LD', 'DD', 'DI', 'DEFENDER'])) {
+            $posGroup = 'DEF';
+            $posLabels = ['DFC', 'DFI', 'DFD', 'CB', 'LB', 'RB', 'DF', 'DEF', 'LI', 'LD', 'DD', 'DI', 'defender', 'dfc', 'dfi', 'dfd', 'cb', 'lb', 'rb', 'df', 'def', 'li', 'ld', 'dd', 'di'];
+        } elseif (in_array($pos, ['MC', 'MCO', 'MCD', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'MED', 'MCI', 'MCR', 'MDD', 'MDI', 'MOD', 'MOI', 'MIDFIELDER'])) {
+            $posGroup = 'MED';
+            $posLabels = ['MC', 'MCO', 'MCD', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'MED', 'MCI', 'MCR', 'MDD', 'MDI', 'MOD', 'MOI', 'midfielder', 'mc', 'mco', 'mcd', 'md', 'mi', 'cm', 'cam', 'cdm', 'lm', 'rm', 'med', 'mci', 'mcr', 'mdd', 'mdi', 'mod', 'moi'];
+        } else {
+            $posGroup = 'DEL';
+            $posLabels = ['DEL', 'DC', 'EI', 'ED', 'ST', 'LW', 'RW', 'CF', 'forward', 'del', 'dc', 'ei', 'ed', 'st', 'lw', 'rw', 'cf'];
+        }
+
+        // 1. Ranking Global (Todos los competidores en la misma posición)
+        $queryGlobal = DB::table('estadisticas_jugadores')
+            ->whereIn('estadisticas_jugadores.posicion', $posLabels);
+
+        if ($orgId && $orgId !== 'todas') {
+            $queryGlobal->join('competencias as c_global', 'estadisticas_jugadores.competencia_id', '=', 'c_global.id')
+                ->join('temporadas as t_global', 'c_global.temporada_id', '=', 't_global.id')
+                ->where('t_global.organizacion_id', $orgId);
+        }
+        if ($compId && $compId !== 'todas') {
+            $queryGlobal->where('estadisticas_jugadores.competencia_id', $compId);
+        }
+
+        $rankingGlobal = $queryGlobal->select('estadisticas_jugadores.jugador_id', DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_val'))
+            ->groupBy('estadisticas_jugadores.jugador_id')
+            ->orderByDesc('avg_val')
+            ->get();
+
+        $rankGlobal = null;
+        $totalGlobal = $rankingGlobal->count();
+        foreach ($rankingGlobal as $index => $row) {
+            if ($row->jugador_id == $user->id) {
+                $rankGlobal = $index + 1;
+                break;
+            }
+        }
+
+        // 2. Ranking por Liga
+        $rankLiga = null;
+        $totalLiga = 0;
+        $ligaFilterId = ($orgId && $orgId !== 'todas') ? $orgId : ($contratoActivo ? $contratoActivo->organizacion_id : null);
+
+        if ($ligaFilterId) {
+            $queryLiga = DB::table('estadisticas_jugadores')
+                ->join('competencias as c_liga', 'estadisticas_jugadores.competencia_id', '=', 'c_liga.id')
+                ->join('temporadas as t_liga', 'c_liga.temporada_id', '=', 't_liga.id')
+                ->where('t_liga.organizacion_id', $ligaFilterId)
+                ->whereIn('estadisticas_jugadores.posicion', $posLabels);
+
+            if ($compId && $compId !== 'todas') {
+                $queryLiga->where('estadisticas_jugadores.competencia_id', $compId);
+            }
+
+            $rankingLiga = $queryLiga->select('estadisticas_jugadores.jugador_id', DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_val'))
+                ->groupBy('estadisticas_jugadores.jugador_id')
+                ->orderByDesc('avg_val')
+                ->get();
+
+            $totalLiga = $rankingLiga->count();
+            foreach ($rankingLiga as $index => $row) {
+                if ($row->jugador_id == $user->id) {
+                    $rankLiga = $index + 1;
+                    break;
+                }
+            }
+        }
+
+        // 3. Promedio global de la posición
+        $queryAvg = DB::table('estadisticas_jugadores')
+            ->whereIn('estadisticas_jugadores.posicion', $posLabels);
+
+        if ($orgId && $orgId !== 'todas') {
+            $queryAvg->join('competencias as c_avg', 'estadisticas_jugadores.competencia_id', '=', 'c_avg.id')
+                ->join('temporadas as t_avg', 'c_avg.temporada_id', '=', 't_avg.id')
+                ->where('t_avg.organizacion_id', $orgId);
+        }
+        if ($compId && $compId !== 'todas') {
+            $queryAvg->where('estadisticas_jugadores.competencia_id', $compId);
+        }
+
+        $avgPosicion = $queryAvg->select(
+            DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_valoracion'),
+            DB::raw('AVG(estadisticas_jugadores.goles) as avg_goles'),
+            DB::raw('AVG(estadisticas_jugadores.asistencias) as avg_asistencias'),
+            DB::raw('AVG(estadisticas_jugadores.entradas_exitosas) as avg_entradas'),
+            DB::raw('AVG(estadisticas_jugadores.tasa_exito_entradas) as avg_exito_entradas'),
+            DB::raw('AVG(estadisticas_jugadores.precision_pases) as avg_precision_pases'),
+            DB::raw('AVG(estadisticas_jugadores.precision_tiro) as avg_precision_tiro'),
+            DB::raw('AVG(estadisticas_jugadores.atajadas) as avg_atajadas'),
+            DB::raw('AVG(estadisticas_jugadores.goles_recibidos) as avg_goles_recibidos')
+        )->first();
+
+        // 4. Líder de la posición
+        $liderPosicionStats = null;
+        if ($rankingGlobal->isNotEmpty()) {
+            $liderId = $rankingGlobal->first()->jugador_id;
+            $liderUser = DB::table('users')->where('id', $liderId)->select('name', 'foto')->first();
+
+            $queryLider = DB::table('estadisticas_jugadores')
+                ->where('estadisticas_jugadores.jugador_id', $liderId);
+
+            if ($orgId && $orgId !== 'todas') {
+                $queryLider->join('competencias as c_lider', 'estadisticas_jugadores.competencia_id', '=', 'c_lider.id')
+                    ->join('temporadas as t_lider', 'c_lider.temporada_id', '=', 't_lider.id')
+                    ->where('t_lider.organizacion_id', $orgId);
+            }
+            if ($compId && $compId !== 'todas') {
+                $queryLider->where('estadisticas_jugadores.competencia_id', $compId);
+            }
+
+            $liderStats = $queryLider->select(
+                DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_valoracion'),
+                DB::raw('SUM(estadisticas_jugadores.goles) as total_goles'),
+                DB::raw('AVG(estadisticas_jugadores.goles) as avg_goles'),
+                DB::raw('SUM(estadisticas_jugadores.asistencias) as total_asistencias'),
+                DB::raw('AVG(estadisticas_jugadores.asistencias) as avg_asistencias'),
+                DB::raw('SUM(estadisticas_jugadores.entradas_exitosas) as total_entradas'),
+                DB::raw('AVG(estadisticas_jugadores.entradas_exitosas) as avg_entradas'),
+                DB::raw('AVG(estadisticas_jugadores.tasa_exito_entradas) as avg_exito_entradas'),
+                DB::raw('AVG(estadisticas_jugadores.precision_pases) as avg_precision_pases'),
+                DB::raw('AVG(estadisticas_jugadores.precision_tiro) as avg_precision_tiro'),
+                DB::raw('SUM(estadisticas_jugadores.atajadas) as total_atajadas'),
+                DB::raw('AVG(estadisticas_jugadores.atajadas) as avg_atajadas'),
+                DB::raw('SUM(estadisticas_jugadores.goles_recibidos) as total_goles_recibidos'),
+                DB::raw('AVG(estadisticas_jugadores.goles_recibidos) as avg_goles_recibidos')
+            )->first();
+
+            $liderPosicionStats = [
+                'name' => $liderUser->name ?? 'Líder',
+                'foto' => $liderUser->foto ?? null,
+                'avg_valoracion' => round($liderStats->avg_valoracion ?? 0, 2),
+                'total_goles' => round($liderStats->total_goles ?? 0, 1),
+                'avg_goles' => round($liderStats->avg_goles ?? 0, 2),
+                'total_asistencias' => round($liderStats->total_asistencias ?? 0, 1),
+                'avg_asistencias' => round($liderStats->avg_asistencias ?? 0, 2),
+                'total_entradas' => round($liderStats->total_entradas ?? 0, 1),
+                'avg_entradas' => round($liderStats->avg_entradas ?? 0, 2),
+                'avg_exito_entradas' => round($liderStats->avg_exito_entradas ?? 0, 1),
+                'avg_precision_pases' => round($liderStats->avg_precision_pases ?? 0, 1),
+                'avg_precision_tiro' => round($liderStats->avg_precision_tiro ?? 0, 1),
+                'total_atajadas' => round($liderStats->total_atajadas ?? 0, 1),
+                'avg_atajadas' => round($liderStats->avg_atajadas ?? 0, 2),
+                'total_goles_recibidos' => round($liderStats->total_goles_recibidos ?? 0, 1),
+                'avg_goles_recibidos' => round($liderStats->avg_goles_recibidos ?? 0, 2),
+            ];
+        }
+
+        // 5. Filtros Disponibles (Organizaciones y Competencias con estadísticas del jugador)
+        $orgsConStats = DB::table('estadisticas_jugadores')
+            ->join('competencias', 'estadisticas_jugadores.competencia_id', '=', 'competencias.id')
+            ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
+            ->join('organizaciones', 'temporadas.organizacion_id', '=', 'organizaciones.id')
+            ->where('estadisticas_jugadores.jugador_id', $user->id)
+            ->select('organizaciones.id', 'organizaciones.nombre')
+            ->distinct()
+            ->get();
+
+        $compsConStats = DB::table('estadisticas_jugadores')
+            ->join('competencias', 'estadisticas_jugadores.competencia_id', '=', 'competencias.id')
+            ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
+            ->where('estadisticas_jugadores.jugador_id', $user->id)
+            ->select('competencias.id', 'competencias.nombre', 'temporadas.organizacion_id')
+            ->distinct()
+            ->get();
+
+        // Competencias del jugador (Inscripciones de su equipo actual)
         $competencias = [];
         if ($contratoActivo) {
             $competencias = DB::table('competencias')
@@ -272,6 +463,10 @@ class UserController extends Controller
             'traspasos' => $traspasos,
             'competencias' => $competencias,
             'historial_torneos' => $historialTorneos,
+            'filtros_disponibles' => [
+                'organizaciones' => $orgsConStats,
+                'competencias' => $compsConStats,
+            ],
             'estadisticas' => [
                 'partidos_jugados' => (int)($statsAcumuladas->partidos_jugados ?? 0),
                 'total_goles' => (int)($statsAcumuladas->total_goles ?? 0),
@@ -286,6 +481,25 @@ class UserController extends Controller
                 'avg_precision_tiro' => round($statsAcumuladas->avg_precision_tiro ?? 0, 1),
                 'total_atajadas' => (int)($statsAcumuladas->total_atajadas ?? 0),
                 'total_goles_recibidos' => (int)($statsAcumuladas->total_goles_recibidos ?? 0),
+            ],
+            'comparativas' => [
+                'posicion_grupo' => $posGroup,
+                'rank_global' => $rankGlobal,
+                'total_global' => $totalGlobal,
+                'rank_liga' => $rankLiga,
+                'total_liga' => $totalLiga,
+                'promedio_posicion' => [
+                    'avg_valoracion' => round($avgPosicion->avg_valoracion ?? 0, 2),
+                    'avg_goles' => round($avgPosicion->avg_goles ?? 0, 2),
+                    'avg_asistencias' => round($avgPosicion->avg_asistencias ?? 0, 2),
+                    'avg_entradas' => round($avgPosicion->avg_entradas ?? 0, 2),
+                    'avg_exito_entradas' => round($avgPosicion->avg_exito_entradas ?? 0, 1),
+                    'avg_precision_pases' => round($avgPosicion->avg_precision_pases ?? 0, 1),
+                    'avg_precision_tiro' => round($avgPosicion->avg_precision_tiro ?? 0, 1),
+                    'avg_atajadas' => round($avgPosicion->avg_atajadas ?? 0, 2),
+                    'avg_goles_recibidos' => round($avgPosicion->avg_goles_recibidos ?? 0, 2),
+                ],
+                'lider_posicion' => $liderPosicionStats
             ]
         ]);
     }
@@ -408,13 +622,13 @@ class UserController extends Controller
             $recibidos = (int)$p->total_goles_recibidos;
             $rojas = (int)$p->total_rojas;
 
-            if ($pos === 'POR' || $pos === 'GK') {
+            if ($pos === 'POR' || $pos === 'GK' || $pos === 'GOALKEEPER') {
                 $p->score = ($prom * 10) + ($atajadas * 4) - ($recibidos * 3);
                 $porList[] = $p;
-            } elseif (in_array($pos, ['DFC', 'DFI', 'DFD', 'CB', 'LB', 'RB'])) {
+            } elseif (in_array($pos, ['DFC', 'DFI', 'DFD', 'CB', 'LB', 'RB', 'DEFENDER'])) {
                 $p->score = ($prom * 8) + ($entradas * 5) + ($exitoEntradas * 0.15) - ($rojas * 5);
                 $defList[] = $p;
-            } elseif (in_array($pos, ['MC', 'MCO', 'MCD', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM'])) {
+            } elseif (in_array($pos, ['MC', 'MCO', 'MCD', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'MIDFIELDER'])) {
                 $p->score = ($prom * 6) + ($asist * 8) + ($precPases * 0.2);
                 $medList[] = $p;
             } else {
@@ -590,7 +804,7 @@ class UserController extends Controller
 
         // 3. Prestigio de Delanteros (Poder Ofensivo): Goles, Asistencias, Tiros, Precisión
         $prestigioDelanteros = (clone $queryJugadoresBase)
-            ->whereIn(DB::raw('UPPER(estadisticas_jugadores.posicion)'), ['DEL', 'DC', 'EI', 'ED', 'ST', 'LW', 'RW', 'CF'])
+            ->whereIn(DB::raw('UPPER(estadisticas_jugadores.posicion)'), ['DEL', 'DC', 'EI', 'ED', 'ST', 'LW', 'RW', 'CF', 'FORWARD'])
             ->select(
                 'users.id',
                 'users.name',
@@ -608,7 +822,7 @@ class UserController extends Controller
 
         // 4. Prestigio de Mediocampistas (Efectividad Creativa): Asistencias, Pases Completados, Precisión
         $prestigioMedios = (clone $queryJugadoresBase)
-            ->whereIn(DB::raw('UPPER(estadisticas_jugadores.posicion)'), ['MC', 'MCO', 'MCD', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM'])
+            ->whereIn(DB::raw('UPPER(estadisticas_jugadores.posicion)'), ['MC', 'MCO', 'MCD', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'MIDFIELDER'])
             ->select(
                 'users.id',
                 'users.name',
@@ -625,7 +839,7 @@ class UserController extends Controller
 
         // 5. Prestigio de Defensores (Solidez Defensiva): Entradas Exitosas, Tasa de Quites, Valoración
         $prestigioDefensas = (clone $queryJugadoresBase)
-            ->whereIn(DB::raw('UPPER(estadisticas_jugadores.posicion)'), ['DFC', 'DFI', 'DFD', 'CB', 'LB', 'RB'])
+            ->whereIn(DB::raw('UPPER(estadisticas_jugadores.posicion)'), ['DFC', 'DFI', 'DFD', 'CB', 'LB', 'RB', 'DEFENDER'])
             ->select(
                 'users.id',
                 'users.name',
@@ -642,7 +856,7 @@ class UserController extends Controller
 
         // 6. Prestigio de Arqueros (Muro de Contención): Atajadas, Goles Recibidos, Valoración
         $prestigioPorteros = (clone $queryJugadoresBase)
-            ->whereIn(DB::raw('UPPER(estadisticas_jugadores.posicion)'), ['POR', 'GK'])
+            ->whereIn(DB::raw('UPPER(estadisticas_jugadores.posicion)'), ['POR', 'GK', 'GOALKEEPER'])
             ->select(
                 'users.id',
                 'users.name',
@@ -789,6 +1003,192 @@ class UserController extends Controller
             ->distinct('equipo_id')
             ->count('equipo_id');
 
+        $misTraspasosPendientesCount = \App\Models\SolicitudFichaje::whereIn('organizacion_id', $misOrganizacionesIds)
+            ->where('estado', 'pendiente_admin')
+            ->count();
+
+        // AUDIT 1: Rosters / Equipos (Plantillas vacías o sin capitán)
+        $teamsInOrgs = \App\Models\OrganizacionEquipoUsuario::whereIn('organizacion_id', $misOrganizacionesIds)
+            ->pluck('equipo_id')
+            ->unique()
+            ->toArray();
+
+        $teamsInCompetencias = \DB::table('competencia_equipo')
+            ->whereIn('competencia_id', \App\Models\Competencia::whereHas('temporada', function($q) use ($misOrganizacionesIds) {
+                $q->whereIn('organizacion_id', $misOrganizacionesIds);
+            })->pluck('id'))
+            ->pluck('equipo_id')
+            ->unique()
+            ->toArray();
+
+        $allEquiposIds = array_unique(array_merge($teamsInOrgs, $teamsInCompetencias));
+        $equipos = \App\Models\Equipo::whereIn('id', $allEquiposIds)->get();
+
+        $equiposWarnings = [];
+        foreach ($equipos as $equipo) {
+            $orgsOfTeam = \App\Models\OrganizacionEquipoUsuario::where('equipo_id', $equipo->id)
+                ->whereIn('organizacion_id', $misOrganizacionesIds)
+                ->pluck('organizacion_id')
+                ->unique()
+                ->toArray();
+            
+            if (empty($orgsOfTeam)) {
+                $orgsOfTeam = \App\Models\Competencia::whereIn('id', function($q) use ($equipo) {
+                    $q->select('competencia_id')->from('competencia_equipo')->where('equipo_id', $equipo->id);
+                })->whereHas('temporada', function($q) use ($misOrganizacionesIds) {
+                    $q->whereIn('organizacion_id', $misOrganizacionesIds);
+                })->get()->map(function($comp) {
+                    return $comp->temporada?->organizacion_id;
+                })->filter()->unique()->toArray();
+            }
+
+            foreach ($orgsOfTeam as $orgId) {
+                $rosterCount = \App\Models\OrganizacionEquipoUsuario::where('equipo_id', $equipo->id)
+                    ->where('organizacion_id', $orgId)
+                    ->count();
+                $orgName = \App\Models\Organizacion::where('id', $orgId)->value('nombre') ?? 'Organización';
+                
+                if ($rosterCount == 0) {
+                    $equiposWarnings[] = [
+                        'equipo_id' => $equipo->id,
+                        'nombre' => $equipo->nombre,
+                        'organizacion' => $orgName,
+                        'tipo' => 'plantilla_vacia',
+                        'mensaje' => "El equipo {$equipo->nombre} no tiene jugadores registrados en la organización {$orgName}."
+                    ];
+                }
+
+                if (!$equipo->id_capitan) {
+                    $equiposWarnings[] = [
+                        'equipo_id' => $equipo->id,
+                        'nombre' => $equipo->nombre,
+                        'organizacion' => $orgName,
+                        'tipo' => 'sin_capitan',
+                        'mensaje' => "El equipo {$equipo->nombre} no cuenta con un capitán asignado."
+                    ];
+                }
+            }
+        }
+
+        // AUDIT 2: Traspasos / Fichajes (Pendientes de firma)
+        $traspasosPendientes = \App\Models\SolicitudFichaje::with(['jugador', 'equipo', 'equipoOrigen', 'organizacion'])
+            ->whereIn('organizacion_id', $misOrganizacionesIds)
+            ->where('estado', 'pendiente_admin')
+            ->get()
+            ->map(function($sf) {
+                return [
+                    'id' => $sf->id,
+                    'jugador' => $sf->jugador?->name ?? 'Jugador Desconocido',
+                    'equipo_destino' => $sf->equipo?->nombre ?? 'Agente Libre / Despido',
+                    'equipo_origen' => $sf->equipoOrigen?->nombre ?? 'Agente Libre',
+                    'organizacion' => $sf->organizacion?->nombre ?? 'N/A',
+                    'tipo' => ($sf->equipo_id === null) ? 'despido' : 'fichaje',
+                    'fecha' => $sf->created_at->toIso8601String(),
+                ];
+            });
+
+        // AUDIT 3: Partidos (Falta de Reporte)
+        $partidosFaltaReporte = \App\Models\Partido::with(['local', 'visitante', 'competencia.temporada.organizacion'])
+            ->whereHas('competencia.temporada', function($q) use ($misOrganizacionesIds) {
+                $q->whereIn('organizacion_id', $misOrganizacionesIds);
+            })
+            ->whereNull('goles_local')
+            ->where('fecha', '<', date('Y-m-d'))
+            ->orderBy('fecha', 'asc')
+            ->get()
+            ->map(function($partido) {
+                return [
+                    'id' => $partido->id,
+                    'local' => $partido->local?->nombre ?? 'Por definir',
+                    'visitante' => $partido->visitante?->nombre ?? 'Por definir',
+                    'fecha' => $partido->fecha,
+                    'hora' => $partido->hora,
+                    'competencia' => $partido->competencia?->nombre ?? 'Competencia',
+                    'organizacion' => $partido->competencia?->temporada?->organizacion?->nombre ?? 'Organización',
+                ];
+            });
+
+        // AUDIT 4: Perfil / Organizaciones (Datos faltantes)
+        $perfilFaltante = [];
+        if (empty($user->gamertag)) $perfilFaltante[] = 'Gamertag / ID Deportivo';
+        if (empty($user->id_ea)) $perfilFaltante[] = 'EA ID';
+        if (empty($user->plataforma)) $perfilFaltante[] = 'Plataforma de Juego';
+        if (empty($user->foto)) $perfilFaltante[] = 'Foto de Perfil';
+        if (empty($user->nacionalidad)) $perfilFaltante[] = 'Nacionalidad';
+        if (empty($user->telefono)) $perfilFaltante[] = 'Teléfono de Contacto';
+        if (empty($user->biografia)) $perfilFaltante[] = 'Biografía / Resumen';
+
+        $organizacionFaltante = [];
+        $misOrganizaciones = \App\Models\Organizacion::where('owner_id', $user->id)->get();
+        foreach ($misOrganizaciones as $org) {
+            $missing = [];
+            if (empty($org->logo)) $missing[] = 'Logo corporativo';
+            if (empty($org->banner)) $missing[] = 'Banner de presentación';
+            if (empty($org->descripcion)) $missing[] = 'Descripción general';
+            if (empty($org->color_hex)) $missing[] = 'Color de Tema (HEX)';
+            if (empty($org->email_contacto)) $missing[] = 'Correo electrónico de contacto';
+            
+            if (!empty($missing)) {
+                $organizacionFaltante[] = [
+                    'id' => $org->id,
+                    'nombre' => $org->nombre,
+                    'campos_faltantes' => $missing
+                ];
+            }
+        }
+
+        // AUDIT 5: Temporadas (Mercados y Plazos de vigencia)
+        $temporadasPlazos = \App\Models\Temporada::with('organizacion')
+            ->whereIn('organizacion_id', $misOrganizacionesIds)
+            ->get()
+            ->map(function($temp) {
+                return [
+                    'id' => $temp->id,
+                    'nombre' => $temp->nombre,
+                    'organizacion' => $temp->organizacion?->nombre ?? 'N/A',
+                    'estado_mercado' => $temp->estado_mercado,
+                    'activa' => $temp->activa,
+                    'fecha_inicio' => $temp->fecha_inicio,
+                    'fecha_fin' => $temp->fecha_fin,
+                ];
+            });
+
+        // AUDIT 6: Competencias (Configuración de divisiones)
+        $competenciasWarn = \App\Models\Competencia::with('temporada.organizacion')
+            ->whereHas('temporada', function($q) use ($misOrganizacionesIds) {
+                $q->whereIn('organizacion_id', $misOrganizacionesIds);
+            })
+            ->get()
+            ->map(function($comp) {
+                $equiposCount = $comp->equipos()->count();
+                $partidosCount = $comp->partidos()->count();
+                $warnings = [];
+
+                if ($equiposCount === 0) {
+                    $warnings[] = 'No hay equipos inscritos en esta competencia.';
+                }
+                if ($partidosCount === 0 && $comp->estado === 'en_curso') {
+                    $warnings[] = 'La competencia está activa pero no se han generado los encuentros/partidos.';
+                }
+                if (empty($comp->color_tema)) {
+                    $warnings[] = 'Falta definir un color de marca para la competencia.';
+                }
+                if (empty($comp->logo)) {
+                    $warnings[] = 'Falta subir el logotipo oficial de la división.';
+                }
+
+                if (!empty($warnings)) {
+                    return [
+                        'id' => $comp->id,
+                        'nombre' => $comp->nombre,
+                        'organizacion' => $comp->temporada?->organizacion?->nombre ?? 'N/A',
+                        'estado' => $comp->estado,
+                        'warnings' => $warnings
+                    ];
+                }
+                return null;
+            })->filter()->values();
+
         return response()->json([
             'global' => [
                 'jugadores' => $totalJugadores,
@@ -809,6 +1209,18 @@ class UserController extends Controller
                 'mis_partidos_pendientes' => \App\Models\Partido::whereHas('competencia.temporada', function($q) use ($misOrganizacionesIds) {
                     $q->whereIn('organizacion_id', $misOrganizacionesIds);
                 })->whereNull('goles_local')->count(),
+                'mis_traspasos_pendientes' => $misTraspasosPendientesCount,
+                'audits' => [
+                    'equipos' => $equiposWarnings,
+                    'traspasos' => $traspasosPendientes,
+                    'partidos' => $partidosFaltaReporte,
+                    'perfil' => [
+                        'usuario' => $perfilFaltante,
+                        'organizaciones' => $organizacionFaltante
+                    ],
+                    'temporadas' => $temporadasPlazos,
+                    'competencias' => $competenciasWarn
+                ]
             ]
         ]);
     }

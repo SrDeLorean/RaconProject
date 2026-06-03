@@ -18,7 +18,7 @@ class EquipoController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Equipo::query()->with('capitan');
+        $query = Equipo::query()->with('capitan')->withCount('rosterOrganizacion');
 
         // Búsqueda por nombre o abreviatura
         $query->when($request->filled('search'), function ($q) use ($request) {
@@ -287,6 +287,104 @@ class EquipoController extends Controller
                 ];
             });
 
+        // Mejores Arqueros (Top 5 en base a su valoración promedio)
+        $mejoresArqueros = \DB::table('estadisticas_jugadores')
+            ->join('users', 'estadisticas_jugadores.jugador_id', '=', 'users.id')
+            ->where('estadisticas_jugadores.equipo_id', $equipo->id)
+            ->whereIn('estadisticas_jugadores.posicion', ['POR', 'GK', 'PO', 'por', 'gk', 'po', 'goalkeeper', 'GOALKEEPER'])
+            ->select(
+                'users.id',
+                'users.name',
+                'users.foto',
+                'users.gamertag',
+                'estadisticas_jugadores.posicion',
+                \DB::raw('COUNT(estadisticas_jugadores.id) as partidos'),
+                \DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_valoracion'),
+                \DB::raw('SUM(estadisticas_jugadores.atajadas) as total_atajadas')
+            )
+            ->groupBy('users.id', 'users.name', 'users.foto', 'users.gamertag', 'estadisticas_jugadores.posicion')
+            ->orderByDesc('avg_valoracion')
+            ->take(5)
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'id' => $row->id,
+                    'name' => $row->name,
+                    'foto' => $row->foto,
+                    'gamertag' => $row->gamertag,
+                    'posicion' => $row->posicion,
+                    'partidos' => (int)$row->partidos,
+                    'avg_valoracion' => round((float)$row->avg_valoracion, 2),
+                    'total_atajadas' => (int)$row->total_atajadas
+                ];
+            });
+
+        // Mejores Defensores (Top 5 en base a su valoración promedio)
+        $mejoresDefensores = \DB::table('estadisticas_jugadores')
+            ->join('users', 'estadisticas_jugadores.jugador_id', '=', 'users.id')
+            ->where('estadisticas_jugadores.equipo_id', $equipo->id)
+            ->whereIn('estadisticas_jugadores.posicion', ['DFC', 'DFI', 'DFD', 'CB', 'LB', 'RB', 'DF', 'DEF', 'dfc', 'dfi', 'dfd', 'cb', 'lb', 'rb', 'df', 'def', 'defender', 'DEFENDER'])
+            ->select(
+                'users.id',
+                'users.name',
+                'users.foto',
+                'users.gamertag',
+                'estadisticas_jugadores.posicion',
+                \DB::raw('COUNT(estadisticas_jugadores.id) as partidos'),
+                \DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_valoracion'),
+                \DB::raw('SUM(estadisticas_jugadores.entradas_exitosas) as total_entradas')
+            )
+            ->groupBy('users.id', 'users.name', 'users.foto', 'users.gamertag', 'estadisticas_jugadores.posicion')
+            ->orderByDesc('avg_valoracion')
+            ->take(5)
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'id' => $row->id,
+                    'name' => $row->name,
+                    'foto' => $row->foto,
+                    'gamertag' => $row->gamertag,
+                    'posicion' => $row->posicion,
+                    'partidos' => (int)$row->partidos,
+                    'avg_valoracion' => round((float)$row->avg_valoracion, 2),
+                    'total_entradas' => (int)$row->total_entradas
+                ];
+            });
+
+        // Mejores Mediocentros (Top 5 en base a su valoración promedio)
+        $mejoresMedios = \DB::table('estadisticas_jugadores')
+            ->join('users', 'estadisticas_jugadores.jugador_id', '=', 'users.id')
+            ->where('estadisticas_jugadores.equipo_id', $equipo->id)
+            ->whereIn('estadisticas_jugadores.posicion', ['MC', 'MCO', 'MCD', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'MED', 'mc', 'mco', 'mcd', 'md', 'mi', 'cm', 'cam', 'cdm', 'lm', 'rm', 'med', 'midfielder', 'MIDFIELDER'])
+            ->select(
+                'users.id',
+                'users.name',
+                'users.foto',
+                'users.gamertag',
+                'estadisticas_jugadores.posicion',
+                \DB::raw('COUNT(estadisticas_jugadores.id) as partidos'),
+                \DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_valoracion'),
+                \DB::raw('SUM(estadisticas_jugadores.asistencias) as total_asistencias'),
+                \DB::raw('AVG(estadisticas_jugadores.precision_pases) as avg_precision_pases')
+            )
+            ->groupBy('users.id', 'users.name', 'users.foto', 'users.gamertag', 'estadisticas_jugadores.posicion')
+            ->orderByDesc('avg_valoracion')
+            ->take(5)
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'id' => $row->id,
+                    'name' => $row->name,
+                    'foto' => $row->foto,
+                    'gamertag' => $row->gamertag,
+                    'posicion' => $row->posicion,
+                    'partidos' => (int)$row->partidos,
+                    'avg_valoracion' => round((float)$row->avg_valoracion, 2),
+                    'total_asistencias' => (int)$row->total_asistencias,
+                    'avg_precision_pases' => round((float)$row->avg_precision_pases, 1)
+                ];
+            });
+
         // Historial completo de torneos disputados por el club agrupados por competencia y temporada
         $historialClub = \DB::table('estadisticas_equipos')
             ->join('competencias', 'estadisticas_equipos.competencia_id', '=', 'competencias.id')
@@ -347,6 +445,9 @@ class EquipoController extends Controller
             'partidos' => $partidos,
             'goleadores' => $goleadoresClub,
             'asistentes' => $asistentesClub,
+            'mejores_arqueros' => $mejoresArqueros,
+            'mejores_defensores' => $mejoresDefensores,
+            'mejores_medios' => $mejoresMedios,
             'historial_club' => $historialClub,
             'estadisticas' => $stats
         ]);
@@ -420,9 +521,6 @@ class EquipoController extends Controller
         return response()->json(['message' => 'Jugador incorporado exitosamente al roster de la organización.'], 200);
     }
 
-    /**
-     * Remover o desvincular un jugador del roster de la organización para este equipo.
-     */
     public function removeRosterJugador(Request $request, Equipo $equipo, $userId): JsonResponse
     {
         // Autodetectar o usar la organización recibida
@@ -436,13 +534,32 @@ class EquipoController extends Controller
                 ?? 1;
         }
 
-        $deleted = \App\Models\OrganizacionEquipoUsuario::where('organizacion_id', $organizacionId)
+        $rosterMember = \App\Models\OrganizacionEquipoUsuario::where('organizacion_id', $organizacionId)
             ->where('equipo_id', $equipo->id)
             ->where('user_id', $userId)
-            ->delete();
+            ->first();
 
-        if ($deleted) {
-            return response()->json(['message' => 'Jugador desvinculado del roster de la organización.'], 200);
+        if ($rosterMember) {
+            $temporada = \App\Models\Temporada::where('organizacion_id', $organizacionId)
+                ->where('activa', true)
+                ->first();
+
+            // Generar una ficha de traspaso del tipo despido / jugador libre
+            \App\Models\SolicitudFichaje::create([
+                'organizacion_id' => $organizacionId,
+                'temporada_id' => $temporada ? $temporada->id : null,
+                'equipo_id' => null, // Destino nulo (Jugador Libre)
+                'equipo_origen_id' => $equipo->id,
+                'user_id' => $userId,
+                'estado' => 'aprobado', // Completado
+                'dorsal' => $rosterMember->dorsal,
+                'posicion' => $rosterMember->posicion_bloque,
+                'observaciones_admin' => 'Despido / Jugador desvinculado del club de forma oficial.'
+            ]);
+
+            $rosterMember->delete();
+
+            return response()->json(['message' => 'Jugador desvinculado del roster de la organización y registrado como libre.'], 200);
         }
 
         return response()->json(['message' => 'Jugador no encontrado en el roster.'], 404);

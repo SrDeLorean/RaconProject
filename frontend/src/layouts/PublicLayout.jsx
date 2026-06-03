@@ -116,7 +116,7 @@ export default function PublicLayout() {
               <div className="dropdown-menu">
                 {[
                   { path: '/organizaciones', label: 'Circuitos / Orgs', icon: '🏛️' },
-                  { path: '#', label: 'Acerca de', icon: 'ℹ️' },
+                  { path: '/acerca-de', label: 'Acerca de', icon: 'ℹ️' },
                   { path: '/contacto', label: 'Contacto', icon: '✉️' },
                 ].map((item) => (
                   <Link
@@ -327,7 +327,7 @@ export default function PublicLayout() {
             <div className="flex flex-wrap justify-center gap-2">
               {[
                 { path: '/organizaciones', label: 'Organizaciones' },
-                { path: '#', label: 'Acerca de' },
+                { path: '/acerca-de', label: 'Acerca de' },
                 { path: '/contacto', label: 'Contacto' },
               ].map((item) => (
                 <Link

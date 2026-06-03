@@ -226,18 +226,18 @@ export default function Organizaciones() {
             <div className="border border-border/40 bg-card/45 backdrop-blur-md rounded-2xl p-6 w-full space-y-4 shadow-xl">
               
               <div className="flex justify-between items-center border-b border-border/30 pb-3">
-                <span className="text-[10px] font-condensed tracking-widest text-muted-foreground uppercase">JORNADA OFICIAL</span>
-                <span className="text-[10px] font-mono text-primary font-bold">TRANSMISIÓN EN VIVO</span>
+                <span className="text-[9px] sm:text-[10px] font-condensed tracking-widest text-muted-foreground uppercase">JORNADA OFICIAL</span>
+                <span className="text-[9px] sm:text-[10px] font-mono text-primary font-bold">TRANSMISIÓN EN VIVO</span>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">TEMPORADA</h4>
-                  <span className="text-3xl font-display font-black text-foreground">TEMPORADA 45</span>
+                  <h4 className="text-[8px] sm:text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">TEMPORADA</h4>
+                  <span className="text-xl sm:text-2xl md:text-3xl font-display font-black text-foreground">TEMPORADA 45</span>
                 </div>
                 <div>
-                  <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">ETAPA ACTUAL</h4>
-                  <span className="text-3xl font-display font-black text-primary">SEMANA 1</span>
+                  <h4 className="text-[8px] sm:text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">ETAPA ACTUAL</h4>
+                  <span className="text-xl sm:text-2xl md:text-3xl font-display font-black text-primary">SEMANA 1</span>
                 </div>
               </div>
 
@@ -457,7 +457,7 @@ export default function Organizaciones() {
 
                   <Button 
                     onClick={() => navigate(`/organizaciones/${league.id}`)}
-                    className="w-full h-11 text-xs font-condensed font-black uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_15px_hsla(var(--primary),0.35)] transition-all duration-300"
+                    className="w-full h-10 text-[10px] font-sans font-bold uppercase tracking-wider bg-primary text-primary-foreground border border-transparent hover:bg-primary/90 hover:shadow-[0_0_15px_hsl(var(--primary)/0.35)] transition-all duration-300"
                   >
                     📅 VER TEMPORADAS ACTIVAS
                   </Button>

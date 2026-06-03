@@ -212,8 +212,8 @@ export default function PlantillaClub({
             data={roster}
             isLoading={false}
             searchPlaceholder="Filtrar por Gamertag en plantilla..."
-            perPage={11}
-            showPagination={false}
+            perPage={5}
+            showPagination={true}
           />
         </div>
 

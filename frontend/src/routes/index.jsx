@@ -31,6 +31,7 @@ const Traspasos = lazy(() => import('@/features/public/pages/Traspasos'));
 const TotwTots = lazy(() => import('@/features/public/pages/TotwTots'));
 const Infografia = lazy(() => import('@/features/public/pages/Infografia'));
 const Contacto = lazy(() => import('@/features/public/pages/Contacto'));
+const AcercaDe = lazy(() => import('@/features/public/pages/AcercaDe'));
 
 import PageLoader from '@/components/ui/PageLoader';
 
@@ -59,6 +60,7 @@ export const router = createBrowserRouter([
       { path: '/totw-tots', element: <TotwTots /> },
       { path: '/infografia', element: <Infografia /> },
       { path: '/contacto', element: <Contacto /> },
+      { path: '/acerca-de', element: <AcercaDe /> },
     ],
   },
   

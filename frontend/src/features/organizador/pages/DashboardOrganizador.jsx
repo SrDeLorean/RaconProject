@@ -13,6 +13,7 @@ export default function DashboardOrganizador() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [misCompetencias, setMisCompetencias] = useState([]);
+  const [activeTab, setActiveTab] = useState('perfil');
 
   useEffect(() => {
     const fetchStatsAndCompetencias = async () => {
@@ -52,7 +53,7 @@ export default function DashboardOrganizador() {
       ) : stats ? (
         <div className="space-y-8">
           {/* Grilla de Métricas en Vivo */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
             
             <Card className="hover:border-primary/50 transition-all shadow-md" withGlow>
               <div className="flex justify-between items-center p-2">
@@ -94,6 +95,269 @@ export default function DashboardOrganizador() {
               </div>
             </Card>
 
+            <Card className="hover:border-primary/50 transition-all shadow-md cursor-pointer" withGlow onClick={() => navigate('/organizador/traspasos')}>
+              <div className="flex justify-between items-center p-2">
+                <div>
+                  <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mb-1">Traspasos Pendientes</p>
+                  <h3 className={`text-4xl font-display font-black ${stats.mis_traspasos_pendientes > 0 ? 'text-amber-500 animate-pulse' : 'text-foreground'}`}>
+                    {stats.mis_traspasos_pendientes ?? 0}
+                  </h3>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xl shadow-inner">🔁</div>
+              </div>
+            </Card>
+
+          </div>
+
+          {/* Centro de Control y Auditoría (6 Vistas) */}
+          <div className="border border-border/40 bg-card/25 rounded-3xl p-6 shadow-xl space-y-6">
+            <div>
+              <h2 className="text-xl font-display font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+                🛡️ Centro de Control y Auditoría
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Supervisa el estado reglamentario, deportivo y de branding de tus ligas y organizaciones en tiempo real.
+              </p>
+            </div>
+
+            {/* Selector de pestañas (6 vistas) */}
+            <div className="flex flex-wrap gap-2 border-b border-border/20 pb-3">
+              {[
+                { id: 'perfil', label: '🏢 Perfil & Orgs', count: (stats.audits?.perfil?.usuario?.length || 0) + (stats.audits?.perfil?.organizaciones?.reduce((acc, o) => acc + (o.campos_faltantes?.length || 0), 0) || 0) },
+                { id: 'equipos', label: '👥 Plantillas & Caps', count: stats.audits?.equipos?.length || 0 },
+                { id: 'traspasos', label: '🔁 Traspasos', count: stats.audits?.traspasos?.length || 0 },
+                { id: 'partidos', label: '🏟️ Falta Reporte', count: stats.audits?.partidos?.length || 0 },
+                { id: 'temporadas', label: '📅 Temporadas', count: stats.audits?.temporadas?.length || 0 },
+                { id: 'competencias', label: '🏆 Competencias', count: stats.audits?.competencias?.length || 0 },
+              ].map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-4 py-2 text-xs font-bold uppercase rounded-lg transition-all flex items-center gap-2 border ${
+                      isActive
+                        ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20'
+                        : 'bg-card/65 text-muted-foreground border-border/50 hover:text-foreground hover:border-primary/30'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    {tab.count > 0 && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                        isActive ? 'bg-primary-foreground text-primary' : 'bg-destructive/20 text-destructive border border-destructive/30 animate-pulse'
+                      }`}>
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Contenido de la pestaña activa */}
+            <div className="bg-card/40 border border-border/30 rounded-2xl p-5 min-h-[200px]">
+              
+              {/* VISTA 1: Perfil & Orgs */}
+              {activeTab === 'perfil' && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">🏢 Perfil y Datos Organizacionales</h4>
+                  
+                  {/* Usuario */}
+                  {stats.audits?.perfil?.usuario?.length > 0 ? (
+                    <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2">
+                      <p className="text-xs text-amber-500 font-bold flex items-center gap-1.5">
+                        ⚠️ Tu perfil de organizador tiene campos incompletos
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Para mayor transparencia, completa los siguientes datos: <strong className="text-foreground">{stats.audits.perfil.usuario.join(', ')}</strong>.
+                      </p>
+                      <Button variant="outline" size="sm" className="text-xs border-amber-500/30 hover:bg-amber-500/10 text-amber-500" onClick={() => navigate('/organizador/perfil')}>
+                        Completar Perfil
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-green-500 font-bold flex items-center gap-1">✅ Tu perfil de organizador está completo.</p>
+                  )}
+
+                  {/* Organizaciones */}
+                  {stats.audits?.perfil?.organizaciones?.length > 0 ? (
+                    <div className="space-y-3">
+                      {stats.audits.perfil.organizaciones.map((org) => (
+                        <div key={org.id} className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                          <div className="space-y-1">
+                            <span className="text-xs font-black text-foreground uppercase">{org.nombre}</span>
+                            <p className="text-[11px] text-muted-foreground">
+                              Faltan cargar los siguientes datos: <strong className="text-foreground">{org.campos_faltantes.join(', ')}</strong>.
+                            </p>
+                          </div>
+                          <Button size="sm" className="text-xs font-bold whitespace-nowrap bg-amber-600 text-white hover:bg-amber-700" onClick={() => navigate('/organizador/perfil')}>
+                            Editar Organización
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-green-500 font-bold flex items-center gap-1">✅ Todas tus organizaciones tienen branding y datos de contacto completos.</p>
+                  )}
+                </div>
+              )}
+
+              {/* VISTA 2: Plantillas & Capitanes */}
+              {activeTab === 'equipos' && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">👥 Auditoría de Equipos (Plantillas y Capitanes)</h4>
+                  {stats.audits?.equipos?.length === 0 ? (
+                    <p className="text-xs text-green-500 font-bold flex items-center gap-1">✅ Todos los equipos participantes cuentan con plantillas registradas y capitán asignado.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {stats.audits.equipos.map((warning, idx) => (
+                        <div key={idx} className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl flex items-center justify-between gap-3">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-foreground">{warning.nombre}</span>
+                            <span className="text-[10px] text-muted-foreground uppercase font-mono">{warning.organizacion}</span>
+                            <span className="text-[11px] text-destructive/90 mt-1 font-medium">{warning.mensaje}</span>
+                          </div>
+                          <Badge variant="error" className="uppercase text-[8px] font-black tracking-wider shrink-0">
+                            {warning.tipo === 'plantilla_vacia' ? 'Sin Roster' : 'Sin Cap'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* VISTA 3: Traspasos */}
+              {activeTab === 'traspasos' && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">🔁 Traspasos y Solicitudes de Fichaje / Despido</h4>
+                  {stats.audits?.traspasos?.length === 0 ? (
+                    <p className="text-xs text-green-500 font-bold flex items-center gap-1">✅ No tienes solicitudes de fichaje o despido pendientes de firma.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {stats.audits.traspasos.map((traspaso) => (
+                        <div key={traspaso.id} className="p-3 bg-card border border-border/50 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-bold text-foreground">{traspaso.jugador}</span>
+                              <Badge variant={traspaso.tipo === 'despido' ? 'error' : 'brand'} className="uppercase text-[8px] font-black">
+                                {traspaso.tipo === 'despido' ? 'Despido / Libre' : 'Fichaje'}
+                              </Badge>
+                              <span className="text-[10px] text-muted-foreground font-mono">{traspaso.organizacion}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Origen: <span className="text-foreground font-medium">{traspaso.equipo_origen}</span> → Destino: <span className="text-foreground font-medium">{traspaso.equipo_destino}</span>
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[10px] text-muted-foreground font-mono">{new Date(traspaso.fecha).toLocaleDateString()}</span>
+                            <Button size="sm" variant="outline" className="h-7 text-[10px] font-bold" onClick={() => navigate('/organizador/traspasos')}>
+                              Firmar / Revisar
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* VISTA 4: Falta Reporte */}
+              {activeTab === 'partidos' && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">🏟️ Partidos Pendientes de Reporte Oficial</h4>
+                  {stats.audits?.partidos?.length === 0 ? (
+                    <p className="text-xs text-green-500 font-bold flex items-center gap-1">✅ Todos los partidos en curso están al día con sus reportes oficiales.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                      {stats.audits.partidos.map((partido) => (
+                        <div key={partido.id} className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-bold text-foreground">{partido.local} vs {partido.visitante}</span>
+                              <span className="text-[10px] text-muted-foreground uppercase font-mono">{partido.competencia}</span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              Programado: <strong className="text-foreground">{partido.fecha} {partido.hora || 'Por definir'}</strong> ({partido.organizacion})
+                            </p>
+                          </div>
+                          <Button size="sm" variant="outline" className="h-7 text-[10px] font-bold border-amber-500/30 text-amber-500 hover:bg-amber-500/10 shrink-0" onClick={() => navigate('/organizador/partidos')}>
+                            Reportar Resultado
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* VISTA 5: Temporadas */}
+              {activeTab === 'temporadas' && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">📅 Control de Temporadas y Mercados de Pases</h4>
+                  {stats.audits?.temporadas?.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No hay temporadas registradas bajo tus organizaciones.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {stats.audits.temporadas.map((temp) => (
+                        <div key={temp.id} className="p-4 bg-card border border-border/50 rounded-xl space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-black text-foreground uppercase">{temp.nombre}</span>
+                            <Badge variant={temp.activa ? 'success' : 'neutral'} className="text-[8px] uppercase tracking-wider font-bold">
+                              {temp.activa ? 'Activa' : 'Inactiva'}
+                            </Badge>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground uppercase font-mono">{temp.organizacion}</p>
+                          <div className="flex justify-between items-center text-xs pt-1 border-t border-border/20">
+                            <span className="text-muted-foreground">Mercado:</span>
+                            <span className={`font-bold ${temp.estado_mercado === 'abierto' ? 'text-green-500' : 'text-destructive'}`}>
+                              {temp.estado_mercado === 'abierto' ? '🟢 Abierto' : '🔴 Cerrado'}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-muted-foreground flex justify-between">
+                            <span>Vigencia:</span>
+                            <span>{temp.fecha_inicio ? new Date(temp.fecha_inicio).toLocaleDateString() : 'N/A'} - {temp.fecha_fin ? new Date(temp.fecha_fin).toLocaleDateString() : 'N/A'}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* VISTA 6: Competencias */}
+              {activeTab === 'competencias' && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">🏆 Estructura y Configuración de Competencias / Ligas</h4>
+                  {stats.audits?.competencias?.length === 0 ? (
+                    <p className="text-xs text-green-500 font-bold flex items-center gap-1">✅ Todas las competencias tienen una estructura deportiva y de branding completa.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {stats.audits.competencias.map((comp) => (
+                        <div key={comp.id} className="p-4 bg-destructive/5 border border-destructive/20 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-black text-foreground uppercase">{comp.nombre}</span>
+                              <span className="text-[10px] text-muted-foreground font-mono">({comp.organizacion})</span>
+                              <Badge variant="neutral" className="uppercase text-[8px] font-bold">{comp.estado}</Badge>
+                            </div>
+                            <ul className="list-disc pl-4 space-y-1">
+                              {comp.warnings.map((warn, idx) => (
+                                <li key={idx} className="text-xs text-muted-foreground">{warn}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          <Button size="sm" variant="outline" className="text-xs font-bold shrink-0" onClick={() => navigate(`/organizador/competencias/${comp.id}`)}>
+                            Gestionar
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </div>
           </div>
 
           {/* Sección de Detalle en el Dashboard */}
@@ -162,6 +426,13 @@ export default function DashboardOrganizador() {
                     onClick={() => navigate('/organizador/partidos')}
                   >
                     🏟️ Reportar Partidos
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full text-xs font-bold"
+                    onClick={() => navigate('/organizador/traspasos')}
+                  >
+                    🔁 Gestionar Traspasos
                   </Button>
                 </div>
               </div>

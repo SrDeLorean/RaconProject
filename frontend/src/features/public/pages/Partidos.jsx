@@ -54,6 +54,10 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
   const [debouncedSearchText, setDebouncedSearchText] = useState('');
   const [dateIndex, setDateIndex] = useState(0);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
   const [sortedDates, setSortedDates] = useState([]);
   const [statusCounts, setStatusCounts] = useState({ all: 0, live: 0, upcoming: 0, finished: 0 });
 
@@ -103,6 +107,8 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
 
   // Fetch distinct calendar dates from backend matching filters
   useEffect(() => {
+    if (forPlayer && !profileData) return;
+
     const fetchDates = async () => {
       try {
         const params = {};
@@ -110,6 +116,19 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
         if (compFiltro) params.competencia_id = compFiltro;
         if (debouncedSearchText) params.search = debouncedSearchText;
         if (forTeam && teamId) params.equipo_id = teamId;
+        
+        if (forOrganizer) {
+          params.for_organizer = true;
+        }
+        if (forPlayer) {
+          const equipoId = profileData?.contrato_activo?.equipo_id;
+          if (equipoId) {
+            params.equipo_id = equipoId;
+          } else {
+            setSortedDates([]);
+            return;
+          }
+        }
         
         const response = await api.get('/partidos-fechas', { params });
         const fetchedDates = response.data || [];
@@ -130,13 +149,18 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
       }
     };
     fetchDates();
-  }, [orgFiltro, compFiltro, debouncedSearchText, forTeam, teamId]);
+  }, [orgFiltro, compFiltro, debouncedSearchText, forTeam, teamId, forOrganizer, forPlayer, profileData]);
 
   const activeDate = useMemo(() => {
     if (sortedDates.length === 0) return null;
     const item = sortedDates[dateIndex];
     return typeof item === 'string' ? item : item?.fecha;
   }, [sortedDates, dateIndex]);
+
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeDate, statusTab, orgFiltro, compFiltro, debouncedSearchText]);
 
   // Sync dateIndex when statusTab changes to 'live' or when dates load
   useEffect(() => {
@@ -180,6 +204,8 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
 
   // Fetch status counts matching current filter selection
   useEffect(() => {
+    if (forPlayer && !profileData) return;
+
     const fetchCounts = async () => {
       try {
         const params = {
@@ -191,6 +217,19 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
         if (debouncedSearchText) params.search = debouncedSearchText;
         if (forTeam && teamId) params.equipo_id = teamId;
         
+        if (forOrganizer) {
+          params.for_organizer = true;
+        }
+        if (forPlayer) {
+          const equipoId = profileData?.contrato_activo?.equipo_id;
+          if (equipoId) {
+            params.equipo_id = equipoId;
+          } else {
+            setStatusCounts({ all: 0, live: 0, upcoming: 0, finished: 0 });
+            return;
+          }
+        }
+        
         const response = await api.get('/partidos-conteos', { params });
         setStatusCounts(response.data || { all: 0, live: 0, upcoming: 0, finished: 0 });
       } catch (error) {
@@ -198,7 +237,7 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
       }
     };
     fetchCounts();
-  }, [activeDate, orgFiltro, compFiltro, debouncedSearchText, forTeam, teamId]);
+  }, [activeDate, orgFiltro, compFiltro, debouncedSearchText, forTeam, teamId, forOrganizer, forPlayer, profileData]);
 
   // Lazy-load matches from backend based on active date or tab and active filters
   useEffect(() => {
@@ -256,6 +295,50 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
   const partidos = allPartidos;
   const filteredMatches = allPartidos;
 
+  // Get all unique jornadas present in the filtered matches list
+  const uniqueJornadas = useMemo(() => {
+    const set = new Set();
+    let hasEmpty = false;
+    filteredMatches.forEach(p => {
+      if (p.jornada && p.jornada.trim() !== '') {
+        set.add(p.jornada.trim());
+      } else {
+        hasEmpty = true;
+      }
+    });
+    const list = Array.from(set);
+    
+    // Sort them numerically if they contain numbers, e.g. "Jornada 1", "Jornada 10"
+    list.sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, ''), 10);
+      const numB = parseInt(b.replace(/\D/g, ''), 10);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      return a.localeCompare(b);
+    });
+
+    if (hasEmpty) {
+      list.push('Otros');
+    }
+    return list;
+  }, [filteredMatches]);
+
+  const totalPages = uniqueJornadas.length;
+  const activeJornada = uniqueJornadas[currentPage - 1] || null;
+
+  const paginatedMatches = useMemo(() => {
+    if (uniqueJornadas.length === 0) return filteredMatches;
+    if (!activeJornada) return filteredMatches;
+    
+    return filteredMatches.filter(p => {
+      if (activeJornada === 'Otros') {
+        return !p.jornada || p.jornada.trim() === '';
+      }
+      return p.jornada === activeJornada;
+    });
+  }, [filteredMatches, activeJornada, uniqueJornadas]);
+
   // Auto scroll to keep selected date centered in viewport horizontally
   useEffect(() => {
     const activeEl = document.getElementById(`date-btn-${dateIndex}`);
@@ -293,7 +376,7 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
   // Group matches inside organization node -> competition node
   const nestedGrouped = useMemo(() => {
     const map = {};
-    filteredMatches.forEach(p => {
+    paginatedMatches.forEach(p => {
       const org = p.competencia?.temporada?.organizacion;
       const orgId = org?.id || 0;
       const orgNom = org?.nombre || 'Circuito Independiente';
@@ -404,18 +487,18 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
                 <div className="border border-border/40 bg-card/45 backdrop-blur-md rounded-2xl p-6 w-full space-y-4 shadow-xl">
                   
                   <div className="flex justify-between items-center border-b border-border/30 pb-3">
-                    <span className="text-[10px] font-condensed tracking-widest text-muted-foreground uppercase">TELEMETRÍA REAL</span>
-                    <span className="text-[10px] font-mono text-primary font-bold">LIVE MATCHES</span>
+                    <span className="text-[9px] sm:text-[10px] font-condensed tracking-widest text-muted-foreground uppercase">TELEMETRÍA REAL</span>
+                    <span className="text-[9px] sm:text-[10px] font-mono text-primary font-bold">LIVE MATCHES</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">EN VIVO</h4>
-                      <span className="text-3xl font-display font-black text-foreground">{statusCounts.live}</span>
+                      <h4 className="text-[8px] sm:text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">EN VIVO</h4>
+                      <span className="text-xl sm:text-2xl md:text-3xl font-display font-black text-foreground">{statusCounts.live}</span>
                     </div>
                     <div>
-                      <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">TOTAL PROGRAMADOS</h4>
-                      <span className="text-3xl font-display font-black text-primary">{allPartidos.length}</span>
+                      <h4 className="text-[8px] sm:text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">TOTAL PROGRAMADOS</h4>
+                      <span className="text-xl sm:text-2xl md:text-3xl font-display font-black text-primary">{allPartidos.length}</span>
                     </div>
                   </div>
 
@@ -442,7 +525,7 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
       {/* 3. TOURNAMENT & COMPETITION FILTERS (Dos niveles reales desde la BD)       */}
       {/* ========================================================================= */}
       <section className="relative z-20 max-w-7xl mx-auto px-6 lg:px-10 mb-6">
-        <div className="flex flex-col gap-5 bg-card/75 dark:bg-[#16110f]/75 border border-border/40 dark:border-white/[0.06] rounded-2xl p-5 shadow-lg backdrop-blur-md">
+        <div className="flex flex-col gap-5 bg-white/90 dark:bg-card/85 border border-border/40 dark:border-white/[0.06] rounded-2xl p-5 shadow-lg backdrop-blur-md">
           
           {/* Fila de Búsqueda */}
           <div className="relative w-full">
@@ -468,7 +551,7 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
 
           {/* Estado de Partido Filtros */}
           <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border/20 dark:border-white/[0.05] pt-4.5">
-            <div className="flex gap-1.5 bg-background p-1 rounded-xl border border-border/40 dark:border-white/[0.06] overflow-x-auto">
+            <div className="flex gap-1.5 bg-white/50 dark:bg-background/60 p-1 rounded-xl border border-border/40 dark:border-white/[0.06] overflow-x-auto">
               {[
                 { id: 'all', label: 'Todos', icon: '🌐' },
                 { id: 'live', label: 'En Vivo', icon: '🔴' },
@@ -481,7 +564,7 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
                   className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-condensed font-black uppercase tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
                     statusTab === tab.id
                       ? 'bg-primary text-primary-foreground shadow-lg active-date-glow'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-card'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-white/80 dark:hover:bg-card'
                   }`}
                 >
                   <span>{tab.icon}</span> {tab.label}
@@ -513,7 +596,7 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
                   className={`px-4.5 py-2 rounded-xl text-[10px] font-condensed font-black uppercase tracking-widest border transition-all duration-300 cursor-pointer ${
                     orgFiltro === null
                       ? 'bg-primary/15 text-primary border-primary/40'
-                      : 'bg-card/35 dark:bg-[#16110f] text-muted-foreground border-border/30 dark:border-white/[0.06] hover:border-primary/45 hover:text-foreground'
+                      : 'bg-white/60 dark:bg-card/40 text-muted-foreground border-border/30 dark:border-white/[0.06] hover:bg-white/95 dark:hover:bg-card/65 hover:border-primary/45 hover:text-foreground'
                   }`}
                 >
                   TODOS ({partidos.length})
@@ -525,7 +608,7 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
                     className={`px-4.5 py-2 rounded-xl text-[10px] font-condensed font-black uppercase tracking-widest border transition-all duration-300 cursor-pointer ${
                       orgFiltro === org.id
                         ? 'bg-primary/15 text-primary border-primary/40'
-                        : 'bg-card/35 dark:bg-[#16110f] text-muted-foreground border-border/30 dark:border-white/[0.06] hover:border-primary/45 hover:text-foreground'
+                        : 'bg-white/60 dark:bg-card/40 text-muted-foreground border-border/30 dark:border-white/[0.06] hover:bg-white/95 dark:hover:bg-card/65 hover:border-primary/45 hover:text-foreground'
                     }`}
                   >
                     {org.nombre}
@@ -547,7 +630,7 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
                   className={`px-4 py-1.5 rounded-lg text-[9px] font-condensed font-black uppercase tracking-widest border transition-all duration-300 cursor-pointer ${
                     compFiltro === null
                       ? 'bg-primary/10 text-primary border-primary/30'
-                      : 'bg-card/25 dark:bg-black/20 text-muted-foreground border-border/30 dark:border-white/[0.05] hover:border-primary/30 hover:text-foreground'
+                      : 'bg-white/50 dark:bg-card/30 text-muted-foreground border-border/30 dark:border-white/[0.05] hover:bg-white/80 dark:hover:bg-card/50 hover:border-primary/30 hover:text-foreground'
                   }`}
                 >
                   TODAS LAS COMPETENCIAS
@@ -559,7 +642,7 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
                     className={`px-4 py-1.5 rounded-lg text-[9px] font-condensed font-black uppercase tracking-widest border transition-all duration-300 cursor-pointer ${
                       compFiltro === comp.id
                         ? 'bg-primary/10 text-primary border-primary/30 shadow-sm'
-                        : 'bg-card/25 dark:bg-black/20 text-muted-foreground border-border/30 dark:border-white/[0.05] hover:border-primary/30 hover:text-foreground'
+                        : 'bg-white/50 dark:bg-card/30 text-muted-foreground border-border/30 dark:border-white/[0.05] hover:bg-white/80 dark:hover:bg-card/50 hover:border-primary/30 hover:text-foreground'
                     }`}
                   >
                     {comp.nombre}
@@ -585,7 +668,7 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
               setDateIndex(prev => Math.max(0, prev - 1));
               setStatusTab('all');
             }}
-            className="p-3.5 rounded-xl border border-border/40 dark:border-white/[0.06] bg-card/85 text-muted-foreground hover:text-foreground disabled:opacity-20 hover:border-primary/40 transition-all duration-300 cursor-pointer shrink-0"
+            className="p-3.5 rounded-xl border border-border/40 dark:border-white/[0.06] bg-white/90 dark:bg-card/85 text-muted-foreground hover:text-foreground disabled:opacity-20 hover:border-primary/40 transition-all duration-300 cursor-pointer shrink-0"
           >
             ◀
           </button>
@@ -605,7 +688,7 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
                   className={`flex-1 min-w-[84px] py-3.5 px-2.5 rounded-2xl border flex flex-col items-center gap-1.5 transition-all duration-300 cursor-pointer ${
                     isActive
                       ? 'bg-primary text-primary-foreground border-primary active-date-glow scale-105'
-                      : 'bg-card/70 text-muted-foreground border-border/45 dark:border-white/[0.06] hover:border-primary/30 hover:text-foreground'
+                      : 'bg-white/60 dark:bg-card/50 text-muted-foreground border-border/45 dark:border-white/[0.06] hover:bg-white/90 dark:hover:bg-card/70 hover:border-primary/30 hover:text-foreground'
                   }`}
                 >
                   {/* Etiqueta Día/Mes en español, ej: vie/jun */}
@@ -616,11 +699,11 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
                   <span className={`text-[8px] font-condensed font-black px-1.5 py-0.5 rounded-full mt-1.5 transition-colors ${
                     isActive 
                       ? 'bg-white/20 text-white' 
-                      : item.count > 0 
+                      : Number(item.count) > 0 
                       ? 'bg-primary/10 text-primary border border-primary/20' 
                       : 'bg-muted text-muted-foreground'
                   }`}>
-                    {item.count} {item.count === 1 ? 'partido' : 'partidos'}
+                    {item.count} {Number(item.count) === 1 ? 'partido' : 'partidos'}
                   </span>
                 </button>
               );
@@ -634,7 +717,7 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
               setDateIndex(prev => Math.min(sortedDates.length - 1, prev + 1));
               setStatusTab('all');
             }}
-            className="p-3.5 rounded-xl border border-border/40 dark:border-white/[0.06] bg-card/85 text-muted-foreground hover:text-foreground disabled:opacity-20 hover:border-primary/40 transition-all duration-300 cursor-pointer shrink-0"
+            className="p-3.5 rounded-xl border border-border/40 dark:border-white/[0.06] bg-white/90 dark:bg-card/85 text-muted-foreground hover:text-foreground disabled:opacity-20 hover:border-primary/40 transition-all duration-300 cursor-pointer shrink-0"
           >
             ▶
           </button>
@@ -647,7 +730,7 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
       {/* ========================================================================= */}
       <main className="relative z-20 max-w-7xl mx-auto px-6 lg:px-10 min-h-[400px]">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 min-h-[300px] border border-border/40 bg-card/25 backdrop-blur-md rounded-2xl">
+          <div className="flex flex-col items-center justify-center py-24 min-h-[300px] border border-border/40 dark:border-white/[0.06] bg-white/40 dark:bg-card/75 backdrop-blur-md rounded-2xl">
             <Spinner size="xl" />
             <p className="mt-4 text-xs font-condensed font-bold text-muted-foreground tracking-[0.2em] uppercase animate-pulse">
               Recuperando transmisiones de partidos...
@@ -723,109 +806,203 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
                           const visitaWinner = isFinished && p.goles_visitante > p.goles_local;
 
                           return (
-                            <div
-                              key={p.id}
-                              className={`relative overflow-hidden rounded-2xl glass-hud-panel p-5 flex flex-col md:flex-row justify-between items-center gap-6 md:gap-10 border transition-all duration-300 scanlines select-none ${
-                                isLive ? 'live-match-flash border-primary/50 bg-primary/5' : 'border-border/45'
-                              }`}
-                            >
-                              <div className="absolute inset-0 hud-noise pointer-events-none opacity-40"></div>
+                            <React.Fragment key={p.id}>
+                              {/* VERSION ESCRITORIO (md y mayores) */}
+                              <div
+                                className={`hidden md:flex relative overflow-hidden rounded-2xl glass-hud-panel p-5 justify-between items-center gap-10 border transition-all duration-300 scanlines select-none ${
+                                  isLive ? 'live-match-flash border-primary/50 bg-primary/5' : 'border-border/45 dark:border-white/[0.06]'
+                                }`}
+                              >
+                                <div className="absolute inset-0 hud-noise pointer-events-none opacity-40"></div>
 
-                              {/* LEFT: Hora + Estado */}
-                              <div className="flex md:flex-col items-center md:items-start justify-between w-full md:w-auto shrink-0 gap-2 border-b md:border-b-0 md:border-r border-border/30 dark:border-white/[0.08] pb-3 md:pb-0 md:pr-8">
-                                <div className="text-center md:text-left">
-                                  <span className="text-[9px] font-condensed text-muted-foreground font-black tracking-widest block uppercase">HORA DE TRANSMISIÓN</span>
-                                  <span className="text-xl font-display font-black text-foreground tracking-widest leading-none mt-1 block">
-                                    {p.hora || 'Por definir'}
-                                  </span>
+                                {/* LEFT: Hora + Estado */}
+                                <div className="flex flex-col items-start justify-between shrink-0 gap-2 border-r border-border/30 dark:border-white/[0.08] pr-8">
+                                  <div className="text-left">
+                                    <span className="text-[9px] font-condensed text-muted-foreground font-black tracking-widest block uppercase">HORA DE TRANSMISIÓN</span>
+                                    <span className="text-xl font-display font-black text-foreground tracking-widest leading-none mt-1 block">
+                                      {p.hora || 'Por definir'}
+                                    </span>
+                                  </div>
+                                  <div className="mt-1">
+                                    {isLive ? (
+                                      <span className="inline-flex items-center gap-1.5 text-[9px] font-condensed font-black tracking-widest text-primary bg-primary/10 border border-primary/35 px-3 py-1 rounded">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" /> EN VIVO
+                                      </span>
+                                    ) : isFinished ? (
+                                      <span className="inline-flex items-center gap-1.5 text-[9px] font-condensed font-black tracking-widest text-muted-foreground bg-muted border border-border/50 px-3 py-1 rounded">
+                                        FINALIZADO
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1.5 text-[9px] font-condensed font-black tracking-widest text-primary/95 bg-primary/5 border border-primary/20 px-3 py-1 rounded">
+                                        PROGRAMADO
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="mt-1">
-                                  {isLive ? (
-                                    <span className="inline-flex items-center gap-1.5 text-[9px] font-condensed font-black tracking-widest text-primary bg-primary/10 border border-primary/35 px-3 py-1 rounded">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" /> EN VIVO
+
+                                {/* CENTER: Team A - Score - Team B */}
+                                <div className="flex-1 flex items-center justify-between gap-10 min-w-0">
+                                  {/* Local Team */}
+                                  <div className="flex-1 flex items-center justify-end gap-3 min-w-0 text-right">
+                                    <span className={`text-xs md:text-sm font-condensed font-black uppercase tracking-wider truncate ${localWinner ? 'text-primary' : 'text-foreground'}`}>
+                                      {teamL}
                                     </span>
-                                  ) : isFinished ? (
-                                    <span className="inline-flex items-center gap-1.5 text-[9px] font-condensed font-black tracking-widest text-muted-foreground bg-muted border border-border/50 px-3 py-1 rounded">
-                                      FINALIZADO
+                                    {p.local?.logo ? (
+                                      <img 
+                                        src={getImageUrl(p.local.logo)} 
+                                        alt={teamL} 
+                                        className="w-9 h-9 rounded-xl object-cover border bg-background shadow-inner shrink-0" 
+                                      />
+                                    ) : (
+                                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-background font-display font-black text-sm uppercase ${
+                                        localWinner ? 'border-primary text-primary shadow-[0_0_10px_rgba(232,0,29,0.15)]' : 'border-border/50 text-muted-foreground'
+                                      }`}>
+                                        {p.local?.abreviatura || teamL.charAt(0)}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Score in Center */}
+                                  <div className="shrink-0 min-w-[84px] text-center">
+                                    <span className="text-2xl md:text-3xl font-display font-black tracking-widest leading-none block">
+                                      <span className={localWinner ? 'text-primary' : 'text-foreground'}>{isFinished || isLive ? p.goles_local : ''}</span>
+                                      <span className="text-muted-foreground/30 mx-2">{isFinished || isLive ? '–' : 'VS'}</span>
+                                      <span className={visitaWinner ? 'text-primary' : 'text-foreground'}>{isFinished || isLive ? p.goles_visitante : ''}</span>
                                     </span>
-                                  ) : (
-                                    <span className="inline-flex items-center gap-1.5 text-[9px] font-condensed font-black tracking-widest text-primary/95 bg-primary/5 border border-primary/20 px-3 py-1 rounded">
-                                      PROGRAMADO
+                                    {p.jornada && (
+                                      <span className="text-[8px] font-condensed font-bold text-muted-foreground uppercase tracking-widest mt-1 block">
+                                        {p.jornada}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Visitante Team */}
+                                  <div className="flex-1 flex items-center justify-start gap-3 min-w-0 text-left">
+                                    {p.visitante?.logo ? (
+                                      <img 
+                                        src={getImageUrl(p.visitante.logo)} 
+                                        alt={teamV} 
+                                        className="w-9 h-9 rounded-xl object-cover border bg-background shadow-inner shrink-0" 
+                                      />
+                                    ) : (
+                                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-background font-display font-black text-sm uppercase ${
+                                        visitaWinner ? 'border-primary text-primary shadow-[0_0_10px_rgba(232,0,29,0.15)]' : 'border-border/50 text-muted-foreground'
+                                      }`}>
+                                        {p.visitante?.abreviatura || teamV.charAt(0)}
+                                      </div>
+                                    )}
+                                    <span className={`text-xs md:text-sm font-condensed font-black uppercase tracking-wider truncate ${visitaWinner ? 'text-primary' : 'text-foreground'}`}>
+                                      {teamV}
                                     </span>
-                                  )}
+                                  </div>
+                                </div>
+
+                                {/* RIGHT: Watch / Detalle Button */}
+                                <div className="shrink-0 border-l border-border/30 dark:border-white/[0.08] pl-8 flex justify-center">
+                                  <button
+                                    onClick={() => navigate(`/partidos/${p.id}`)}
+                                    className="w-32 py-3 px-6 text-[10px] font-condensed font-black tracking-widest uppercase bg-primary/15 text-primary border border-primary/35 rounded-xl hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_15px_rgba(232,0,29,0.45)] transition-all duration-300 cursor-pointer font-black"
+                                  >
+                                    {isLive ? '🔴 VER DUELO' : isFinished ? 'ANALIZAR' : 'VER DETALLES'}
+                                  </button>
                                 </div>
                               </div>
 
-                              {/* CENTER: Team A - Score - Team B (Aligned like eSports broadcast banner) */}
-                              <div className="flex-1 flex items-center justify-between gap-6 md:gap-10 w-full min-w-0">
-                                
-                                {/* Local Team */}
-                                <div className="flex-1 flex items-center justify-end gap-3 min-w-0 text-right">
-                                  <span className={`text-xs md:text-sm font-condensed font-black uppercase tracking-wider truncate ${localWinner ? 'text-primary' : 'text-foreground'}`}>
-                                    {teamL}
+                              {/* VERSION MÓVIL (Menor que md) */}
+                              <div
+                                className={`flex md:hidden relative overflow-hidden rounded-2xl glass-hud-panel p-3.5 items-center justify-between gap-3 border transition-all duration-300 scanlines select-none ${
+                                  isLive ? 'live-match-flash border-primary/50 bg-primary/5' : 'border-border/45 dark:border-white/[0.06]'
+                                }`}
+                              >
+                                <div className="absolute inset-0 hud-noise pointer-events-none opacity-40"></div>
+
+                                {/* LEFT: Hora + Estado */}
+                                <div className="flex flex-col items-start gap-1 shrink-0 min-w-[65px] border-r border-border/20 dark:border-white/[0.05] pr-2.5">
+                                  <span className="text-[11px] font-mono font-bold text-foreground leading-none">
+                                    {p.hora || '00:00'}
                                   </span>
-                                  {p.local?.logo ? (
-                                    <img 
-                                      src={getImageUrl(p.local.logo)} 
-                                      alt={teamL} 
-                                      className="w-9 h-9 rounded-xl object-cover border bg-background shadow-inner shrink-0" 
-                                    />
-                                  ) : (
-                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-background font-display font-black text-sm uppercase ${
-                                      localWinner ? 'border-primary text-primary shadow-[0_0_10px_rgba(232,0,29,0.15)]' : 'border-border/50 text-muted-foreground'
-                                    }`}>
-                                      {p.local?.abreviatura || teamL.charAt(0)}
-                                    </div>
-                                  )}
+                                  <div>
+                                    {isLive ? (
+                                      <span className="inline-flex items-center gap-0.5 text-[7.5px] font-condensed font-black tracking-wider text-primary bg-primary/10 border border-primary/20 px-1 py-0.5 rounded uppercase leading-none">
+                                        VIVO
+                                      </span>
+                                    ) : isFinished ? (
+                                      <span className="inline-flex items-center gap-0.5 text-[7.5px] font-condensed font-black tracking-wider text-muted-foreground bg-muted border border-border/30 px-1 py-0.5 rounded uppercase leading-none">
+                                        FIN
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-0.5 text-[7.5px] font-condensed font-black tracking-wider text-primary/80 bg-primary/5 border border-primary/15 px-1 py-0.5 rounded uppercase leading-none">
+                                        PROG
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
 
-                                {/* Score in Center */}
-                                <div className="shrink-0 min-w-[84px] text-center">
-                                  <span className="text-2xl md:text-3xl font-display font-black tracking-widest leading-none block">
-                                    <span className={localWinner ? 'text-primary' : 'text-foreground'}>{isFinished || isLive ? p.goles_local : ''}</span>
-                                    <span className="text-muted-foreground/30 mx-2">{isFinished || isLive ? '–' : 'VS'}</span>
-                                    <span className={visitaWinner ? 'text-primary' : 'text-foreground'}>{isFinished || isLive ? p.goles_visitante : ''}</span>
-                                  </span>
-                                  {p.jornada && (
-                                    <span className="text-[8px] font-condensed font-bold text-muted-foreground uppercase tracking-widest mt-1 block">
-                                      {p.jornada}
+                                {/* CENTER: Team A - Score - Team B */}
+                                <div className="flex-1 flex items-center justify-center gap-1.5 min-w-0">
+                                  
+                                  {/* Local */}
+                                  <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0 text-right">
+                                    <span className={`text-[10px] font-condensed font-black uppercase tracking-wider truncate ${localWinner ? 'text-primary' : 'text-foreground'}`}>
+                                      {p.local?.abreviatura || (teamL.length > 5 ? teamL.substring(0, 3).toUpperCase() : teamL)}
                                     </span>
-                                  )}
+                                    {p.local?.logo ? (
+                                      <img 
+                                        src={getImageUrl(p.local.logo)} 
+                                        alt={teamL} 
+                                        className="w-7 h-7 rounded-lg object-cover border bg-background shrink-0" 
+                                      />
+                                    ) : (
+                                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border bg-background font-display font-black text-[10px] uppercase ${
+                                        localWinner ? 'border-primary text-primary' : 'border-border/50 text-muted-foreground'
+                                      }`}>
+                                        {p.local?.abreviatura?.substring(0, 2) || teamL.charAt(0)}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Marcador */}
+                                  <div className="shrink-0 bg-background/60 dark:bg-black/40 border border-border/30 dark:border-white/[0.06] rounded-lg px-2 py-0.5 text-center min-w-[48px]">
+                                    <span className="text-[11px] font-display font-black tracking-wider leading-none block">
+                                      <span className={localWinner ? 'text-primary' : 'text-foreground'}>{isFinished || isLive ? p.goles_local : ''}</span>
+                                      <span className="text-muted-foreground/30 mx-0.5">{isFinished || isLive ? '–' : 'VS'}</span>
+                                      <span className={visitaWinner ? 'text-primary' : 'text-foreground'}>{isFinished || isLive ? p.goles_visitante : ''}</span>
+                                    </span>
+                                  </div>
+
+                                  {/* Visitante */}
+                                  <div className="flex-1 flex items-center justify-start gap-1.5 min-w-0 text-left">
+                                    {p.visitante?.logo ? (
+                                      <img 
+                                        src={getImageUrl(p.visitante.logo)} 
+                                        alt={teamV} 
+                                        className="w-7 h-7 rounded-lg object-cover border bg-background shrink-0" 
+                                      />
+                                    ) : (
+                                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border bg-background font-display font-black text-[10px] uppercase ${
+                                        visitaWinner ? 'border-primary text-primary' : 'border-border/50 text-muted-foreground'
+                                      }`}>
+                                        {p.visitante?.abreviatura?.substring(0, 2) || teamV.charAt(0)}
+                                      </div>
+                                    )}
+                                    <span className={`text-[10px] font-condensed font-black uppercase tracking-wider truncate ${visitaWinner ? 'text-primary' : 'text-foreground'}`}>
+                                      {p.visitante?.abreviatura || (teamV.length > 5 ? teamV.substring(0, 3).toUpperCase() : teamV)}
+                                    </span>
+                                  </div>
+
                                 </div>
 
-                                {/* Visitante Team */}
-                                <div className="flex-1 flex items-center justify-start gap-3 min-w-0 text-left">
-                                  {p.visitante?.logo ? (
-                                    <img 
-                                      src={getImageUrl(p.visitante.logo)} 
-                                      alt={teamV} 
-                                      className="w-9 h-9 rounded-xl object-cover border bg-background shadow-inner shrink-0" 
-                                    />
-                                  ) : (
-                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-background font-display font-black text-sm uppercase ${
-                                      visitaWinner ? 'border-primary text-primary shadow-[0_0_10px_rgba(232,0,29,0.15)]' : 'border-border/50 text-muted-foreground'
-                                    }`}>
-                                      {p.visitante?.abreviatura || teamV.charAt(0)}
-                                    </div>
-                                  )}
-                                  <span className={`text-xs md:text-sm font-condensed font-black uppercase tracking-wider truncate ${visitaWinner ? 'text-primary' : 'text-foreground'}`}>
-                                    {teamV}
-                                  </span>
+                                {/* RIGHT: Ficha / Analizar Button */}
+                                <div className="shrink-0 border-l border-border/20 dark:border-white/[0.05] pl-2.5 flex justify-end min-w-[72px]">
+                                  <button
+                                    onClick={() => navigate(`/partidos/${p.id}`)}
+                                    className="w-full py-1.5 text-[9px] font-condensed font-black tracking-wider uppercase bg-primary/10 text-primary border border-primary/35 rounded-lg hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_10px_rgba(232,0,29,0.3)] transition-all duration-300 cursor-pointer text-center font-black"
+                                  >
+                                    {isFinished ? 'Analizar' : 'Ver Ficha'}
+                                  </button>
                                 </div>
-
                               </div>
-
-                              {/* RIGHT: Watch / Detalle Button */}
-                              <div className="shrink-0 w-full md:w-auto border-t md:border-t-0 md:border-l border-border/30 dark:border-white/[0.08] pt-4 md:pt-0 md:pl-8 flex justify-center">
-                                <button
-                                  onClick={() => navigate(`/partidos/${p.id}`)}
-                                  className="w-full md:w-32 py-3 px-6 text-[10px] font-condensed font-black tracking-widest uppercase bg-primary/15 text-primary border border-primary/35 rounded-xl hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_15px_rgba(232,0,29,0.45)] transition-all duration-300 cursor-pointer font-black"
-                                >
-                                  {isLive ? '🔴 VER DUELO' : isFinished ? 'ANALIZAR' : 'VER DETALLES'}
-                                </button>
-                              </div>
-
-                            </div>
+                            </React.Fragment>
                           );
                         })}
                       </div>
@@ -836,6 +1013,62 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
 
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Paginador */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-12 pt-6 border-t border-border/20 dark:border-white/[0.06]">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => {
+                setCurrentPage(prev => Math.max(1, prev - 1));
+                window.scrollTo({ top: 350, behavior: 'smooth' });
+              }}
+              className="px-4 py-2 text-xs font-condensed font-black tracking-widest uppercase bg-white/60 dark:bg-card/50 hover:bg-primary/20 text-muted-foreground hover:text-primary disabled:opacity-20 border border-border/30 dark:border-white/[0.06] rounded-xl transition-all cursor-pointer shrink-0"
+            >
+              ◀ Anterior
+            </button>
+
+            {/* Desktop Jornada List */}
+            <div className="hidden sm:flex items-center gap-1.5 overflow-x-auto max-w-[500px] py-1 px-2 custom-scrollbar">
+              {uniqueJornadas.map((jornadaName, idx) => {
+                const pageNum = idx + 1;
+                const isActive = currentPage === pageNum;
+                return (
+                  <button
+                    key={jornadaName}
+                    onClick={() => {
+                      setCurrentPage(pageNum);
+                      window.scrollTo({ top: 350, behavior: 'smooth' });
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-condensed font-black uppercase tracking-wider transition-all border cursor-pointer whitespace-nowrap ${
+                      isActive
+                        ? 'bg-primary text-white border-primary active-date-glow'
+                        : 'bg-white/60 dark:bg-card/50 hover:bg-primary/10 text-muted-foreground border-border/30 dark:border-white/[0.06] hover:border-primary/30 hover:text-foreground'
+                    }`}
+                  >
+                    {jornadaName}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Mobile Jornada Label */}
+            <span className="flex sm:hidden text-xs font-condensed font-black text-primary uppercase tracking-widest px-4 truncate max-w-[160px]">
+              {activeJornada}
+            </span>
+
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => {
+                setCurrentPage(prev => Math.min(totalPages, prev + 1));
+                window.scrollTo({ top: 350, behavior: 'smooth' });
+              }}
+              className="px-4 py-2 text-xs font-condensed font-black tracking-widest uppercase bg-white/60 dark:bg-card/50 hover:bg-primary/20 text-muted-foreground hover:text-primary disabled:opacity-20 border border-border/30 dark:border-white/[0.06] rounded-xl transition-all cursor-pointer shrink-0"
+            >
+              Siguiente ▶
+            </button>
           </div>
         )}
       </main>

@@ -63,9 +63,9 @@ export default function MiEquipoDashboard() {
         /* CASO 2: CLUB ACTIVO (CENTRO DE OPERACIONES) */
         <>
           {/* BANNER PRINCIPAL DE MARCA */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-border/50 pb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-destructive/20 border border-primary/30 flex items-center justify-center font-display font-black text-primary text-xl shadow-inner overflow-hidden">
+          <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 border-b border-border/40 pb-6">
+            <div className="flex items-center gap-5">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-destructive/10 border border-primary/20 flex items-center justify-center font-display font-black text-primary text-xl shadow-lg overflow-hidden shrink-0">
                 {data.equipo.logo ? (
                   <img 
                     src={data.equipo.logo.startsWith('http') ? data.equipo.logo : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${data.equipo.logo}`} 
@@ -76,27 +76,38 @@ export default function MiEquipoDashboard() {
                   data.equipo.abreviatura
                 )}
               </div>
-              <div>
-                <h1 className="text-2xl font-display font-black text-foreground tracking-wide uppercase flex items-center gap-2">
+              <div className="space-y-1.5">
+                <h1 className="text-2xl font-display font-black text-foreground tracking-wider uppercase flex items-center gap-2">
                   {data.equipo.nombre}
-                  <Badge variant="success">Capitán</Badge>
+                  <Badge variant="success" className="text-[9px] uppercase tracking-widest font-bold">Capitán</Badge>
                 </h1>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-muted-foreground">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-x-6 gap-y-2 mt-1 text-xs text-muted-foreground">
                   <span>
-                    Ecosistema: <span className="text-foreground font-semibold uppercase">{data.equipo.plataforma}</span>
+                    Plataforma: <strong className="text-foreground uppercase">{data.equipo.plataforma}</strong>
                   </span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-[10px] uppercase tracking-wider">Circuito:</span>
+                  
+                  {/* Selector de Circuito / Organizaciones Premium */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-[10px] uppercase tracking-wider">Circuito Competitivo:</span>
                     {data.organizaciones.length > 0 ? (
-                      <select
-                        value={data.organizacionId || ''}
-                        onChange={(e) => actions.selectOrganizacion(Number(e.target.value))}
-                        className="bg-card border border-border/60 rounded px-2 py-0.5 text-[11px] font-bold text-primary focus:ring-1 focus:ring-primary focus:outline-none cursor-pointer"
-                      >
-                        {data.organizaciones.map((org) => (
-                          <option key={org.id} value={org.id}>{org.nombre}</option>
-                        ))}
-                      </select>
+                      <div className="flex flex-wrap gap-1">
+                        {data.organizaciones.map((org) => {
+                          const isSelected = data.organizacionId === org.id;
+                          return (
+                            <button
+                              key={org.id}
+                              onClick={() => actions.selectOrganizacion(org.id)}
+                              className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border transition-all duration-300 cursor-pointer ${
+                                isSelected
+                                  ? 'bg-primary/15 text-primary border-primary/45 shadow-[0_0_10px_rgba(232,0,29,0.15)] font-bold'
+                                  : 'bg-card/40 text-muted-foreground border-border/30 hover:border-primary/30 hover:text-foreground'
+                              }`}
+                            >
+                              🏢 {org.nombre}
+                            </button>
+                          );
+                        })}
+                      </div>
                     ) : (
                       <span className="text-[11px] font-bold text-destructive">Ninguna Organización</span>
                     )}
@@ -106,21 +117,24 @@ export default function MiEquipoDashboard() {
             </div>
 
             {/* SELECCIÓN DE PESTAÑAS (MÓDULOS) */}
-            <div className="flex gap-1 bg-muted/40 p-1 rounded-lg border border-border/40 w-full md:w-auto overflow-x-auto">
-              {tabsConfig.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => actions.setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-bold whitespace-nowrap transition-all duration-200 ${
-                    data.activeTab === tab.id 
-                      ? 'bg-background text-primary shadow-sm border border-border/40' 
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-                  }`}
-                >
-                  <span>{tab.icon}</span>
-                  {tab.label}
-                </button>
-              ))}
+            <div className="flex gap-1.5 p-1.5 bg-card/25 backdrop-blur-md rounded-2xl border border-border/40 w-full xl:w-auto overflow-x-auto">
+              {tabsConfig.map((tab) => {
+                const isActive = data.activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => actions.setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer border ${
+                      isActive 
+                        ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/15' 
+                        : 'bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/30'
+                    }`}
+                  >
+                    <span>{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

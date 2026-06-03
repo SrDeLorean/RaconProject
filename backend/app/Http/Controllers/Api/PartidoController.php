@@ -71,6 +71,10 @@ class PartidoController extends Controller
                 $query->whereNull('goles_local')
                       ->whereNull('goles_visitante')
                       ->where('fecha', '!=', $today);
+            } elseif ($request->status === 'pending_report') {
+                $query->whereNull('goles_local')
+                      ->whereNull('goles_visitante')
+                      ->where('fecha', '<', $today);
             }
         }
 
@@ -102,6 +106,21 @@ class PartidoController extends Controller
     {
         $query = Partido::select('fecha', \DB::raw('count(*) as count'))
             ->groupBy('fecha');
+
+        $user = auth('sanctum')->user();
+        if ($request->boolean('for_organizer') && $user) {
+            $organizacion = \App\Models\Organizacion::where('owner_id', $user->id)->first();
+            if ($organizacion) {
+                $query->whereHas('competencia.temporada', function ($q) use ($organizacion) {
+                    $q->where('organizacion_id', $organizacion->id);
+                });
+            } else {
+                $role = $user->role;
+                if ($role !== 'admin' && $role !== 'administrador') {
+                    return response()->json([]);
+                }
+            }
+        }
 
         if ($request->filled('organizacion_id')) {
             $query->whereHas('competencia.temporada', function ($q) use ($request) {
@@ -263,6 +282,27 @@ class PartidoController extends Controller
         
         $queryBase = Partido::query();
 
+        $user = auth('sanctum')->user();
+        if ($request->boolean('for_organizer') && $user) {
+            $organizacion = \App\Models\Organizacion::where('owner_id', $user->id)->first();
+            if ($organizacion) {
+                $queryBase->whereHas('competencia.temporada', function ($q) use ($organizacion) {
+                    $q->where('organizacion_id', $organizacion->id);
+                });
+            } else {
+                $role = $user->role;
+                if ($role !== 'admin' && $role !== 'administrador') {
+                    return response()->json([
+                        'all' => 0,
+                        'live' => 0,
+                        'finished' => 0,
+                        'upcoming' => 0,
+                        'pending_report' => 0
+                    ]);
+                }
+            }
+        }
+
         if ($request->filled('organizacion_id')) {
             $queryBase->whereHas('competencia.temporada', function ($q) use ($request) {
                 $q->where('organizacion_id', $request->organizacion_id);
@@ -297,12 +337,14 @@ class PartidoController extends Controller
         $live = (clone $queryBase)->where('fecha', $today)->count();
         $finished = (clone $queryBase)->whereNotNull('goles_local')->whereNotNull('goles_visitante')->count();
         $upcoming = (clone $queryBase)->whereNull('goles_local')->whereNull('goles_visitante')->where('fecha', '!=', $today)->count();
+        $pending_report = (clone $queryBase)->whereNull('goles_local')->whereNull('goles_visitante')->where('fecha', '<', $today)->count();
 
         return response()->json([
             'all' => $all,
             'live' => $live,
             'finished' => $finished,
-            'upcoming' => $upcoming
+            'upcoming' => $upcoming,
+            'pending_report' => $pending_report
         ]);
     }
 }

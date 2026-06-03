@@ -13,6 +13,10 @@ export default function Traspasos() {
   const [selectedPos, setSelectedPos] = useState('ALL');
   const [selectedOrg, setSelectedOrg] = useState('ALL');
 
+  // Paginación State
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 12;
+
   useEffect(() => {
     const fetchTraspasos = async () => {
       setLoading(true);
@@ -68,6 +72,14 @@ export default function Traspasos() {
       return matchSearch && matchPos && matchOrg;
     });
   }, [traspasos, searchQuery, selectedPos, selectedOrg]);
+
+  const totalTraspasos = filteredTraspasos.length;
+  const totalPages = Math.ceil(totalTraspasos / ITEMS_PER_PAGE);
+
+  const paginatedTraspasos = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredTraspasos.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredTraspasos, currentPage, ITEMS_PER_PAGE]);
 
   const formatFecha = (dateString) => {
     if (!dateString) return '';
@@ -181,54 +193,84 @@ export default function Traspasos() {
 
         {/* 🔍 FILTERS BAR (eSports Táctico & Glassmorphism) */}
         {!loading && traspasos.length > 0 && (
-          <div className="filter-panel grid grid-cols-1 md:grid-cols-3 gap-4 relative z-30">
-            {/* Buscar */}
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted-foreground text-xs">
-                🔍
-              </span>
+          <div className="bg-white/90 dark:bg-card/85 border border-border/40 dark:border-white/[0.06] rounded-2xl p-5 shadow-lg backdrop-blur-md space-y-4 relative z-30">
+            
+            {/* Search Input */}
+            <div className="relative w-full">
+              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
               <input 
                 type="text" 
-                placeholder="Buscar jugador, club..." 
+                placeholder="Buscar jugador, club de origen o club de destino..." 
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="input-premium pl-10 h-11 font-condensed font-bold uppercase tracking-widest"
+                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                className="input-premium pl-11 py-3.5"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  ✕
+                </button>
+              )}
             </div>
 
-            {/* Filtrar por Posición */}
-            <div className="relative">
-              <select
-                value={selectedPos}
-                onChange={(e) => setSelectedPos(e.target.value)}
-                className="input-premium h-11 font-condensed font-bold uppercase tracking-widest appearance-none cursor-pointer"
-              >
-                <option value="ALL" className="bg-background text-foreground">🏃 Todas las Posiciones</option>
-                {uniquePositions.map(pos => (
-                  <option key={pos} value={pos} className="bg-background text-foreground">{pos}</option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-muted-foreground text-[10px]">
-                ▼
+            {/* Selects & Clear Filters Row */}
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between border-t border-border/20 dark:border-white/[0.05] pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full sm:w-auto sm:flex-1 sm:max-w-xl">
+                {/* Posición */}
+                <div className="relative w-full">
+                  <select
+                    value={selectedPos}
+                    onChange={(e) => { setSelectedPos(e.target.value); setCurrentPage(1); }}
+                    className="input-premium h-11 pl-4 pr-10 font-condensed font-black uppercase tracking-wider appearance-none cursor-pointer"
+                  >
+                    <option value="ALL" className="bg-background text-foreground">🏃 Todas las Posiciones</option>
+                    {uniquePositions.map(pos => (
+                      <option key={pos} value={pos} className="bg-background text-foreground">{pos}</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-muted-foreground text-[10px]">
+                    ▼
+                  </div>
+                </div>
+
+                {/* Circuito */}
+                <div className="relative w-full">
+                  <select
+                    value={selectedOrg}
+                    onChange={(e) => { setSelectedOrg(e.target.value); setCurrentPage(1); }}
+                    className="input-premium h-11 pl-4 pr-10 font-condensed font-black uppercase tracking-wider appearance-none cursor-pointer"
+                  >
+                    <option value="ALL" className="bg-background text-foreground">🌐 Todos los Circuitos</option>
+                    {uniqueOrgs.map(([id, name]) => (
+                      <option key={id} value={String(id)} className="bg-background text-foreground">{name.toUpperCase()}</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-muted-foreground text-[10px]">
+                    ▼
+                  </div>
+                </div>
               </div>
+
+              {/* Clear Filters Link */}
+              {(searchQuery.trim() !== '' || selectedPos !== 'ALL' || selectedOrg !== 'ALL') && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedPos('ALL');
+                    setSelectedOrg('ALL');
+                    setCurrentPage(1);
+                  }}
+                  className="text-xs font-condensed font-black text-primary hover:text-red-400 transition-colors uppercase tracking-widest flex items-center gap-1.5 cursor-pointer shrink-0 mt-2 sm:mt-0"
+                >
+                  ✕ Limpiar Filtros
+                </button>
+              )}
             </div>
 
-            {/* Filtrar por Circuito */}
-            <div className="relative">
-              <select
-                value={selectedOrg}
-                onChange={(e) => setSelectedOrg(e.target.value)}
-                className="input-premium h-11 font-condensed font-bold uppercase tracking-widest appearance-none cursor-pointer"
-              >
-                <option value="ALL" className="bg-background text-foreground">🌐 Todos los Circuitos</option>
-                {uniqueOrgs.map(([id, name]) => (
-                  <option key={id} value={String(id)} className="bg-background text-foreground">{name.toUpperCase()}</option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-muted-foreground text-[10px]">
-                ▼
-              </div>
-            </div>
           </div>
         )}
 
@@ -242,7 +284,7 @@ export default function Traspasos() {
         ) : filteredTraspasos.length > 0 ? (
           <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTraspasos.map((traspaso, idx) => {
+            {paginatedTraspasos.map((traspaso, idx) => {
               const jugador = traspaso.jugador || {};
               const equipoOrigen = traspaso.equipo_origen || null;
               const equipoDestino = traspaso.equipo || {};
@@ -338,12 +380,12 @@ export default function Traspasos() {
                         <span className="text-[7px] text-muted-foreground/75 block tracking-widest leading-none">CLUB DESTINO</span>
                         <div className="flex items-center gap-1.5 justify-end min-w-0">
                           <span className="font-semibold text-primary truncate block">
-                            {equipoDestino.nombre || 'SIN ASIGNAR'}
+                            {equipoDestino.id ? (equipoDestino.nombre || 'SIN ASIGNAR') : 'JUGADOR LIBRE'}
                           </span>
                           {equipoDestino.logo ? (
                             <img src={getImageUrl(equipoDestino.logo)} alt="" className="w-3.5 h-3.5 object-cover rounded-sm" />
                           ) : (
-                            <span className="text-[8px]">🛡️</span>
+                            <span className="text-[12px]">{equipoDestino.id ? '🛡️' : '🔓'}</span>
                           )}
                         </div>
                       </div>
@@ -373,6 +415,59 @@ export default function Traspasos() {
               );
             })}
           </div>
+
+          {/* Paginador */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-12 pt-6 border-t border-border/20 dark:border-white/[0.06]">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => {
+                  setCurrentPage(prev => Math.max(1, prev - 1));
+                  window.scrollTo({ top: 350, behavior: 'smooth' });
+                }}
+                className="px-4 py-2 text-xs font-condensed font-black tracking-widest uppercase bg-white/60 dark:bg-card/50 hover:bg-primary/20 text-muted-foreground hover:text-primary disabled:opacity-20 border border-border/30 dark:border-white/[0.06] rounded-xl transition-all cursor-pointer shrink-0"
+              >
+                ◀ Anterior
+              </button>
+
+              {/* Desktop Page Numbers */}
+              <div className="hidden sm:flex items-center gap-1.5">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+                  <button
+                    key={pageNum}
+                    onClick={() => {
+                      setCurrentPage(pageNum);
+                      window.scrollTo({ top: 350, behavior: 'smooth' });
+                    }}
+                    className={`w-9 h-9 flex items-center justify-center rounded-xl text-xs font-mono font-bold transition-all border cursor-pointer ${
+                      currentPage === pageNum
+                        ? 'bg-primary text-white border-primary active-date-glow'
+                        : 'bg-white/60 dark:bg-card/50 hover:bg-primary/10 text-muted-foreground border-border/30 dark:border-white/[0.06] hover:border-primary/30 hover:text-foreground'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+              </div>
+
+              {/* Mobile Page Label */}
+              <span className="flex sm:hidden text-xs font-condensed font-black text-muted-foreground uppercase tracking-widest px-4">
+                Pág. {currentPage} de {totalPages}
+              </span>
+
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => {
+                  setCurrentPage(prev => Math.min(totalPages, prev + 1));
+                  window.scrollTo({ top: 350, behavior: 'smooth' });
+                }}
+                className="px-4 py-2 text-xs font-condensed font-black tracking-widest uppercase bg-white/60 dark:bg-card/50 hover:bg-primary/20 text-muted-foreground hover:text-primary disabled:opacity-20 border border-border/30 dark:border-white/[0.06] rounded-xl transition-all cursor-pointer shrink-0"
+              >
+                Siguiente ▶
+              </button>
+            </div>
+          )}
+
           </div>
         ) : (
           <div className="border border-border/60 bg-muted/25 rounded-2xl p-16 flex flex-col items-center text-center max-w-2xl mx-auto gap-6 shadow-sm">

@@ -21,7 +21,7 @@ class SolicitudFichajeRepository implements SolicitudFichajeRepositoryInterface
      */
     public function getAll(?string $estado = null, ?int $organizacionId = null): Collection
     {
-        $query = SolicitudFichaje::with(['equipo', 'organizacion', 'jugador']);
+        $query = SolicitudFichaje::with(['equipo', 'equipoOrigen', 'organizacion', 'jugador']);
 
         if ($organizacionId) {
             $query->where('organizacion_id', $organizacionId);

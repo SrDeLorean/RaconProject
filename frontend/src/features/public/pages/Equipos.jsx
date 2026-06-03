@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '@/api/axios';
 import Badge from '@/components/ui/Badge';
+import { useDebounce } from '@/hooks/useDebounce';
 
 
 export default function Equipos() {
@@ -12,6 +13,7 @@ export default function Equipos() {
   const [totalEquipos, setTotalEquipos] = useState(0);
 
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 400);
   const [plataforma, setPlataforma] = useState('todas');
 
   const handleSearchChange = (e) => {
@@ -27,7 +29,7 @@ export default function Equipos() {
           params: { 
             page: currentPage, 
             per_page: 9,
-            search: search || undefined,
+            search: debouncedSearch || undefined,
             plataforma: plataforma !== 'todas' ? plataforma : undefined
           }
         });
@@ -42,7 +44,7 @@ export default function Equipos() {
       }
     };
     fetchEquipos();
-  }, [currentPage, search, plataforma]);
+  }, [currentPage, debouncedSearch, plataforma]);
 
   const getImageUrl = (path) => {
     if (!path) return null;
@@ -50,20 +52,81 @@ export default function Equipos() {
     return `http://localhost:8000${path}`;
   };
 
-  const platformConfig = {
-    PS5:  { label: 'PS5',  icon: '🎮', color: 'text-blue-400',   bg: 'bg-blue-500/10',  border: 'border-blue-500/25',  glow: 'shadow-[0_0_12px_rgba(59,130,246,0.2)]' },
-    PS4:  { label: 'PS4',  icon: '🎮', color: 'text-blue-500',   bg: 'bg-blue-600/10',  border: 'border-blue-600/25',  glow: 'shadow-[0_0_12px_rgba(37,99,235,0.2)]' },
-    XBOX: { label: 'XBOX', icon: '🟢', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/25', glow: 'shadow-[0_0_12px_rgba(16,185,129,0.2)]' },
-    PC:   { label: 'PC',   icon: '🖥️', color: 'text-amber-400',  bg: 'bg-amber-500/10', border: 'border-amber-500/25', glow: 'shadow-[0_0_12px_rgba(245,158,11,0.2)]' },
-  };
-
-  const getPlatConfig = (plat) => {
+  const getPlatDetails = (plat) => {
     const p = (plat || '').toUpperCase();
-    if (p.includes('PS5')) return platformConfig.PS5;
-    if (p.includes('PS4')) return platformConfig.PS4;
-    if (p.includes('XBOX')) return platformConfig.XBOX;
-    if (p.includes('PC')) return platformConfig.PC;
-    return { label: plat || 'N/A', icon: '🌐', color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/25', glow: '' };
+    if (p.includes('PS5')) {
+      return {
+        label: 'PS5',
+        icon: '🎮',
+        bg: 'bg-blue-500/10',
+        color: 'text-blue-400',
+        border: 'border-blue-500/25',
+        glow: 'shadow-[0_0_12px_rgba(59,130,246,0.2)]',
+        gradient: 'from-blue-600/15 via-card to-card',
+        hoverShadow: 'group-hover:shadow-[0_20px_60px_-12px_rgba(0,0,0,0.55),0_0_25px_rgba(59,130,246,0.15)] group-hover:border-blue-500/45',
+        shieldGlow: 'group-hover:shadow-[0_0_15px_rgba(59,130,246,0.35)] group-hover:border-blue-500/50',
+        bracketColor: 'border-blue-400/80',
+        accentBg: 'bg-blue-500'
+      };
+    }
+    if (p.includes('PS4')) {
+      return {
+        label: 'PS4',
+        icon: '🎮',
+        bg: 'bg-blue-600/10',
+        color: 'text-blue-500',
+        border: 'border-blue-600/25',
+        glow: 'shadow-[0_0_12px_rgba(37,99,235,0.2)]',
+        gradient: 'from-blue-700/15 via-card to-card',
+        hoverShadow: 'group-hover:shadow-[0_20px_60px_-12px_rgba(0,0,0,0.55),0_0_25px_rgba(37,99,235,0.15)] group-hover:border-blue-600/45',
+        shieldGlow: 'group-hover:shadow-[0_0_15px_rgba(37,99,235,0.35)] group-hover:border-blue-600/50',
+        bracketColor: 'border-blue-500/80',
+        accentBg: 'bg-blue-600'
+      };
+    }
+    if (p.includes('XBOX')) {
+      return {
+        label: 'XBOX',
+        icon: '🟢',
+        bg: 'bg-emerald-500/10',
+        color: 'text-emerald-400',
+        border: 'border-emerald-500/25',
+        glow: 'shadow-[0_0_12px_rgba(16,185,129,0.2)]',
+        gradient: 'from-emerald-600/15 via-card to-card',
+        hoverShadow: 'group-hover:shadow-[0_20px_60px_-12px_rgba(0,0,0,0.55),0_0_25px_rgba(16,185,129,0.15)] group-hover:border-emerald-500/45',
+        shieldGlow: 'group-hover:shadow-[0_0_15px_rgba(16,185,129,0.35)] group-hover:border-emerald-500/50',
+        bracketColor: 'border-emerald-400/80',
+        accentBg: 'bg-emerald-500'
+      };
+    }
+    if (p.includes('PC')) {
+      return {
+        label: 'PC',
+        icon: '🖥️',
+        bg: 'bg-amber-500/10',
+        color: 'text-amber-400',
+        border: 'border-amber-500/25',
+        glow: 'shadow-[0_0_12px_rgba(245,158,11,0.2)]',
+        gradient: 'from-amber-600/15 via-card to-card',
+        hoverShadow: 'group-hover:shadow-[0_20px_60px_-12px_rgba(0,0,0,0.55),0_0_25px_rgba(245,158,11,0.15)] group-hover:border-amber-500/45',
+        shieldGlow: 'group-hover:shadow-[0_0_15px_rgba(245,158,11,0.35)] group-hover:border-amber-500/50',
+        bracketColor: 'border-amber-400/80',
+        accentBg: 'bg-amber-500'
+      };
+    }
+    return {
+      label: plat || 'N/A',
+      icon: '🌐',
+      bg: 'bg-primary/10',
+      color: 'text-primary',
+      border: 'border-primary/25',
+      glow: '',
+      gradient: 'from-primary/10 via-card to-card',
+      hoverShadow: 'group-hover:shadow-[0_20px_60px_-12px_rgba(0,0,0,0.55),0_0_25px_hsla(var(--primary),0.1)] group-hover:border-primary/45',
+      shieldGlow: 'group-hover:shadow-[0_0_15px_hsla(var(--primary),0.25)] group-hover:border-primary/50',
+      bracketColor: 'border-primary/80',
+      accentBg: 'bg-primary'
+    };
   };
 
   const platforms = [
@@ -286,8 +349,8 @@ export default function Equipos() {
             {/* Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {equipos.map((eq, index) => {
-                const platCfg = getPlatConfig(eq.plataforma);
-                const jugadoresCount = eq.jugadores_count || eq.jugadores?.length || 0;
+                const platCfg = getPlatDetails(eq.plataforma);
+                const jugadoresCount = eq.roster_organizacion_count || eq.jugadores_count || eq.jugadores?.length || 0;
                 const orgName = eq.organizacion?.nombre || eq.competencia?.temporada?.organizacion?.nombre || null;
 
                 return (
@@ -300,8 +363,14 @@ export default function Equipos() {
                     }}
                   >
                     {/* Card wrapper with glassmorphism */}
-                    <div className="relative h-full flex flex-col bg-card/20 backdrop-blur-md border border-border/40 rounded-2xl shadow-lg overflow-hidden transition-all duration-500 group-hover:border-primary/40 group-hover:shadow-[0_20px_60px_-12px_rgba(0,0,0,0.4),0_0_30px_hsla(var(--primary),0.1)] group-hover:-translate-y-2 group-hover:scale-[1.01]">
+                    <div className={`relative h-full flex flex-col bg-card/25 backdrop-blur-md border border-border/40 rounded-2xl shadow-lg overflow-hidden transition-all duration-500 ${platCfg.hoverShadow} group-hover:-translate-y-2 group-hover:scale-[1.01]`}>
                       
+                      {/* HUD Brackets - Light up on card hover with console colors */}
+                      <div className={`absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-transparent transition-colors duration-500 pointer-events-none rounded-tl-md group-hover:${platCfg.bracketColor}`}></div>
+                      <div className={`absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-transparent transition-colors duration-500 pointer-events-none rounded-tr-md group-hover:${platCfg.bracketColor}`}></div>
+                      <div className={`absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-transparent transition-colors duration-500 pointer-events-none rounded-bl-md group-hover:${platCfg.bracketColor}`}></div>
+                      <div className={`absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-transparent transition-colors duration-500 pointer-events-none rounded-br-md group-hover:${platCfg.bracketColor}`}></div>
+
                       {/* Banner */}
                       <div className="relative h-36 w-full overflow-hidden">
                         {eq.banner ? (
@@ -312,12 +381,23 @@ export default function Equipos() {
                             onError={(e) => { e.target.style.display = 'none'; }}
                           />
                         ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-primary/20 via-card to-card"></div>
+                          <div className={`w-full h-full bg-gradient-to-br ${platCfg.gradient}`}></div>
                         )}
                         {/* Gradient overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent"></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent"></div>
                         
-                        {/* Platform badge floating on banner */}
+                        {/* Status Badge floating on banner (left) */}
+                        <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-mono font-black tracking-wider uppercase border border-border/30 backdrop-blur-sm bg-card/45">
+                          <span className="relative flex h-2 w-2">
+                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${eq.estado ? 'bg-success' : 'bg-destructive'}`}></span>
+                            <span className={`relative inline-flex rounded-full h-2 w-2 ${eq.estado ? 'bg-success' : 'bg-destructive'}`}></span>
+                          </span>
+                          <span className={eq.estado ? 'text-success font-bold' : 'text-destructive font-bold'}>
+                            {eq.estado ? 'ACTIVO' : 'INACTIVO'}
+                          </span>
+                        </div>
+
+                        {/* Platform badge floating on banner (right) */}
                         <div className={`absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-mono font-black tracking-wider uppercase border backdrop-blur-sm ${platCfg.bg} ${platCfg.color} ${platCfg.border} ${platCfg.glow}`}>
                           <span>{platCfg.icon}</span>
                           {platCfg.label}
@@ -332,8 +412,10 @@ export default function Equipos() {
                       {/* Logo + Info */}
                       <div className="relative px-5 -mt-10 z-10">
                         <div className="flex items-end gap-4">
-                          {/* Club shield */}
-                          <div className="w-[4.5rem] h-[4.5rem] rounded-xl overflow-hidden border-[3px] border-background shadow-xl bg-card shrink-0 transition-all duration-500 group-hover:shadow-[0_0_20px_hsla(var(--primary),0.25)] group-hover:border-primary/40 group-hover:scale-105">
+                          {/* Club shield with double border and glow */}
+                          <div className={`w-[4.5rem] h-[4.5rem] rounded-xl overflow-hidden border-[3px] border-background shadow-xl bg-card shrink-0 transition-all duration-500 ${platCfg.shieldGlow} group-hover:scale-105 relative`}>
+                            {/* Outer tech frame ring */}
+                            <div className="absolute inset-0 border border-white/5 pointer-events-none rounded-lg"></div>
                             {eq.logo ? (
                               <img 
                                 src={getImageUrl(eq.logo)} 
@@ -373,23 +455,67 @@ export default function Equipos() {
                           {eq.descripcion || 'Escuadra competitiva e-sports oficial inscrita en los circuitos de RaconPro.'}
                         </p>
 
-                        {/* Stats row */}
-                        <div className="flex items-center gap-3 border-t border-border/30 pt-3">
-                          {jugadoresCount > 0 && (
-                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                              <svg className="w-3.5 h-3.5 text-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                              </svg>
-                              <span className="font-bold">{jugadoresCount}</span> jugador{jugadoresCount !== 1 ? 'es' : ''}
+                        {/* Tactical Telemetry Panel */}
+                        <div className="grid grid-cols-2 gap-2 mt-1 bg-background/45 backdrop-blur-md rounded-xl p-2.5 border border-border/20 text-left font-mono">
+                          <div className="space-y-0.5 min-w-0">
+                            <span className="text-[8px] text-muted-foreground uppercase tracking-widest block">CAPITÁN</span>
+                            <div className="flex items-center gap-1 text-[10px] font-bold text-foreground truncate" title={eq.capitan?.name || 'Sin Asignar'}>
+                              <span className="text-amber-400 font-sans">👑</span>
+                              <span className="truncate">{eq.capitan?.name || 'Sin Asignar'}</span>
                             </div>
+                          </div>
+                          <div className="space-y-0.5 border-l border-border/20 pl-2.5">
+                            <span className="text-[8px] text-muted-foreground uppercase tracking-widest block">PLANTILLA</span>
+                            <div className="flex items-center gap-1 text-[10px] font-bold text-foreground">
+                              <span className="text-primary font-sans">👥</span>
+                              <span>{jugadoresCount} {jugadoresCount === 1 ? 'FICHA' : 'FICHAS'}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action row with Social Media buttons & VER CLUB CTA */}
+                        <div className="flex items-center justify-between border-t border-border/30 pt-3 mt-1">
+                          
+                          {/* Social media handles */}
+                          {(eq.redes_sociales?.twitter || eq.redes_sociales?.twitch) ? (
+                            <div className="flex gap-1.5 items-center z-20">
+                              {eq.redes_sociales.twitter && (
+                                <a 
+                                  href={`https://twitter.com/${eq.redes_sociales.twitter}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-7 h-7 rounded-lg border border-border/40 bg-card/30 hover:bg-primary/20 hover:border-primary/40 flex items-center justify-center text-[10px] text-muted-foreground hover:text-primary transition-all duration-300 shadow-md"
+                                  title={`Twitter: @${eq.redes_sociales.twitter}`}
+                                >
+                                  🐦
+                                </a>
+                              )}
+                              {eq.redes_sociales.twitch && (
+                                <a 
+                                  href={`https://twitch.tv/${eq.redes_sociales.twitch}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-7 h-7 rounded-lg border border-border/40 bg-card/30 hover:bg-primary/20 hover:border-primary/40 flex items-center justify-center text-[10px] text-muted-foreground hover:text-primary transition-all duration-300 shadow-md"
+                                  title={`Twitch: ${eq.redes_sociales.twitch}`}
+                                >
+                                  📺
+                                </a>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="h-7 w-1"></div>
                           )}
-                          <div className="ml-auto flex items-center gap-1.5 text-[10px] font-bold text-primary font-mono tracking-widest uppercase group-hover:gap-3 transition-all duration-300">
+
+                          <div className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/25 bg-primary/5 text-[9px] font-bold text-primary font-mono tracking-widest uppercase transition-all duration-300 group-hover:bg-primary/15 group-hover:border-primary/40 group-hover:gap-3 group-hover:shadow-[0_0_12px_hsla(var(--primary),0.2)]">
                             <span>VER FICHA</span>
                             <svg className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                             </svg>
                           </div>
                         </div>
+
                       </div>
                     </div>
                   </Link>
@@ -405,27 +531,41 @@ export default function Equipos() {
                 {/* Previous */}
                 <button 
                   disabled={currentPage === 1 || loading}
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  className="pagination-btn flex items-center gap-1.5"
+                  onClick={() => {
+                    setCurrentPage(prev => Math.max(prev - 1, 1));
+                    window.scrollTo({ top: 350, behavior: 'smooth' });
+                  }}
+                  className="pagination-btn flex items-center gap-1"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
-                  Anterior
+                  <span className="hidden sm:inline ml-1">Anterior</span>
                 </button>
 
-                {/* Page numbers */}
-                <div className="flex items-center gap-1">
+                {/* Desktop: Page numbers */}
+                <div className="hidden md:flex items-center gap-1">
                   {pageNumbers[0] > 1 && (
                     <>
-                      <button onClick={() => setCurrentPage(1)} className="pagination-btn !px-3.5 !py-2">1</button>
+                      <button 
+                        onClick={() => {
+                          setCurrentPage(1);
+                          window.scrollTo({ top: 350, behavior: 'smooth' });
+                        }} 
+                        className="pagination-btn !px-3.5 !py-2"
+                      >
+                        1
+                      </button>
                       {pageNumbers[0] > 2 && <span className="text-muted-foreground text-xs px-1">···</span>}
                     </>
                   )}
                   {pageNumbers.map(num => (
                     <button
                       key={num}
-                      onClick={() => setCurrentPage(num)}
+                      onClick={() => {
+                        setCurrentPage(num);
+                        window.scrollTo({ top: 350, behavior: 'smooth' });
+                      }}
                       className={`px-3.5 py-2 text-xs font-bold uppercase tracking-wider rounded-xl border transition-all duration-300 cursor-pointer ${
                         num === currentPage
                           ? 'bg-primary/15 border-primary/40 text-primary shadow-[0_0_15px_hsla(var(--primary),0.15)] font-black'
@@ -438,18 +578,34 @@ export default function Equipos() {
                   {pageNumbers[pageNumbers.length - 1] < totalPages && (
                     <>
                       {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && <span className="text-muted-foreground text-xs px-1">···</span>}
-                      <button onClick={() => setCurrentPage(totalPages)} className="pagination-btn !px-3.5 !py-2">{totalPages}</button>
+                      <button 
+                        onClick={() => {
+                          setCurrentPage(totalPages);
+                          window.scrollTo({ top: 350, behavior: 'smooth' });
+                        }} 
+                        className="pagination-btn !px-3.5 !py-2"
+                      >
+                        {totalPages}
+                      </button>
                     </>
                   )}
+                </div>
+
+                {/* Mobile: Page Indicator Label */}
+                <div className="flex md:hidden px-3.5 py-2 rounded-xl bg-card/30 border border-border/40 text-xs font-mono font-bold text-muted-foreground select-none">
+                  Pág. <span className="text-foreground mx-1">{currentPage}</span> de <span className="text-foreground ml-1">{totalPages}</span>
                 </div>
 
                 {/* Next */}
                 <button 
                   disabled={currentPage === totalPages || loading}
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  className="pagination-btn flex items-center gap-1.5"
+                  onClick={() => {
+                    setCurrentPage(prev => Math.min(prev + 1, totalPages));
+                    window.scrollTo({ top: 350, behavior: 'smooth' });
+                  }}
+                  className="pagination-btn flex items-center gap-1"
                 >
-                  Siguiente
+                  <span className="hidden sm:inline mr-1">Siguiente</span>
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>

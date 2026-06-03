@@ -128,14 +128,14 @@ function StandingsTable({ standings, noResultsMsg }) {
             <th className="px-4 py-3 text-center w-10">#</th>
             <th className="px-4 py-3">Club</th>
             <th className="px-4 py-3 text-center w-12">PJ</th>
-            <th className="px-4 py-3 text-center w-12 text-emerald-400">PG</th>
-            <th className="px-4 py-3 text-center w-12">PE</th>
-            <th className="px-4 py-3 text-center w-12 text-destructive">PP</th>
-            <th className="px-4 py-3 text-center w-12">GF</th>
-            <th className="px-4 py-3 text-center w-12">GC</th>
+            <th className="hidden sm:table-cell px-4 py-3 text-center w-12 text-emerald-400">PG</th>
+            <th className="hidden sm:table-cell px-4 py-3 text-center w-12">PE</th>
+            <th className="hidden sm:table-cell px-4 py-3 text-center w-12 text-destructive">PP</th>
+            <th className="hidden md:table-cell px-4 py-3 text-center w-12">GF</th>
+            <th className="hidden md:table-cell px-4 py-3 text-center w-12">GC</th>
             <th className="px-4 py-3 text-center w-14">DG</th>
             <th className="px-4 py-3 text-center w-16 text-primary">Pts</th>
-            <th className="px-4 py-3 text-center w-36">Últimos 5</th>
+            <th className="hidden lg:table-cell px-4 py-3 text-center w-36">Últimos 5</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border/30 font-semibold text-xs">
@@ -171,16 +171,16 @@ function StandingsTable({ standings, noResultsMsg }) {
                   </div>
                 </td>
                 <td className="px-4 py-3 text-center font-mono">{s.pj}</td>
-                <td className="px-4 py-3 text-center font-mono text-emerald-400">{s.pg}</td>
-                <td className="px-4 py-3 text-center font-mono text-muted-foreground">{s.pe}</td>
-                <td className="px-4 py-3 text-center font-mono text-destructive">{s.pp}</td>
-                <td className="px-4 py-3 text-center font-mono">{s.gf}</td>
-                <td className="px-4 py-3 text-center font-mono">{s.gc}</td>
+                <td className="hidden sm:table-cell px-4 py-3 text-center font-mono text-emerald-400">{s.pg}</td>
+                <td className="hidden sm:table-cell px-4 py-3 text-center font-mono text-muted-foreground">{s.pe}</td>
+                <td className="hidden sm:table-cell px-4 py-3 text-center font-mono text-destructive">{s.pp}</td>
+                <td className="hidden md:table-cell px-4 py-3 text-center font-mono">{s.gf}</td>
+                <td className="hidden md:table-cell px-4 py-3 text-center font-mono">{s.gc}</td>
                 <td className={`px-4 py-3 text-center font-mono font-bold ${dg > 0 ? 'text-emerald-400' : dg < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
                   {dg > 0 ? `+${dg}` : dg}
                 </td>
                 <td className="px-4 py-3 text-center font-mono text-primary font-black text-sm">{s.pts}</td>
-                <td className="px-4 py-3 text-center">
+                <td className="hidden lg:table-cell px-4 py-3 text-center">
                   <div className="flex items-center justify-center gap-1.5">
                     {s.ultimosCinco && s.ultimosCinco.length > 0 ? (
                       s.ultimosCinco.map((res, rIdx) => {
@@ -224,9 +224,9 @@ function LigaView({ partidos }) {
 
   return (
     <div className="space-y-4">
-      {/* Mini stats — only when there are results */}
+      {/* Mini stats — only when there are results (oculto en móviles) */}
       {hasResults && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="hidden sm:grid grid-cols-1 sm:grid-cols-3 gap-3">
           <StatCard icon="🥇" label="Líder de Tabla" value={leader?.nombre}
             sub={leader ? `${leader.pts} pts · DG ${leader.gf - leader.gc > 0 ? '+' : ''}${leader.gf - leader.gc}` : null} />
           <StatCard icon="⚔️" label="Mejor Ataque"   value={bestAttack?.nombre}
@@ -874,9 +874,9 @@ export default function Clasificacion() {
             {/* ── FILTER PANEL ── */}
             <div className="filter-panel space-y-5">
 
-              {/* Global stats strip */}
+              {/* Global stats strip (oculto en móviles) */}
               {totalJugados > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-4 border-b border-border/30">
+                <div className="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-3 pb-4 border-b border-border/30">
                   <StatCard icon="🥇" label="Líder Global"     value={globalLeader?.nombre}  sub={globalLeader  ? `${globalLeader.pts} pts` : null} />
                   <StatCard icon="⚔️"  label="Mejor Ataque"    value={globalBestAtk?.nombre} sub={globalBestAtk ? `${globalBestAtk.gf} goles` : null} />
                   <StatCard icon="🛡️" label="Mejor Defensa"   value={globalBestDef?.nombre} sub={globalBestDef ? `${globalBestDef.gc} recibidos` : null} />

@@ -72,7 +72,7 @@ function MatchCard({ partido }) {
   return (
     <div
       className={`relative overflow-hidden rounded-2xl glass-hud-panel p-5 flex flex-col md:flex-row justify-between items-center gap-6 md:gap-10 border transition-all duration-300 scanlines select-none ${
-        isLive ? 'live-match-flash border-primary/50 bg-primary/5' : 'border-border/45'
+        isLive ? 'live-match-flash border-primary/50 bg-primary/5' : 'border-border/45 dark:border-white/[0.06]'
       }`}
     >
       <div className="absolute inset-0 hud-noise pointer-events-none opacity-40"></div>
@@ -189,11 +189,11 @@ function StandingsTable({ standings, title }) {
             <th className="px-4 py-3 text-center w-10">#</th>
             <th className="px-4 py-3">Club</th>
             <th className="px-4 py-3 text-center w-12">PJ</th>
-            <th className="px-4 py-3 text-center w-12 text-emerald-400">PG</th>
-            <th className="px-4 py-3 text-center w-12">PE</th>
-            <th className="px-4 py-3 text-center w-12 text-destructive">PP</th>
-            <th className="px-4 py-3 text-center w-12">GF</th>
-            <th className="px-4 py-3 text-center w-12">GC</th>
+            <th className="hidden sm:table-cell px-4 py-3 text-center w-12 text-emerald-400">PG</th>
+            <th className="hidden sm:table-cell px-4 py-3 text-center w-12">PE</th>
+            <th className="hidden sm:table-cell px-4 py-3 text-center w-12 text-destructive">PP</th>
+            <th className="hidden md:table-cell px-4 py-3 text-center w-12">GF</th>
+            <th className="hidden md:table-cell px-4 py-3 text-center w-12">GC</th>
             <th className="px-4 py-3 text-center w-14">DG</th>
             <th className="px-4 py-3 text-center w-16 text-primary">Pts</th>
           </tr>
@@ -215,11 +215,11 @@ function StandingsTable({ standings, title }) {
               </td>
               <td className="px-4 py-3 font-bold text-foreground uppercase">{s.nombre}</td>
               <td className="px-4 py-3 text-center font-mono">{s.pj}</td>
-              <td className="px-4 py-3 text-center font-mono text-emerald-400">{s.pg}</td>
-              <td className="px-4 py-3 text-center font-mono text-muted-foreground">{s.pe}</td>
-              <td className="px-4 py-3 text-center font-mono text-destructive">{s.pp}</td>
-              <td className="px-4 py-3 text-center font-mono">{s.gf}</td>
-              <td className="px-4 py-3 text-center font-mono">{s.gc}</td>
+              <td className="hidden sm:table-cell px-4 py-3 text-center font-mono text-emerald-400">{s.pg}</td>
+              <td className="hidden sm:table-cell px-4 py-3 text-center font-mono text-muted-foreground">{s.pe}</td>
+              <td className="hidden sm:table-cell px-4 py-3 text-center font-mono text-destructive">{s.pp}</td>
+              <td className="hidden md:table-cell px-4 py-3 text-center font-mono">{s.gf}</td>
+              <td className="hidden md:table-cell px-4 py-3 text-center font-mono">{s.gc}</td>
               <td className={`px-4 py-3 text-center font-mono ${s.gf - s.gc >= 0 ? 'text-emerald-400' : 'text-destructive'}`}>
                 {s.gf - s.gc > 0 ? `+${s.gf - s.gc}` : s.gf - s.gc}
               </td>
@@ -993,11 +993,11 @@ export default function DetalleCompetenciaPublica() {
                               <span className={`text-[8px] font-condensed font-black px-1.5 py-0.5 rounded-full mt-1.5 transition-colors ${
                                 isActive 
                                   ? 'bg-white/20 text-white' 
-                                  : item.count > 0 
+                                  : Number(item.count) > 0 
                                   ? 'bg-primary/10 text-primary border border-primary/20' 
                                   : 'bg-muted text-muted-foreground'
                               }`}>
-                                {item.count} {item.count === 1 ? 'partido' : 'partidos'}
+                                {item.count} {Number(item.count) === 1 ? 'partido' : 'partidos'}
                               </span>
                             </button>
                           );

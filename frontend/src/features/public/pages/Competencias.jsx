@@ -267,7 +267,7 @@ export default function Competencias() {
                 <div className="p-6 pt-0 relative z-20">
                   <Button 
                     onClick={() => navigate(`/competencia-detalle/${comp.id}`)}
-                    className="w-full h-11 text-xs font-condensed font-black uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_15px_hsla(var(--primary),0.35)] transition-all duration-300"
+                    className="w-full h-10 text-[10px] font-sans font-bold uppercase tracking-wider bg-primary text-primary-foreground border border-transparent hover:bg-primary/90 hover:shadow-[0_0_15px_hsl(var(--primary)/0.35)] transition-all duration-300"
                   >
                     🏟️ Ver Ficha del Torneo
                   </Button>

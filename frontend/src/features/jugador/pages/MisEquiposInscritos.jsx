@@ -181,7 +181,7 @@ export default function MisEquiposInscritos() {
               {/* Botón Detalles */}
               <Button 
                 onClick={() => navigate(`/jugador/mis-equipos/${contrato.equipo?.id}`)}
-                className="w-full h-9 text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-primary-foreground transition-all duration-300 relative z-10"
+                className="w-full h-9 text-[10px] font-sans font-bold uppercase tracking-wider bg-primary text-primary-foreground border border-transparent hover:bg-primary/90 hover:shadow-[0_0_15px_hsl(var(--primary)/0.35)] transition-all duration-300 relative z-10"
               >
                 🏟️ Ver Sede del Club
               </Button>
