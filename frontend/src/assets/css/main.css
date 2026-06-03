@@ -798,3 +798,52 @@
   background: hsl(var(--primary) / 0.1);
   color: hsl(var(--primary));
 }
+
+/* Glass Card AAA style */
+.glass-card-aaa {
+  background: hsl(var(--card) / 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid hsl(var(--border) / 0.4);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.glass-card-aaa:hover {
+  background: hsl(var(--card) / 0.55);
+  border-color: hsl(var(--primary) / 0.3);
+  box-shadow: 0 8px 30px -4px rgba(255, 0, 46, 0.08);
+}
+
+/* Evitar el color de fondo azul/amarillo feo del autocompletado (autofill) del navegador - Modo Claro */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: hsl(var(--foreground)) !important;
+  -webkit-box-shadow: 0 0 0px 1000px hsl(var(--card)) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Evitar el color de fondo del autocompletado en Modo Oscuro */
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark textarea:-webkit-autofill,
+.dark textarea:-webkit-autofill:hover,
+.dark textarea:-webkit-autofill:focus,
+.dark select:-webkit-autofill,
+.dark select:-webkit-autofill:hover,
+.dark select:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f8fafc !important;
+  -webkit-box-shadow: 0 0 0px 1000px #09090e inset !important;
+}
+
+/* Transiciones suaves adicionales para los inputs en foco */
+input, select, textarea {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import api from '@/api/axios';
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/shared/Card';
@@ -18,6 +19,7 @@ export default function Infografia() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [subTab, setSubTab] = useState('equipos'); // 'equipos' | 'jugadores'
+  const [activeMvpPos, setActiveMvpPos] = useState('DEL'); // 'DEL' | 'MED' | 'DEF' | 'POR'
 
   // Estados de expansión y búsqueda en listas tácticas
   const [searchGoleadores, setSearchGoleadores] = useState('');
@@ -126,46 +128,67 @@ export default function Infografia() {
   const podiumData = useMemo(() => {
     if (!stats) return [];
     if (subTab === 'jugadores') {
-      const goleadores = stats.top_goleadores || [];
+      let list = [];
+      let metricName = 'Goles';
+      let getMetricValue = (p) => `${p?.total_goles || 0} Goles`;
+
+      if (activeMvpPos === 'DEL') {
+        list = stats.prestigio_delanteros || stats.top_goleadores || [];
+        metricName = 'Goles';
+        getMetricValue = (p) => `${p?.total_goles || 0} Goles`;
+      } else if (activeMvpPos === 'MED') {
+        list = stats.prestigio_medios || [];
+        metricName = 'Asistencias';
+        getMetricValue = (p) => `${p?.total_asistencias || 0} Asist.`;
+      } else if (activeMvpPos === 'DEF') {
+        list = stats.prestigio_defensas || [];
+        metricName = 'Quites';
+        getMetricValue = (p) => `${p?.total_entradas || 0} Quites`;
+      } else if (activeMvpPos === 'POR') {
+        list = stats.prestigio_porteros || [];
+        metricName = 'Atajadas';
+        getMetricValue = (p) => `${p?.total_atajadas || 0} Atajadas`;
+      }
+
       return [
         {
           rank: 1,
-          name: goleadores[0]?.name || 'Seba K.',
-          tag: goleadores[0]?.name?.substring(0, 3).toUpperCase() || 'SEB',
-          foto: goleadores[0]?.foto,
-          metric: `${goleadores[0]?.total_goles || 34} Goles`,
-          subText: goleadores[0]?.equipo_nombre || 'Holicz Esports',
+          name: list[0]?.name || 'Seba K.',
+          tag: list[0]?.name?.substring(0, 3).toUpperCase() || 'SEB',
+          foto: list[0]?.foto,
+          metric: list[0] ? getMetricValue(list[0]) : '—',
+          subText: list[0]?.equipo_nombre || 'Holicz Esports',
           color: '#f59e0b',
           glow: 'rgba(245,158,11,0.6)',
           stars: 5,
-          statLabel: 'MVP',
-          statVal: 8
+          statLabel: 'Valoración',
+          statVal: list[0]?.avg_valoracion ? Number(list[0].avg_valoracion).toFixed(2) : '8.50'
         },
         {
           rank: 2,
-          name: goleadores[1]?.name || 'Diego R.',
-          tag: goleadores[1]?.name?.substring(0, 3).toUpperCase() || 'DIG',
-          foto: goleadores[1]?.foto,
-          metric: `${goleadores[1]?.total_goles || 28} Goles`,
-          subText: goleadores[1]?.equipo_nombre || 'Envious Pro',
+          name: list[1]?.name || 'Diego R.',
+          tag: list[1]?.name?.substring(0, 3).toUpperCase() || 'DIG',
+          foto: list[1]?.foto,
+          metric: list[1] ? getMetricValue(list[1]) : '—',
+          subText: list[1]?.equipo_nombre || 'Envious Pro',
           color: '#3b82f6',
           glow: 'rgba(59,130,246,0.6)',
           stars: 5,
-          statLabel: 'MVP',
-          statVal: 6
+          statLabel: 'Valoración',
+          statVal: list[1]?.avg_valoracion ? Number(list[1].avg_valoracion).toFixed(2) : '8.20'
         },
         {
           rank: 3,
-          name: goleadores[2]?.name || 'Pipe C.',
-          tag: goleadores[2]?.name?.substring(0, 3).toUpperCase() || 'PIP',
-          foto: goleadores[2]?.foto,
-          metric: `${goleadores[2]?.total_goles || 18} Goles`,
-          subText: goleadores[2]?.equipo_nombre || 'Mythic Esports',
+          name: list[2]?.name || 'Pipe C.',
+          tag: list[2]?.name?.substring(0, 3).toUpperCase() || 'PIP',
+          foto: list[2]?.foto,
+          metric: list[2] ? getMetricValue(list[2]) : '—',
+          subText: list[2]?.equipo_nombre || 'Mythic Esports',
           color: '#8b5cf6',
           glow: 'rgba(139,92,246,0.6)',
           stars: 4,
-          statLabel: 'MVP',
-          statVal: 7
+          statLabel: 'Valoración',
+          statVal: list[2]?.avg_valoracion ? Number(list[2].avg_valoracion).toFixed(2) : '8.00'
         }
       ];
     } else {
@@ -212,7 +235,7 @@ export default function Infografia() {
         }
       ];
     }
-  }, [stats, subTab]);
+  }, [stats, subTab, activeMvpPos]);
 
   // 👥 Filtrado y paginado dinámico de listas en Frontend
   const filteredGoleadores = useMemo(() => {
@@ -308,7 +331,7 @@ export default function Infografia() {
               🔥 Analíticas & Data Arbitral
             </Badge>
 
-            <h1 className="text-6xl sm:text-8xl md:text-9xl font-display font-black text-foreground uppercase tracking-[0.01em] leading-[0.82] drop-shadow-2xl z-10 mt-2 select-none">
+            <h1 className="text-4xl sm:text-8xl md:text-9xl font-display font-black text-foreground uppercase tracking-[0.01em] leading-[0.82] drop-shadow-2xl z-10 mt-2 select-none">
               INFOGRAFÍA DE <br />
               <span className="text-primary tracking-tight font-black shimmer-text">
                 LA LIGA.
@@ -437,7 +460,7 @@ export default function Infografia() {
         </div>
 
         {/* TABS DE SELECCIÓN DE ENFOQUE (EQUIPOS VS JUGADORES) */}
-        <div className="flex justify-center shrink-0">
+        <div className="flex flex-col items-center gap-4 shrink-0">
           <div className="flex gap-1.5 bg-card/60 p-1.5 rounded-xl border border-border/30 overflow-x-auto">
             {[
               { id: 'equipos', label: '🛡️ ESCUADRAS / EQUIPOS' },
@@ -459,6 +482,33 @@ export default function Infografia() {
               </button>
             ))}
           </div>
+
+          {/* Selector de Pestañas de Posición para Jugadores */}
+          {subTab === 'jugadores' && (
+            <div className="flex bg-card/45 p-1 rounded-xl border border-border/40 gap-1 overflow-x-auto max-w-full">
+              {[
+                { id: 'DEL', label: '⚽ Delanteros' },
+                { id: 'MED', label: '🪄 Mediocentros' },
+                { id: 'DEF', label: '🛡️ Defensores' },
+                { id: 'POR', label: '🧤 Porteros' }
+              ].map((pos) => {
+                const isActive = activeMvpPos === pos.id;
+                return (
+                  <button
+                    key={pos.id}
+                    onClick={() => setActiveMvpPos(pos.id)}
+                    className={`px-5 py-2.5 rounded-lg text-[10px] font-condensed tracking-widest uppercase whitespace-nowrap transition-all duration-300 relative cursor-pointer ${
+                      isActive 
+                        ? 'text-primary shadow-[0_0_15px_hsla(var(--primary),0.25)] bg-primary/5 border border-primary/30 font-black' 
+                        : 'text-gray-400 hover:text-white hover:bg-white/5 font-bold'
+                    }`}
+                  >
+                    {pos.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -488,8 +538,11 @@ export default function Infografia() {
                 <div className="flex flex-col md:flex-row items-end justify-center gap-6 w-full px-4 pt-10 pb-6">
                   
                   {/* 🥈 SEGUNDO LUGAR (IZQUIERDA) */}
-                  <div className="w-full md:w-1/3 order-2 md:order-1 flex flex-col items-center group mt-8 md:mt-0">
-                    <div className="relative w-24 h-24 mb-4 flex items-center justify-center shrink-0">
+                  <div className="w-full md:w-1/3 order-2 md:order-1 flex flex-col items-center group mt-8 md:mt-0 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+                    <Link 
+                      to={podiumData[1]?.id ? (subTab === 'jugadores' ? `/jugadores/${podiumData[1].id}` : `/equipos/${podiumData[1].id}`) : '#'} 
+                      className="relative w-24 h-24 mb-4 flex items-center justify-center shrink-0 hover:scale-105 transition-all duration-300 group/avatar z-10"
+                    >
                       <div className="absolute inset-0 border border-dashed border-info/40 rounded-full anim-rotate-cw anim-pulse-ring"></div>
                       <div className="absolute inset-1.5 border-2 border-double border-white/10 border-t-info border-b-info rounded-full anim-rotate-ccw"></div>
                       {podiumData[1]?.foto ? (
@@ -499,10 +552,15 @@ export default function Infografia() {
                           {podiumData[1]?.tag}
                         </div>
                       )}
-                    </div>
+                    </Link>
                     
                     <div className="text-center mb-3">
-                      <h4 className="text-sm font-display font-black text-foreground uppercase tracking-wider truncate max-w-[180px] leading-tight">{podiumData[1]?.name}</h4>
+                      <Link 
+                        to={podiumData[1]?.id ? (subTab === 'jugadores' ? `/jugadores/${podiumData[1].id}` : `/equipos/${podiumData[1].id}`) : '#'}
+                        className="hover:text-primary transition-colors block"
+                      >
+                        <h4 className="text-sm font-display font-black text-foreground uppercase tracking-wider truncate max-w-[180px] leading-tight hover:text-primary">{podiumData[1]?.name}</h4>
+                      </Link>
                       <span className="text-[9px] font-mono text-info uppercase font-bold tracking-wider block mt-0.5">{podiumData[1]?.subText}</span>
                     </div>
                     
@@ -517,8 +575,11 @@ export default function Infografia() {
                   </div>
 
                   {/* 🥇 PRIMER LUGAR (CENTRO - MÁS ALTO) */}
-                  <div className="w-full md:w-1/3 order-1 md:order-2 flex flex-col items-center group -translate-y-4">
-                    <div className="relative w-28 h-28 mb-4 flex items-center justify-center shrink-0">
+                  <div className="w-full md:w-1/3 order-1 md:order-2 flex flex-col items-center group -translate-y-4 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                    <Link 
+                      to={podiumData[0]?.id ? (subTab === 'jugadores' ? `/jugadores/${podiumData[0].id}` : `/equipos/${podiumData[0].id}`) : '#'} 
+                      className="relative w-28 h-28 mb-4 flex items-center justify-center shrink-0 hover:scale-105 transition-all duration-300 group/avatar z-10"
+                    >
                       <div className="absolute inset-0 bg-warning/10 rounded-full blur-xl pointer-events-none animate-pulse"></div>
                       <div className="absolute inset-0 border-2 border-dashed border-warning rounded-full anim-rotate-cw"></div>
                       <div className="absolute inset-2 border border-dotted border-primary rounded-full anim-rotate-ccw" style={{ animationDuration: '6s' }}></div>
@@ -529,10 +590,15 @@ export default function Infografia() {
                           {podiumData[0]?.tag}
                         </div>
                       )}
-                    </div>
+                    </Link>
                     
                     <div className="text-center mb-3">
-                      <h4 className="text-base font-display font-black text-foreground uppercase tracking-wider truncate max-w-[200px] leading-tight">{podiumData[0]?.name}</h4>
+                      <Link 
+                        to={podiumData[0]?.id ? (subTab === 'jugadores' ? `/jugadores/${podiumData[0].id}` : `/equipos/${podiumData[0].id}`) : '#'}
+                        className="hover:text-primary transition-colors block"
+                      >
+                        <h4 className="text-base font-display font-black text-foreground uppercase tracking-wider truncate max-w-[200px] leading-tight hover:text-primary">{podiumData[0]?.name}</h4>
+                      </Link>
                       <span className="text-[10px] font-mono text-warning uppercase font-black tracking-widest block mt-0.5">{podiumData[0]?.subText}</span>
                     </div>
                     
@@ -552,8 +618,11 @@ export default function Infografia() {
                   </div>
 
                   {/* 🥉 TERCER LUGAR (DERECHA) */}
-                  <div className="w-full md:w-1/3 order-3 md:order-3 flex flex-col items-center group mt-8 md:mt-0">
-                    <div className="relative w-24 h-24 mb-4 flex items-center justify-center shrink-0">
+                  <div className="w-full md:w-1/3 order-3 md:order-3 flex flex-col items-center group mt-8 md:mt-0 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+                    <Link 
+                      to={podiumData[2]?.id ? (subTab === 'jugadores' ? `/jugadores/${podiumData[2].id}` : `/equipos/${podiumData[2].id}`) : '#'} 
+                      className="relative w-24 h-24 mb-4 flex items-center justify-center shrink-0 hover:scale-105 transition-all duration-300 group/avatar z-10"
+                    >
                       <div className="absolute inset-0 border border-dashed border-primary/45 rounded-full anim-rotate-cw anim-pulse-ring"></div>
                       <div className="absolute inset-1.5 border-2 border-double border-white/10 border-t-primary border-b-primary rounded-full anim-rotate-ccw"></div>
                       {podiumData[2]?.foto ? (
@@ -563,10 +632,15 @@ export default function Infografia() {
                           {podiumData[2]?.tag}
                         </div>
                       )}
-                    </div>
+                    </Link>
                     
                     <div className="text-center mb-3">
-                      <h4 className="text-sm font-display font-black text-foreground uppercase tracking-wider truncate max-w-[180px] leading-tight">{podiumData[2]?.name}</h4>
+                      <Link 
+                        to={podiumData[2]?.id ? (subTab === 'jugadores' ? `/jugadores/${podiumData[2].id}` : `/equipos/${podiumData[2].id}`) : '#'}
+                        className="hover:text-primary transition-colors block"
+                      >
+                        <h4 className="text-sm font-display font-black text-foreground uppercase tracking-wider truncate max-w-[180px] leading-tight hover:text-primary">{podiumData[2]?.name}</h4>
+                      </Link>
                       <span className="text-[9px] font-mono text-primary uppercase font-bold tracking-wider block mt-0.5">{podiumData[2]?.subText}</span>
                     </div>
                     
@@ -804,7 +878,7 @@ export default function Infografia() {
                         )}
                         <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                           {filteredEqGoleadores.map((e, idx) => (
-                            <div key={e.id} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/30 transition-all duration-300">
+                            <Link key={e.id} to={`/equipos/${e.id}`} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/30 hover:scale-[1.01] transition-all duration-300 cursor-pointer">
                               <div className="flex items-center gap-3">
                                 <span className="font-mono font-black text-primary text-sm">#{idx + 1}</span>
                                 {e.logo ? (
@@ -820,20 +894,17 @@ export default function Infografia() {
                                 )}
                                 <span className="text-xs font-display font-bold uppercase text-foreground truncate max-w-[120px]">{e.nombre}</span>
                               </div>
-                              <span className="text-xs font-display font-black text-primary font-mono">{e.total_goles_favor} GF</span>
-                            </div>
+                               <span className="text-xs font-display font-black text-primary font-mono">{e.total_goles_favor} GF</span>
+                            </Link>
                           ))}
                         </div>
                         {stats.equipos_goleadores.length > 5 && (
-                          <button 
-                            onClick={() => {
-                              setExpandEqGoleadores(!expandEqGoleadores);
-                              if (expandEqGoleadores) setSearchEqGoleadores('');
-                            }}
+                          <Link 
+                            to="/datos"
                             className="w-full text-center py-2 border border-dashed border-border/40 hover:border-primary/45 rounded-xl text-[9px] font-condensed font-black tracking-widest uppercase hover:text-primary transition-colors cursor-pointer mt-2 block"
                           >
-                            {expandEqGoleadores ? "➖ MOSTRAR MENOS" : "➕ VER MÁS / FILTRAR"}
-                          </button>
+                            ➕ VER MÁS / FILTRAR
+                          </Link>
                         )}
                       </div>
                     ) : (
@@ -859,7 +930,7 @@ export default function Infografia() {
                         )}
                         <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                           {filteredEqPases.map((e, idx) => (
-                            <div key={e.id} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/30 transition-all duration-300">
+                            <Link key={e.id} to={`/equipos/${e.id}`} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/30 hover:scale-[1.01] transition-all duration-300 cursor-pointer">
                               <div className="flex items-center gap-3">
                                 <span className="font-mono font-black text-primary text-sm">#{idx + 1}</span>
                                 {e.logo ? (
@@ -876,19 +947,16 @@ export default function Infografia() {
                                 <span className="text-xs font-display font-bold uppercase text-foreground truncate max-w-[120px]">{e.nombre}</span>
                               </div>
                               <span className="text-xs font-display font-black text-foreground font-mono">{e.avg_precision_pases}%</span>
-                            </div>
+                            </Link>
                           ))}
                         </div>
                         {stats.equipos_pases.length > 5 && (
-                          <button 
-                            onClick={() => {
-                              setExpandEqPases(!expandEqPases);
-                              if (expandEqPases) setSearchEqPases('');
-                            }}
+                          <Link 
+                            to="/datos"
                             className="w-full text-center py-2 border border-dashed border-border/40 hover:border-primary/45 rounded-xl text-[9px] font-condensed font-black tracking-widest uppercase hover:text-primary transition-colors cursor-pointer mt-2 block"
                           >
-                            {expandEqPases ? "➖ MOSTRAR MENOS" : "➕ VER MÁS / FILTRAR"}
-                          </button>
+                            ➕ VER MÁS / FILTRAR
+                          </Link>
                         )}
                       </div>
                     ) : (
@@ -914,7 +982,7 @@ export default function Infografia() {
                         )}
                         <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                           {filteredEqDefensa.map((e, idx) => (
-                            <div key={e.id} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/30 transition-all duration-300">
+                            <Link key={e.id} to={`/equipos/${e.id}`} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/30 hover:scale-[1.01] transition-all duration-300 cursor-pointer">
                               <div className="flex items-center gap-3">
                                 <span className="font-mono font-black text-primary text-sm">#{idx + 1}</span>
                                 {e.logo ? (
@@ -931,19 +999,16 @@ export default function Infografia() {
                                 <span className="text-xs font-display font-bold uppercase text-foreground truncate max-w-[120px]">{e.nombre}</span>
                               </div>
                               <span className="text-xs font-display font-black text-destructive font-mono">{e.total_goles_recibidos} GC</span>
-                            </div>
+                            </Link>
                           ))}
                         </div>
                         {stats.equipos_defensa.length > 5 && (
-                          <button 
-                            onClick={() => {
-                              setExpandEqDefensa(!expandEqDefensa);
-                              if (expandEqDefensa) setSearchEqDefensa('');
-                            }}
+                          <Link 
+                            to="/datos"
                             className="w-full text-center py-2 border border-dashed border-border/40 hover:border-primary/45 rounded-xl text-[9px] font-condensed font-black tracking-widest uppercase hover:text-primary transition-colors cursor-pointer mt-2 block"
                           >
-                            {expandEqDefensa ? "➖ MOSTRAR MENOS" : "➕ VER MÁS / FILTRAR"}
-                          </button>
+                            ➕ VER MÁS / FILTRAR
+                          </Link>
                         )}
                       </div>
                     ) : (
@@ -979,121 +1044,332 @@ export default function Infografia() {
             {subTab === 'jugadores' && (
               <div className="space-y-12 animate-fade-in">
 
-                {/* ── ⚡ JUGADOR DE LA SEMANA / MVP DE LA LIGA (FUT CARD STYLE) ── */}
-                {/* ── ⚡ JUGADORES MVPS POR POSICIÓN (FUT CARDS GRID) ── */}
+                {/* ── ⚡ JUGADORES MVPS POR POSICIÓN (DETAILED TABBED LAYOUT) ── */}
                 {(() => {
-                  const mvpDelantero = stats.prestigio_delanteros?.[0] || stats.top_goleadores?.[0];
-                  const mvpMedio = stats.prestigio_medios?.[0];
-                  const mvpDefensa = stats.prestigio_defensas?.[0];
-                  const mvpPortero = stats.prestigio_porteros?.[0];
-
-                  const mvpsList = [
-                    {
-                      pos: 'DEL',
-                      player: mvpDelantero,
-                      ovr: 99,
-                      color: 'from-amber-500/35 via-card to-background border-warning',
-                      glow: 'rgba(245,158,11,0.25)',
-                      stats: [
-                        { label: 'GOL', val: mvpDelantero?.total_goles || 0 },
-                        { label: 'AST', val: mvpDelantero?.total_asistencias || 0 },
-                        { label: 'TIRO', val: `${Math.round(mvpDelantero?.avg_precision_tiro || 0)}%` }
-                      ]
+                  const posConfig = {
+                    DEL: {
+                      color: 'from-amber-500/35 via-card to-background border-amber-500',
+                      glow: 'rgba(245,158,11,0.3)',
+                      textColor: 'text-amber-500',
+                      accentText: 'text-amber-400',
+                      badge: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+                      avatarBorder: 'border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.2)]',
+                      label: 'Delantero',
+                      shimmer: 'bg-gradient-to-r from-amber-500 to-red-500'
                     },
-                    {
-                      pos: 'MED',
-                      player: mvpMedio,
-                      ovr: 98,
+                    MED: {
                       color: 'from-emerald-500/35 via-card to-background border-emerald-500',
-                      glow: 'rgba(16,185,129,0.25)',
-                      stats: [
-                        { label: 'AST', val: mvpMedio?.total_asistencias || 0 },
-                        { label: 'PAS', val: `${Math.round(mvpMedio?.avg_precision_pases || 0)}%` },
-                        { label: 'PTS', val: mvpMedio?.score || 0 }
-                      ]
+                      glow: 'rgba(16,185,129,0.3)',
+                      textColor: 'text-emerald-500',
+                      accentText: 'text-emerald-400',
+                      badge: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+                      avatarBorder: 'border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]',
+                      label: 'Mediocentro',
+                      shimmer: 'bg-gradient-to-r from-emerald-500 to-cyan-500'
                     },
-                    {
-                      pos: 'DEF',
-                      player: mvpDefensa,
-                      ovr: 97,
+                    DEF: {
                       color: 'from-blue-500/35 via-card to-background border-blue-500',
-                      glow: 'rgba(59,130,246,0.25)',
-                      stats: [
-                        { label: 'ENT', val: mvpDefensa?.total_entradas || 0 },
-                        { label: 'ÉXI', val: `${Math.round(mvpDefensa?.avg_exito_entradas || 0)}%` },
-                        { label: 'PTS', val: mvpDefensa?.score || 0 }
-                      ]
+                      glow: 'rgba(59,130,246,0.3)',
+                      textColor: 'text-blue-500',
+                      accentText: 'text-blue-400',
+                      badge: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+                      avatarBorder: 'border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]',
+                      label: 'Defensa',
+                      shimmer: 'bg-gradient-to-r from-blue-500 to-indigo-500'
                     },
-                    {
-                      pos: 'POR',
-                      player: mvpPortero,
-                      ovr: 96,
+                    POR: {
                       color: 'from-purple-500/35 via-card to-background border-purple-500',
-                      glow: 'rgba(139,92,246,0.25)',
-                      stats: [
-                        { label: 'ATA', val: mvpPortero?.total_atajadas || 0 },
-                        { label: 'REC', val: mvpPortero?.total_goles_recibidos || 0 },
-                        { label: 'PTS', val: mvpPortero?.score || 0 }
-                      ]
+                      glow: 'rgba(139,92,246,0.3)',
+                      textColor: 'text-purple-500',
+                      accentText: 'text-purple-400',
+                      badge: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
+                      avatarBorder: 'border-purple-500/30 shadow-[0_0_15px_rgba(139,92,246,0.2)]',
+                      label: 'Portero',
+                      shimmer: 'bg-gradient-to-r from-purple-500 to-pink-500'
                     }
-                  ];
+                  };
+
+                  const player = activeMvpPos === 'DEL' 
+                    ? (stats.prestigio_delanteros?.[0] || stats.top_goleadores?.[0]) 
+                    : activeMvpPos === 'MED' 
+                    ? stats.prestigio_medios?.[0] 
+                    : activeMvpPos === 'DEF' 
+                    ? stats.prestigio_defensas?.[0] 
+                    : stats.prestigio_porteros?.[0];
+
+                  const getQuickStats = (pos, p) => {
+                    if (!p) return [];
+                    if (pos === 'DEL') {
+                      return [
+                        { label: 'GOL', val: p.total_goles || 0 },
+                        { label: 'AST', val: p.total_asistencias || 0 },
+                        { label: 'TIRO', val: `${Math.round(p.avg_precision_tiro || 0)}%` }
+                      ];
+                    }
+                    if (pos === 'MED') {
+                      return [
+                        { label: 'AST', val: p.total_asistencias || 0 },
+                        { label: 'PAS', val: `${Math.round(p.avg_precision_pases || 0)}%` },
+                        { label: 'OVR', val: Number(p.avg_valoracion || 0).toFixed(1) }
+                      ];
+                    }
+                    if (pos === 'DEF') {
+                      return [
+                        { label: 'ENT', val: p.total_entradas || 0 },
+                        { label: 'ÉXI', val: `${Math.round(p.avg_exito_entradas || 0)}%` },
+                        { label: 'OVR', val: Number(p.avg_valoracion || 0).toFixed(1) }
+                      ];
+                    }
+                    if (pos === 'POR') {
+                      return [
+                        { label: 'ATA', val: p.total_atajadas || 0 },
+                        { label: 'REC', val: p.total_goles_recibidos || 0 },
+                        { label: 'OVR', val: Number(p.avg_valoracion || 0).toFixed(1) }
+                      ];
+                    }
+                    return [];
+                  };
+
+                  const getPlayerMetrics = (pos, p) => {
+                    if (!p) return [];
+                    
+                    if (pos === 'DEL') {
+                      return [
+                        {
+                          label: 'Efectividad en Goleo',
+                          value: `${p.total_goles || 0} GOLES`,
+                          desc: 'Total de anotaciones marcadas.',
+                          color: 'text-amber-500',
+                          barVal: Math.min(100, (p.total_goles || 0) * 10)
+                        },
+                        {
+                          label: 'Creación de Juego',
+                          value: `${p.total_asistencias || 0} ASISTENCIAS`,
+                          desc: 'Total de pases de gol entregados.',
+                          color: 'text-primary',
+                          barVal: Math.min(100, (p.total_asistencias || 0) * 10)
+                        },
+                        {
+                          label: 'Rendimiento General (OVR)',
+                          value: `${Number(p.avg_valoracion || 0).toFixed(2)}`,
+                          desc: 'Valoración media del competidor.',
+                          color: 'text-amber-400',
+                          barVal: Math.min(100, (p.avg_valoracion || 0) * 10)
+                        },
+                        {
+                          label: 'Precisión de Disparo',
+                          value: `${Math.round(p.avg_precision_tiro || 0)}%`,
+                          desc: 'Eficacia en tiros al arco.',
+                          color: 'text-emerald-500',
+                          barVal: Math.round(p.avg_precision_tiro || 0)
+                        },
+                        {
+                          label: 'Ritmo de Competencia',
+                          value: `${p.partidos_jugados || 0} PARTIDOS`,
+                          desc: 'Partidos disputados en el circuito.',
+                          color: 'text-blue-500',
+                          barVal: Math.min(100, (p.partidos_jugados || 0) * 10)
+                        },
+                        {
+                          label: 'Prestigio Táctico',
+                          value: `⭐ ${p.total_mvp || 0} MVPs`,
+                          desc: 'Veces seleccionado como el Jugador del Partido.',
+                          color: 'text-amber-500',
+                          barVal: Math.min(100, (p.total_mvp || 0) * 20)
+                        }
+                      ];
+                    }
+                    
+                    if (pos === 'MED') {
+                      return [
+                        {
+                          label: 'Precisión de Pases',
+                          value: `${Math.round(p.avg_precision_pases || 0)}%`,
+                          desc: 'Efectividad en pases completados.',
+                          color: 'text-emerald-500',
+                          barVal: Math.round(p.avg_precision_pases || 0)
+                        },
+                        {
+                          label: 'Creación de Juego',
+                          value: `${p.total_asistencias || 0} ASISTENCIAS`,
+                          desc: 'Total de pases de gol entregados.',
+                          color: 'text-primary',
+                          barVal: Math.min(100, (p.total_asistencias || 0) * 10)
+                        },
+                        {
+                          label: 'Rendimiento General (OVR)',
+                          value: `${Number(p.avg_valoracion || 0).toFixed(2)}`,
+                          desc: 'Valoración media del competidor.',
+                          color: 'text-emerald-400',
+                          barVal: Math.min(100, (p.avg_valoracion || 0) * 10)
+                        },
+                        {
+                          label: 'Volumen Ofensivo',
+                          value: `${p.total_goles || 0} GOLES`,
+                          desc: 'Goles marcados desde el mediocampo.',
+                          color: 'text-amber-500',
+                          barVal: Math.min(100, (p.total_goles || 0) * 15)
+                        },
+                        {
+                          label: 'Ritmo de Competencia',
+                          value: `${p.partidos_jugados || 0} PARTIDOS`,
+                          desc: 'Partidos disputados en el circuito.',
+                          color: 'text-blue-500',
+                          barVal: Math.min(100, (p.partidos_jugados || 0) * 10)
+                        },
+                        {
+                          label: 'Prestigio Táctico',
+                          value: `⭐ ${p.total_mvp || 0} MVPs`,
+                          desc: 'Veces seleccionado como el Jugador del Partido.',
+                          color: 'text-amber-500',
+                          barVal: Math.min(100, (p.total_mvp || 0) * 20)
+                        }
+                      ];
+                    }
+
+                    if (pos === 'DEF') {
+                      return [
+                        {
+                          label: 'Solidez en Defensiva',
+                          value: `${p.total_entradas || 0} QUITES`,
+                          desc: 'Entradas limpias y quites completados.',
+                          color: 'text-blue-500',
+                          barVal: Math.min(100, (p.total_entradas || 0) * 5)
+                        },
+                        {
+                          label: 'Tasa de Quites Exitosos',
+                          value: `${Math.round(p.avg_exito_entradas || 0)}%`,
+                          desc: 'Efectividad en duelos defensivos directos.',
+                          color: 'text-emerald-500',
+                          barVal: Math.round(p.avg_exito_entradas || 0)
+                        },
+                        {
+                          label: 'Rendimiento General (OVR)',
+                          value: `${Number(p.avg_valoracion || 0).toFixed(2)}`,
+                          desc: 'Valoración media del competidor.',
+                          color: 'text-blue-400',
+                          barVal: Math.min(100, (p.avg_valoracion || 0) * 10)
+                        },
+                        {
+                          label: 'Precisión de Pases',
+                          value: `${Math.round(p.avg_precision_pases || 0)}%`,
+                          desc: 'Eficacia en salida y pases en zona baja.',
+                          color: 'text-foreground/80',
+                          barVal: Math.round(p.avg_precision_pases || 0)
+                        },
+                        {
+                          label: 'Ritmo de Competencia',
+                          value: `${p.partidos_jugados || 0} PARTIDOS`,
+                          desc: 'Partidos disputados en el circuito.',
+                          color: 'text-blue-500',
+                          barVal: Math.min(100, (p.partidos_jugados || 0) * 10)
+                        },
+                        {
+                          label: 'Prestigio Táctico',
+                          value: `⭐ ${p.total_mvp || 0} MVPs`,
+                          desc: 'Veces seleccionado como el Jugador del Partido.',
+                          color: 'text-amber-500',
+                          barVal: Math.min(100, (p.total_mvp || 0) * 20)
+                        }
+                      ];
+                    }
+
+                    if (pos === 'POR') {
+                      return [
+                        {
+                          label: 'Eficacia Bajo Tres Palos',
+                          value: `${p.total_atajadas || 0} ATAJADAS`,
+                          desc: 'Total de tiros detenidos o desviados.',
+                          color: 'text-purple-500',
+                          barVal: Math.min(100, (p.total_atajadas || 0) * 4)
+                        },
+                        {
+                          label: 'Goles Recibidos',
+                          value: `${p.total_goles_recibidos || 0} GOLES`,
+                          desc: 'Goles concedidos en la meta.',
+                          color: 'text-rose-500',
+                          barVal: Math.max(10, 100 - (p.total_goles_recibidos || 0) * 5)
+                        },
+                        {
+                          label: 'Rendimiento General (OVR)',
+                          value: `${Number(p.avg_valoracion || 0).toFixed(2)}`,
+                          desc: 'Valoración media del competidor.',
+                          color: 'text-purple-400',
+                          barVal: Math.min(100, (p.avg_valoracion || 0) * 10)
+                        },
+                        {
+                          label: 'Precisión de Pases',
+                          value: `${Math.round(p.avg_precision_pases || 0)}%`,
+                          desc: 'Precisión en saques y pases largos.',
+                          color: 'text-foreground/80',
+                          barVal: Math.round(p.avg_precision_pases || 0)
+                        },
+                        {
+                          label: 'Ritmo de Competencia',
+                          value: `${p.partidos_jugados || 0} PARTIDOS`,
+                          desc: 'Partidos disputados en el circuito.',
+                          color: 'text-blue-500',
+                          barVal: Math.min(100, (p.partidos_jugados || 0) * 10)
+                        },
+                        {
+                          label: 'Prestigio Táctico',
+                          value: `⭐ ${p.total_mvp || 0} MVPs`,
+                          desc: 'Veces seleccionado como el Jugador del Partido.',
+                          color: 'text-amber-500',
+                          barVal: Math.min(100, (p.total_mvp || 0) * 20)
+                        }
+                      ];
+                    }
+                    return [];
+                  };
+
+                  const config = posConfig[activeMvpPos];
+                  const quickStats = getQuickStats(activeMvpPos, player);
+                  const detailedMetrics = getPlayerMetrics(activeMvpPos, player);
+                  const calculatedOvr = player ? Math.round(80 + (Number(player.avg_valoracion || 8.0) * 1.8)) : 99;
 
                   return (
-                    <div className="border border-border/40 bg-card/15 backdrop-blur-md p-6 rounded-3xl space-y-6 shadow-xl relative overflow-hidden">
+                    <div className="border border-border/40 bg-card/15 backdrop-blur-xl rounded-3xl p-6 md:p-8 space-y-8 glass-cyber relative overflow-hidden max-w-6xl mx-auto shadow-2xl hover:border-primary/25 transition-all duration-500">
                       <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
                       
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-border/40 pb-4 gap-2">
+                      {/* Top Header Block */}
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-border/40 pb-5 gap-4">
                         <div className="text-left">
                           <Badge className="text-primary bg-primary/10 border border-primary/25 text-[10px] uppercase font-condensed tracking-widest px-3 py-1">
-                            ⚡ CUADRO DE LÍDERES TÁCTICOS
+                            ⚡ JUGADOR DESTACADO
                           </Badge>
-                          <h2 className="text-2xl md:text-3xl font-display font-black uppercase text-foreground tracking-tight mt-1">
-                            LOS MVPS DE LA SEMANA <span className="text-glow-primary bg-clip-text bg-gradient-to-r from-primary to-destructive text-transparent">POR POSICIÓN</span>
+                          <h2 className="text-3xl md:text-4xl font-display font-black uppercase text-foreground tracking-tight mt-1">
+                            LÍDER JUGADOR DE LA <span className="text-glow-primary bg-clip-text bg-gradient-to-r from-primary to-destructive text-transparent">SEMANA</span>
                           </h2>
                         </div>
-                        <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest">REGISTROS ACTUALES DEL SERVIDOR</span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
-                        {mvpsList.map((mvp, idx) => {
-                          const player = mvp.player;
-                          if (!player) {
-                            return (
-                              <div key={idx} className="relative w-full h-[23rem] bg-card/20 border border-border/30 border-dashed rounded-[2.5rem] flex flex-col items-center justify-center text-center p-5 text-muted-foreground">
-                                <span className="text-3xl">🏃</span>
-                                <span className="text-[10px] font-mono uppercase tracking-widest font-black mt-2">MVP {mvp.pos}</span>
-                                <p className="text-[10px] italic mt-1 font-light">Sin datos de juego registrados esta semana.</p>
-                              </div>
-                            );
-                          }
-
-                          return (
-                            <div 
-                              key={idx}
-                              className={`relative w-full h-[23rem] bg-gradient-to-b ${mvp.color} border-2 rounded-[2.5rem] p-5 shadow-2xl overflow-hidden hover:scale-[1.04] transition-all duration-300 flex flex-col justify-between group`}
-                            >
-                              {/* Glowing background shapes */}
+                      {player ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                          {/* FUT Shield Card (Left) */}
+                          <div className="lg:col-span-4 w-full flex justify-center">
+                            <div className={`relative w-64 h-[23rem] bg-gradient-to-b ${config.color} border-2 rounded-[2.5rem] p-5 shadow-2xl overflow-hidden hover:scale-[1.04] transition-all duration-300 flex flex-col justify-between group`}>
                               <div 
                                 className="absolute inset-0 pointer-events-none"
-                                style={{ backgroundImage: `radial-gradient(ellipse at top, ${mvp.glow}, transparent)` }}
+                                style={{ backgroundImage: `radial-gradient(ellipse at top, ${config.glow}, transparent)` }}
                               ></div>
+                              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
                               
-                              {/* Upper Card Info */}
                               <div className="flex justify-between items-start font-mono text-xs z-10">
-                                <div className="flex flex-col items-center text-left">
-                                  <span className="text-2xl font-display font-black leading-none">{mvp.ovr}</span>
-                                  <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">OVR</span>
+                                <div className="flex flex-col items-center">
+                                  <span className={`text-3xl font-display font-black leading-none ${config.textColor}`}>{calculatedOvr}</span>
+                                  <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">OVR</span>
                                 </div>
                                 <div className="flex flex-col items-end">
-                                  <span className="text-[8px] font-mono font-black text-foreground/85 tracking-wide uppercase px-2 py-0.5 rounded bg-background/50 border border-border/30">
-                                    {mvp.pos}
+                                  <span className="text-[9px] bg-background/55 border border-border/30 text-foreground font-mono font-black px-2 py-0.5 rounded uppercase">
+                                    {activeMvpPos}
                                   </span>
+                                  <span className="text-[7px] text-muted-foreground uppercase font-bold tracking-wider mt-1">WEEK MVP</span>
                                 </div>
                               </div>
 
-                              {/* Avatar & Player Name */}
                               <div className="flex flex-col items-center py-2 z-10 relative">
-                                <div className="relative w-24 h-24 rounded-full border border-white/20 bg-background flex items-center justify-center overflow-hidden shadow-lg group-hover:scale-105 transition-transform duration-300">
+                                <div className={`relative w-28 h-28 rounded-full border-2 ${config.avatarBorder} bg-background flex items-center justify-center overflow-hidden shadow-lg group-hover:scale-105 transition-transform duration-300`}>
                                   {player.foto ? (
                                     <img 
                                       src={getImageUrl(player.foto)} 
@@ -1101,35 +1377,61 @@ export default function Infografia() {
                                       className="w-full h-full object-cover"
                                     />
                                   ) : (
-                                    <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-3xl uppercase text-foreground">
-                                      {player.name?.charAt(0)}
+                                    <div className="w-full h-full bg-gradient-to-tr from-primary/25 to-card/50 flex items-center justify-center font-display font-black text-4xl text-foreground uppercase">
+                                      {player.name?.substring(0, 2)}
                                     </div>
                                   )}
                                 </div>
                                 
-                                <div className="mt-3 text-center w-full">
-                                  <h3 className="text-lg font-display font-black text-foreground tracking-wide uppercase leading-none truncate max-w-[180px] mx-auto">
-                                    {player.name}
-                                  </h3>
-                                  <span className="text-[8px] bg-background/60 border border-border/40 text-muted-foreground px-2 py-0.5 rounded-full font-mono uppercase font-bold block mt-1.5 truncate max-w-[140px] mx-auto">
+                                <div className="mt-3 text-center">
+                                  <h3 className="text-xl font-display font-black text-foreground tracking-wide uppercase leading-none truncate max-w-[190px] mx-auto">{player.name}</h3>
+                                  <span className="text-[8px] bg-background/60 border border-border/40 text-muted-foreground px-2.5 py-0.5 rounded-full font-mono uppercase font-bold block mt-1.5 truncate max-w-[160px] mx-auto">
                                     🛡️ {player.equipo_nombre}
                                   </span>
                                 </div>
                               </div>
 
-                              {/* Stats Breakdown Grid */}
+                              {/* Card Bottom Quick Stats */}
                               <div className="grid grid-cols-3 gap-1 border-t border-border/20 pt-4 text-center font-mono text-[9px] z-10 bg-background/35 p-2 rounded-2xl border border-border/10">
-                                {mvp.stats.map((st, sIdx) => (
+                                {quickStats.map((st, sIdx) => (
                                   <div key={sIdx} className={sIdx < 2 ? 'border-r border-border/15' : ''}>
-                                    <span className="text-[7px] text-gray-500 font-bold block leading-none">{st.label}</span>
-                                    <strong className="text-xs font-black text-foreground mt-1 block leading-none">{st.val}</strong>
+                                    <span className="text-[7px] text-gray-500 font-bold block">{st.label}</span>
+                                    <strong className="text-xs font-black text-foreground">{st.val}</strong>
                                   </div>
                                 ))}
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
+                          </div>
+
+                          {/* 6 Metrics Grid (Right) */}
+                          <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 w-full">
+                            {detailedMetrics.map((stat, i) => (
+                              <div key={i} className="glass-card-aaa p-5 rounded-2xl space-y-3.5 text-left border border-border/40 hover:border-primary/20 transition-all duration-300">
+                                <span className="text-[9px] text-muted-foreground font-condensed font-black tracking-widest uppercase block">{stat.label}</span>
+                                <div className="flex justify-between items-baseline font-mono">
+                                  <span className={`font-display text-2xl font-black ${stat.color} tracking-wider`}>{stat.value}</span>
+                                  <span className="text-[8px] text-muted-foreground/60">TOL: ±0.03</span>
+                                </div>
+                                
+                                {/* Progress Bar */}
+                                <div className="w-full h-1.5 bg-background/60 rounded-full overflow-hidden border border-border/45">
+                                  <div 
+                                    className={`h-full ${config.shimmer} rounded-full transition-all duration-500`}
+                                    style={{ width: `${stat.barVal}%` }}
+                                  />
+                                </div>
+                                <p className="text-[9px] text-muted-foreground leading-normal font-light">{stat.desc}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="border border-border/30 border-dashed rounded-3xl p-12 text-center text-muted-foreground">
+                          <span className="text-4xl">🏃</span>
+                          <h4 className="text-sm font-display font-black text-foreground uppercase tracking-wider mt-2">Sin Datos Disponibles</h4>
+                          <p className="text-xs italic mt-1 font-light">No hay registros tácticos de juego cargados para la demarcación de {config.label} esta semana.</p>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
@@ -1155,7 +1457,7 @@ export default function Infografia() {
                         )}
                         <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                           {filteredGoleadores.map((s, idx) => (
-                            <div key={s.id} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/30 transition-all">
+                            <Link key={s.id} to={`/jugadores/${s.id}`} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/30 hover:scale-[1.01] transition-all cursor-pointer">
                               <div className="flex items-center gap-3">
                                 <span className="font-mono font-black text-primary text-sm">#{idx + 1}</span>
                                 {s.foto ? (
@@ -1171,19 +1473,16 @@ export default function Infografia() {
                                 </div>
                               </div>
                               <span className="text-xs font-display font-black text-primary tracking-wide font-mono">{s.total_goles} Goles</span>
-                            </div>
+                            </Link>
                           ))}
                         </div>
                         {stats.top_goleadores.length > 5 && (
-                          <button 
-                            onClick={() => {
-                              setExpandGoleadores(!expandGoleadores);
-                              if (expandGoleadores) setSearchGoleadores('');
-                            }}
+                          <Link 
+                            to="/datos"
                             className="w-full text-center py-2 border border-dashed border-border/40 hover:border-primary/45 rounded-xl text-[9px] font-condensed font-black tracking-widest uppercase hover:text-primary transition-colors cursor-pointer mt-2 block"
                           >
-                            {expandGoleadores ? "➖ MOSTRAR MENOS" : "➕ VER MÁS / FILTRAR"}
-                          </button>
+                            ➕ VER MÁS / FILTRAR
+                          </Link>
                         )}
                       </div>
                     ) : (
@@ -1209,7 +1508,7 @@ export default function Infografia() {
                         )}
                         <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                           {filteredAsistentes.map((a, idx) => (
-                            <div key={a.id} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/30 transition-all">
+                            <Link key={a.id} to={`/jugadores/${a.id}`} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/30 hover:scale-[1.01] transition-all cursor-pointer">
                               <div className="flex items-center gap-3">
                                 <span className="font-mono font-black text-primary text-sm">#{idx + 1}</span>
                                 {a.foto ? (
@@ -1225,19 +1524,16 @@ export default function Infografia() {
                                 </div>
                               </div>
                               <span className="text-xs font-display font-black text-primary tracking-wide font-mono">{a.total_asistencias} Asistencias</span>
-                            </div>
+                            </Link>
                           ))}
                         </div>
                         {stats.top_asistentes.length > 5 && (
-                          <button 
-                            onClick={() => {
-                              setExpandAsistentes(!expandAsistentes);
-                              if (expandAsistentes) setSearchAsistentes('');
-                            }}
+                          <Link 
+                            to="/datos"
                             className="w-full text-center py-2 border border-dashed border-border/40 hover:border-primary/45 rounded-xl text-[9px] font-condensed font-black tracking-widest uppercase hover:text-primary transition-colors cursor-pointer mt-2 block"
                           >
-                            {expandAsistentes ? "➖ MOSTRAR MENOS" : "➕ VER MÁS / FILTRAR"}
-                          </button>
+                            ➕ VER MÁS / FILTRAR
+                          </Link>
                         )}
                       </div>
                     ) : (
@@ -1273,7 +1569,7 @@ export default function Infografia() {
                           )}
                           <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                             {filteredDelanteros.map((p, idx) => (
-                              <div key={p.id} className="flex items-center justify-between gap-2 p-2.5 border border-border/40 rounded-xl bg-card/25 hover:border-primary/20 transition-all">
+                              <Link key={p.id} to={`/jugadores/${p.id}`} className="flex items-center justify-between gap-2 p-2.5 border border-border/40 rounded-xl bg-card/25 hover:border-primary/20 hover:scale-[1.01] transition-all cursor-pointer">
                                 <div className="flex items-center gap-3 min-w-0">
                                   <span className="font-mono font-black text-xs text-primary">#{idx + 1}</span>
                                   <div className="shrink-0">
@@ -1300,19 +1596,16 @@ export default function Infografia() {
                                     <p className="text-xs font-display font-black text-primary font-mono leading-none mt-1">{p.score}</p>
                                   </div>
                                 </div>
-                              </div>
+                              </Link>
                             ))}
                           </div>
                           {stats.prestigio_delanteros.length > 5 && (
-                            <button 
-                              onClick={() => {
-                                setExpandDelanteros(!expandDelanteros);
-                                if (expandDelanteros) setSearchDelanteros('');
-                              }}
+                            <Link 
+                              to="/datos"
                               className="w-full text-center py-2 border border-dashed border-border/40 hover:border-primary/45 rounded-xl text-[9px] font-condensed font-black tracking-widest uppercase hover:text-primary transition-colors cursor-pointer mt-2 block"
                             >
-                              {expandDelanteros ? "➖ MOSTRAR MENOS" : "➕ VER MÁS / FILTRAR"}
-                            </button>
+                              ➕ VER MÁS / FILTRAR
+                            </Link>
                           )}
                         </div>
                       ) : (
@@ -1338,7 +1631,7 @@ export default function Infografia() {
                           )}
                           <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                             {filteredMedios.map((p, idx) => (
-                              <div key={p.id} className="flex items-center justify-between gap-2 p-2.5 border border-border/40 rounded-xl bg-card/25 hover:border-primary/20 transition-all">
+                              <Link key={p.id} to={`/jugadores/${p.id}`} className="flex items-center justify-between gap-2 p-2.5 border border-border/40 rounded-xl bg-card/25 hover:border-primary/20 hover:scale-[1.01] transition-all cursor-pointer">
                                 <div className="flex items-center gap-3 min-w-0">
                                   <span className="font-mono font-black text-xs text-primary">#{idx + 1}</span>
                                   <div className="shrink-0">
@@ -1365,19 +1658,16 @@ export default function Infografia() {
                                     <p className="text-xs font-display font-black text-primary font-mono leading-none mt-1">{p.score}</p>
                                   </div>
                                 </div>
-                              </div>
+                              </Link>
                             ))}
                           </div>
                           {stats.prestigio_medios.length > 5 && (
-                            <button 
-                              onClick={() => {
-                                setExpandMedios(!expandMedios);
-                                if (expandMedios) setSearchMedios('');
-                              }}
+                            <Link 
+                              to="/datos"
                               className="w-full text-center py-2 border border-dashed border-border/40 hover:border-primary/45 rounded-xl text-[9px] font-condensed font-black tracking-widest uppercase hover:text-primary transition-colors cursor-pointer mt-2 block"
                             >
-                              {expandMedios ? "➖ MOSTRAR MENOS" : "➕ VER MÁS / FILTRAR"}
-                            </button>
+                              ➕ VER MÁS / FILTRAR
+                            </Link>
                           )}
                         </div>
                       ) : (
@@ -1403,7 +1693,7 @@ export default function Infografia() {
                           )}
                           <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                             {filteredDefensas.map((p, idx) => (
-                              <div key={p.id} className="flex items-center justify-between gap-2 p-2.5 border border-border/40 rounded-xl bg-card/25 hover:border-primary/20 transition-all">
+                              <Link key={p.id} to={`/jugadores/${p.id}`} className="flex items-center justify-between gap-2 p-2.5 border border-border/40 rounded-xl bg-card/25 hover:border-primary/20 hover:scale-[1.01] transition-all cursor-pointer">
                                 <div className="flex items-center gap-3 min-w-0">
                                   <span className="font-mono font-black text-xs text-primary">#{idx + 1}</span>
                                   <div className="shrink-0">
@@ -1430,19 +1720,16 @@ export default function Infografia() {
                                     <p className="text-xs font-display font-black text-primary font-mono leading-none mt-1">{p.score}</p>
                                   </div>
                                 </div>
-                              </div>
+                              </Link>
                             ))}
                           </div>
                           {stats.prestigio_defensas.length > 5 && (
-                            <button 
-                              onClick={() => {
-                                setExpandDefensas(!expandDefensas);
-                                if (expandDefensas) setSearchDefensas('');
-                              }}
+                            <Link 
+                              to="/datos"
                               className="w-full text-center py-2 border border-dashed border-border/40 hover:border-primary/45 rounded-xl text-[9px] font-condensed font-black tracking-widest uppercase hover:text-primary transition-colors cursor-pointer mt-2 block"
                             >
-                              {expandDefensas ? "➖ MOSTRAR MENOS" : "➕ VER MÁS / FILTRAR"}
-                            </button>
+                              ➕ VER MÁS / FILTRAR
+                            </Link>
                           )}
                         </div>
                       ) : (
@@ -1468,7 +1755,7 @@ export default function Infografia() {
                           )}
                           <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                             {filteredPorteros.map((p, idx) => (
-                              <div key={p.id} className="flex items-center justify-between gap-2 p-2.5 border border-border/40 rounded-xl bg-card/25 hover:border-primary/20 transition-all">
+                              <Link key={p.id} to={`/jugadores/${p.id}`} className="flex items-center justify-between gap-2 p-2.5 border border-border/40 rounded-xl bg-card/25 hover:border-primary/20 hover:scale-[1.01] transition-all cursor-pointer">
                                 <div className="flex items-center gap-3 min-w-0">
                                   <span className="font-mono font-black text-xs text-primary">#{idx + 1}</span>
                                   <div className="shrink-0">
@@ -1495,19 +1782,16 @@ export default function Infografia() {
                                     <p className="text-xs font-display font-black text-primary font-mono leading-none mt-1">{p.score}</p>
                                   </div>
                                 </div>
-                              </div>
+                              </Link>
                             ))}
                           </div>
                           {stats.prestigio_porteros.length > 5 && (
-                            <button 
-                              onClick={() => {
-                                setExpandPorteros(!expandPorteros);
-                                if (expandPorteros) setSearchPorteros('');
-                              }}
+                            <Link 
+                              to="/datos"
                               className="w-full text-center py-2 border border-dashed border-border/40 hover:border-primary/45 rounded-xl text-[9px] font-condensed font-black tracking-widest uppercase hover:text-primary transition-colors cursor-pointer mt-2 block"
                             >
-                              {expandPorteros ? "➖ MOSTRAR MENOS" : "➕ VER MÁS / FILTRAR"}
-                            </button>
+                              ➕ VER MÁS / FILTRAR
+                            </Link>
                           )}
                         </div>
                       ) : (

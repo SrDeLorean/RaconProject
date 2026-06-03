@@ -193,7 +193,7 @@ export default function Equipos() {
               🔥 Directorio de Escuadras
             </Badge>
 
-            <h1 className="text-6xl sm:text-8xl md:text-9xl font-display font-black text-foreground uppercase tracking-[0.01em] leading-[0.82] drop-shadow-2xl z-10 mt-2 select-none">
+            <h1 className="text-4xl sm:text-8xl md:text-9xl font-display font-black text-foreground uppercase tracking-[0.01em] leading-[0.82] drop-shadow-2xl z-10 mt-2 select-none">
               CLUBES <br />
               <span className="text-primary tracking-tight font-black shimmer-text">
                 VIGENTES.

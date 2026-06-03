@@ -14,6 +14,7 @@ export default function DashboardOrganizador() {
   const [loading, setLoading] = useState(true);
   const [misCompetencias, setMisCompetencias] = useState([]);
   const [activeTab, setActiveTab] = useState('perfil');
+  const [playersAudit, setPlayersAudit] = useState({ missingData: [], similarGroups: [] });
 
   useEffect(() => {
     const fetchStatsAndCompetencias = async () => {
@@ -25,6 +26,99 @@ export default function DashboardOrganizador() {
         const responseComp = await api.get('/competencias', { params: { per_page: 5, for_organizer: true } });
         const compArray = responseComp.data.data ? responseComp.data.data : (Array.isArray(responseComp.data) ? responseComp.data : []);
         setMisCompetencias(compArray);
+
+        // Obtener jugadores para la auditoría
+        const responsePlayers = await api.get('/usuarios', { params: { role: 'jugador', per_page: 1000 } });
+        const allPlayers = responsePlayers.data?.data || responsePlayers.data || [];
+
+        // Calcular auditoría de jugadores
+        const missing = [];
+        allPlayers.forEach(p => {
+          const missingEa = !p.id_ea || p.id_ea.trim() === '';
+          const missingGt = !p.gamertag || p.gamertag.trim() === '';
+          if (missingEa || missingGt) {
+            missing.push({
+              ...p,
+              missingEa,
+              missingGt
+            });
+          }
+        });
+
+        // Agrupamiento por similitud
+        const playersWithGt = allPlayers.filter(p => p.gamertag && p.gamertag.trim() !== '');
+        const visited = new Set();
+        const similarGroups = [];
+
+        const getLevenshteinDistance = (a, b) => {
+          const matrix = [];
+          for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+          for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+          for (let i = 1; i <= b.length; i++) {
+            for (let j = 1; j <= a.length; j++) {
+              if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+              } else {
+                matrix[i][j] = Math.min(
+                  matrix[i - 1][j - 1] + 1,
+                  matrix[i][j - 1] + 1,
+                  matrix[i - 1][j] + 1
+                );
+              }
+            }
+          }
+          return matrix[b.length][a.length];
+        };
+
+        const isSimilar = (gt1, gt2) => {
+          if (!gt1 || !gt2) return false;
+          const clean = (str) => {
+            return str
+              .toLowerCase()
+              .replace(/[\s\._\-]/g, '')
+              .replace(/0/g, 'o')
+              .replace(/1/g, 'i')
+              .replace(/3/g, 'e')
+              .replace(/4/g, 'a')
+              .replace(/5/g, 's')
+              .replace(/7/g, 't')
+              .replace(/8/g, 'b');
+          };
+          const c1 = clean(gt1);
+          const c2 = clean(gt2);
+          if (c1 === c2) return true;
+          
+          const dist = getLevenshteinDistance(c1, c2);
+          if (dist <= 2 && Math.min(c1.length, c2.length) >= 4) {
+            return true;
+          }
+          return false;
+        };
+
+        for (let i = 0; i < playersWithGt.length; i++) {
+          const p1 = playersWithGt[i];
+          if (visited.has(p1.id)) continue;
+
+          const currentGroup = [p1];
+          for (let j = i + 1; j < playersWithGt.length; j++) {
+            const p2 = playersWithGt[j];
+            if (visited.has(p2.id)) continue;
+
+            if (isSimilar(p1.gamertag, p2.gamertag)) {
+              currentGroup.push(p2);
+            }
+          }
+
+          if (currentGroup.length > 1) {
+            currentGroup.forEach(p => visited.add(p.id));
+            similarGroups.push(currentGroup);
+          }
+        }
+
+        setPlayersAudit({
+          missingData: missing,
+          similarGroups: similarGroups
+        });
       } catch (error) {
         console.error("Error al obtener estadísticas de organizador:", error);
       } finally {
@@ -120,7 +214,7 @@ export default function DashboardOrganizador() {
               </p>
             </div>
 
-            {/* Selector de pestañas (6 vistas) */}
+            {/* Selector de pestañas (7 vistas) */}
             <div className="flex flex-wrap gap-2 border-b border-border/20 pb-3">
               {[
                 { id: 'perfil', label: '🏢 Perfil & Orgs', count: (stats.audits?.perfil?.usuario?.length || 0) + (stats.audits?.perfil?.organizaciones?.reduce((acc, o) => acc + (o.campos_faltantes?.length || 0), 0) || 0) },
@@ -129,6 +223,7 @@ export default function DashboardOrganizador() {
                 { id: 'partidos', label: '🏟️ Falta Reporte', count: stats.audits?.partidos?.length || 0 },
                 { id: 'temporadas', label: '📅 Temporadas', count: stats.audits?.temporadas?.length || 0 },
                 { id: 'competencias', label: '🏆 Competencias', count: stats.audits?.competencias?.length || 0 },
+                { id: 'jugadores', label: '🎮 Auditoría Jugadores', count: playersAudit.missingData.length + playersAudit.similarGroups.length },
               ].map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
@@ -207,7 +302,7 @@ export default function DashboardOrganizador() {
                 <div className="space-y-4">
                   <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">👥 Auditoría de Equipos (Plantillas y Capitanes)</h4>
                   {stats.audits?.equipos?.length === 0 ? (
-                    <p className="text-xs text-green-500 font-bold flex items-center gap-1">✅ Todos los equipos participantes cuentan con plantillas registradas y capitán asignado.</p>
+                    <p className="text-xs text-green-500 font-bold flex items-center gap-1">✅ Todos los equipos participantes cuentan con plantillas, capitán asignado y EA ID registrado.</p>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {stats.audits.equipos.map((warning, idx) => (
@@ -218,7 +313,7 @@ export default function DashboardOrganizador() {
                             <span className="text-[11px] text-destructive/90 mt-1 font-medium">{warning.mensaje}</span>
                           </div>
                           <Badge variant="error" className="uppercase text-[8px] font-black tracking-wider shrink-0">
-                            {warning.tipo === 'plantilla_vacia' ? 'Sin Roster' : 'Sin Cap'}
+                            {warning.tipo === 'plantilla_vacia' ? 'Sin Roster' : warning.tipo === 'sin_capitan' ? 'Sin Cap' : 'Sin EA ID'}
                           </Badge>
                         </div>
                       ))}
@@ -354,6 +449,90 @@ export default function DashboardOrganizador() {
                       ))}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* VISTA 7: Auditoría de Jugadores */}
+              {activeTab === 'jugadores' && (
+                <div className="space-y-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-border/10 pb-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">🎮 Auditoría y Control de Calidad de Jugadores</h4>
+                      <p className="text-xs text-muted-foreground">Verificación de identificadores y detección de posibles cuentas similares o duplicadas.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Tarjeta 1: Datos Faltantes */}
+                    <div className="space-y-3">
+                      <h5 className="text-xs font-black text-foreground uppercase tracking-wider flex items-center gap-1.5 text-amber-500">
+                        ⚠️ Fichas Incompletas ({playersAudit.missingData.length})
+                      </h5>
+                      {playersAudit.missingData.length === 0 ? (
+                        <p className="text-xs text-green-500 font-bold bg-green-500/5 border border-green-500/10 rounded-xl p-4">
+                          ✅ Todos los jugadores registrados tienen completo su GamerTAG y EA ID.
+                        </p>
+                      ) : (
+                        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                          {playersAudit.missingData.map((player) => (
+                            <div key={player.id} className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl flex items-center justify-between gap-3">
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-xs font-bold text-foreground truncate">{player.name}</span>
+                                <span className="text-[10px] text-muted-foreground truncate">{player.email}</span>
+                                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                  {player.missingGt && (
+                                    <span className="text-[8px] font-black uppercase tracking-wider bg-destructive/20 text-destructive border border-destructive/30 px-1.5 py-0.5 rounded">
+                                      Falta GamerTAG
+                                    </span>
+                                  )}
+                                  {player.missingEa && (
+                                    <span className="text-[8px] font-black uppercase tracking-wider bg-destructive/20 text-destructive border border-destructive/30 px-1.5 py-0.5 rounded">
+                                      Falta EA ID
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Tarjeta 2: Similitud / Duplicados */}
+                    <div className="space-y-3">
+                      <h5 className="text-xs font-black text-foreground uppercase tracking-wider flex items-center gap-1.5 text-destructive animate-pulse">
+                        🚨 Advertencia de GamerTAGs Similares ({playersAudit.similarGroups.length})
+                      </h5>
+                      {playersAudit.similarGroups.length === 0 ? (
+                        <p className="text-xs text-green-500 font-bold bg-green-500/5 border border-green-500/10 rounded-xl p-4">
+                          ✅ No se han detectado GamerTAGs sospechosamente similares o duplicados.
+                        </p>
+                      ) : (
+                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                          {playersAudit.similarGroups.map((group, idx) => (
+                            <div key={idx} className="p-4 bg-destructive/5 border border-destructive/20 rounded-xl space-y-2">
+                              <p className="text-xs text-destructive font-black uppercase tracking-wide flex items-center gap-1">
+                                📢 Posible Conflicto / Duplicado
+                              </p>
+                              <div className="divide-y divide-border/10">
+                                {group.map((player) => (
+                                  <div key={player.id} className="py-2 first:pt-0 last:pb-0 flex items-center justify-between text-xs gap-3">
+                                    <div className="min-w-0">
+                                      <span className="font-bold text-foreground block truncate">{player.gamertag}</span>
+                                      <span className="text-[10px] text-muted-foreground block truncate">{player.name} ({player.email})</span>
+                                    </div>
+                                    <span className="text-[9px] bg-card border border-border/50 text-muted-foreground px-2 py-0.5 rounded uppercase font-mono shrink-0">
+                                      ID: {player.id}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 

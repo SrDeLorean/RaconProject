@@ -11,6 +11,23 @@ export default function DetalleJugador() {
   const [activeTab, setActiveTab] = useState('stats'); // 'stats' | 'competencias' | 'traspasos' | 'calendario' | 'historia'
   const [selectedOrg, setSelectedOrg] = useState('todas');
   const [selectedComp, setSelectedComp] = useState('todas');
+  const [activeStatSubTab, setActiveStatSubTab] = useState('ataque');
+
+  useEffect(() => {
+    if (data) {
+      const rawPos = data.user?.posicion || data.contrato_activo?.posicion_bloque || 'MC';
+      const pStr = rawPos.toUpperCase();
+      if (['POR', 'GK', 'PO', 'GOALKEEPER'].includes(pStr)) {
+        setActiveStatSubTab('porteria');
+      } else if (['DFC', 'CB', 'LB', 'RB', 'DF', 'DEF', 'LI', 'LD', 'DD', 'DI', 'DEFENDER'].includes(pStr)) {
+        setActiveStatSubTab('defensa');
+      } else if (['MC', 'MCO', 'MCD', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'MED', 'MCI', 'MCR', 'MDD', 'MDI', 'MOD', 'MOI', 'MIDFIELDER'].includes(pStr)) {
+        setActiveStatSubTab('pase');
+      } else {
+        setActiveStatSubTab('ataque');
+      }
+    }
+  }, [data]);
 
   useEffect(() => {
     const fetchJugador = async () => {
@@ -42,49 +59,73 @@ export default function DetalleJugador() {
     const pStr = (pos || '').toUpperCase();
     if (['POR', 'GK', 'PO', 'GOALKEEPER'].includes(pStr)) {
       return {
-        glow: 'group-hover:shadow-[0_12px_30px_-10px_rgba(245,158,11,0.15)] group-hover:border-amber-500/40',
-        avatarGlow: 'border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.2)]',
+        glow: 'hover:border-amber-500/40 hover:shadow-[0_15px_40px_-12px_rgba(245,158,11,0.25)]',
+        avatarGlow: 'border-amber-500/40 shadow-[0_0_20px_rgba(245,158,11,0.3)]',
         bracketColor: 'border-amber-500/60',
-        posColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-        barColor: 'bg-amber-500',
+        brackets: 'group-hover:border-amber-500/70',
+        posColor: 'text-amber-500 bg-amber-500/10 border-amber-500/25',
+        barColor: 'bg-gradient-to-r from-amber-600 to-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.3)]',
         accentText: 'text-amber-400',
         textColor: 'text-amber-500',
-        label: 'Portero'
+        label: 'Portero',
+        tabActive: 'bg-amber-500 text-black shadow-[0_0_20px_rgba(245,158,11,0.4)]',
+        borderAccent: 'border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)]',
+        glowBg: 'bg-amber-500',
+        glowRing: 'border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.4)]',
+        pulseGlow: 'bg-amber-500'
       };
     }
     if (['DFC', 'CB', 'LB', 'RB', 'DF', 'DEF', 'LI', 'LD', 'DD', 'DI', 'DEFENDER'].includes(pStr)) {
       return {
-        glow: 'group-hover:shadow-[0_12px_30px_-10px_rgba(59,130,246,0.15)] group-hover:border-blue-500/40',
-        avatarGlow: 'border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]',
+        glow: 'hover:border-blue-500/40 hover:shadow-[0_15px_40px_-12px_rgba(59,130,246,0.25)]',
+        avatarGlow: 'border-blue-500/40 shadow-[0_0_20px_rgba(59,130,246,0.3)]',
         bracketColor: 'border-blue-500/60',
-        posColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
-        barColor: 'bg-blue-500',
+        brackets: 'group-hover:border-blue-500/70',
+        posColor: 'text-blue-500 bg-blue-500/10 border-blue-500/25',
+        barColor: 'bg-gradient-to-r from-blue-600 to-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.3)]',
         accentText: 'text-blue-400',
         textColor: 'text-blue-500',
-        label: 'Defensa'
+        label: 'Defensa',
+        tabActive: 'bg-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.4)]',
+        borderAccent: 'border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.15)]',
+        glowBg: 'bg-blue-500',
+        glowRing: 'border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.4)]',
+        pulseGlow: 'bg-blue-500'
       };
     }
     if (['MC', 'MCO', 'MCD', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'MED', 'MCI', 'MCR', 'MDD', 'MDI', 'MOD', 'MOI', 'MIDFIELDER'].includes(pStr)) {
       return {
-        glow: 'group-hover:shadow-[0_12px_30px_-10px_rgba(16,185,129,0.15)] group-hover:border-emerald-500/40',
-        avatarGlow: 'border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]',
+        glow: 'hover:border-emerald-500/40 hover:shadow-[0_15px_40px_-12px_rgba(16,185,129,0.25)]',
+        avatarGlow: 'border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.3)]',
         bracketColor: 'border-emerald-500/60',
-        posColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
-        barColor: 'bg-emerald-500',
+        brackets: 'group-hover:border-emerald-500/70',
+        posColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/25',
+        barColor: 'bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.3)]',
         accentText: 'text-emerald-400',
         textColor: 'text-emerald-500',
-        label: 'Mediocentro'
+        label: 'Mediocentro',
+        tabActive: 'bg-emerald-500 text-black shadow-[0_0_20px_rgba(16,185,129,0.4)]',
+        borderAccent: 'border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.15)]',
+        glowBg: 'bg-emerald-500',
+        glowRing: 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.4)]',
+        pulseGlow: 'bg-emerald-500'
       };
     }
     return {
-      glow: 'group-hover:shadow-[0_12px_30px_-10px_rgba(239,68,68,0.15)] group-hover:border-primary/40',
-      avatarGlow: 'border-primary/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]',
+      glow: 'hover:border-rose-500/40 hover:shadow-[0_15px_40px_-12px_rgba(239,68,68,0.25)]',
+      avatarGlow: 'border-rose-500/40 shadow-[0_0_20px_rgba(239,68,68,0.3)]',
       bracketColor: 'border-primary/60',
-      posColor: 'text-primary bg-primary/10 border-primary/20',
-      barColor: 'bg-primary',
-      accentText: 'text-primary',
-      textColor: 'text-primary',
-      label: 'Delantero'
+      brackets: 'group-hover:border-rose-500/70',
+      posColor: 'text-rose-500 bg-rose-500/10 border-rose-500/25',
+      barColor: 'bg-gradient-to-r from-rose-600 to-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.3)]',
+      accentText: 'text-rose-400',
+      textColor: 'text-rose-500',
+      label: 'Delantero',
+      tabActive: 'bg-rose-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)]',
+      borderAccent: 'border-rose-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)]',
+      glowBg: 'bg-rose-500',
+      glowRing: 'border-rose-500/50 shadow-[0_0_15px_rgba(239,68,68,0.4)]',
+      pulseGlow: 'bg-rose-500'
     };
   };
 
@@ -106,8 +147,8 @@ export default function DetalleJugador() {
   if (!data) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 text-center">
-        <span className="text-4xl">👤</span>
-        <h2 className="text-xl font-display font-black text-foreground uppercase">Competidor No Encontrado</h2>
+        <span className="text-4xl animate-bounce">👤</span>
+        <h2 className="text-xl font-display font-black text-foreground uppercase tracking-wider">Competidor No Encontrado</h2>
         <Link to="/jugadores" className="text-xs text-primary font-bold uppercase hover:underline">Volver al Directorio</Link>
       </div>
     );
@@ -223,6 +264,115 @@ export default function DetalleJugador() {
     return statsList;
   };
 
+  const specItems = [
+    { 
+      label: 'Demarcación', 
+      value: user.posicion || contrato_activo?.posicion_bloque || 'MC',
+      icon: (
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+        </svg>
+      )
+    },
+    { 
+      label: 'Nacionalidad', 
+      value: user.nacionalidad || 'Chilena',
+      icon: (
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 100-18.008 9.004 9.004 0 000 18.008zm0 0V3m0 18c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m-9 9h18" />
+        </svg>
+      )
+    },
+    { 
+      label: 'Estatura', 
+      value: user.altura ? `${user.altura} cm` : '—',
+      icon: (
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 10.5V18M15 10.5V18M3 18.75V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25v13.5A2.25 2.25 0 0118.75 21H5.25A2.25 2.25 0 013 18.75z" />
+        </svg>
+      )
+    },
+    { 
+      label: 'Peso', 
+      value: user.peso ? `${user.peso} kg` : '—',
+      icon: (
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18M3 12h18" />
+        </svg>
+      )
+    }
+  ];
+
+  const statsSections = [
+    {
+      id: 'ataque',
+      title: '🎯 FASE OFENSIVA Y REMATES',
+      color: 'text-rose-500',
+      barColor: 'bg-gradient-to-r from-rose-600 to-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.45)]',
+      items: [
+        { label: 'Goles Totales', value: estadisticas?.total_goles || 0, max: 20 },
+        { label: 'Tiros Totales', value: estadisticas?.total_tiros || 0, max: 80 },
+        { label: 'Precisión de Tiro', value: `${Math.round(estadisticas?.avg_precision_tiro || 0)}%`, pct: Math.round(estadisticas?.avg_precision_tiro || 0) }
+      ]
+    },
+    {
+      id: 'pase',
+      title: '🪄 FASE ASOCIATIVA Y DISTRIBUCIÓN',
+      color: 'text-emerald-500',
+      barColor: 'bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.45)]',
+      items: [
+        { label: 'Asistencias', value: estadisticas?.total_asistencias || 0, max: 15 },
+        { label: 'Pases Completados', value: estadisticas?.total_pases_completados || 0, max: 400 },
+        { label: 'Pases Intentados', value: estadisticas?.total_pases_intentados || 0, max: 500 },
+        { label: 'Precisión de Pases', value: `${Math.round(estadisticas?.avg_precision_pases || 0)}%`, pct: Math.round(estadisticas?.avg_precision_pases || 0) }
+      ]
+    },
+    {
+      id: 'defensa',
+      title: '🛡️ FASE DEFENSIVA Y PREVENCIÓN',
+      color: 'text-blue-500',
+      barColor: 'bg-gradient-to-r from-blue-600 to-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.45)]',
+      items: [
+        { label: 'Entradas Exitosas', value: estadisticas?.total_entradas || 0, max: 80 },
+        { label: 'Entradas Intentadas', value: estadisticas?.total_entradas_intentadas || 0, max: 120 },
+        { label: 'Éxito de Entradas', value: `${Math.round(estadisticas?.avg_exito_entradas || 0)}%`, pct: Math.round(estadisticas?.avg_exito_entradas || 0) },
+        { label: 'Desvíos Totales', value: estadisticas?.total_desvios || 0, max: 40 }
+      ]
+    },
+    {
+      id: 'porteria',
+      title: '🧤 REGISTRO DE ARCO Y ATAJADAS',
+      color: 'text-amber-500',
+      barColor: 'bg-gradient-to-r from-amber-600 to-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.45)]',
+      items: [
+        { label: 'Atajadas', value: estadisticas?.total_atajadas || 0, max: 100 },
+        { label: 'Goles Recibidos', value: estadisticas?.total_goles_recibidos || 0, max: 50, isNegative: true },
+        { label: 'Atajadas Colocación', value: estadisticas?.total_atajadas_buena_colocacion || 0, max: 40 },
+        { label: 'Atajadas Volada', value: estadisticas?.total_atajadas_volada || 0, max: 40 },
+        { label: 'Atajadas Reflejos', value: estadisticas?.total_atajadas_reflejos || 0, max: 40 },
+        { 
+          label: 'Despejes / Centros Cortados', 
+          value: `${estadisticas?.total_despejes_punos || 0} / ${estadisticas?.total_centros_cortados || 0}`, 
+          valForBar: (estadisticas?.total_despejes_punos || 0) + (estadisticas?.total_centros_cortados || 0), 
+          max: 30 
+        }
+      ]
+    },
+    {
+      id: 'fisico',
+      title: '⏱️ TELEMETRÍA FÍSICA Y LATENCIA',
+      color: 'text-purple-500',
+      barColor: 'bg-gradient-to-r from-purple-600 to-fuchsia-400 shadow-[0_0_8px_rgba(168,85,247,0.45)]',
+      items: [
+        { label: 'Segundos Jugados', value: estadisticas?.total_segundos_jugados || 0, max: 15000 },
+        { label: 'Tiempo Juego Motor', value: estadisticas?.total_tiempo_juego_motor || 0, max: 15000 },
+        { label: 'Tiempo Inactivo', value: estadisticas?.total_tiempo_inactivo || 0, max: 5000 },
+        { label: 'Tiempo Real Lag', value: estadisticas?.total_tiempo_real_lag || 0, max: 2000 },
+        { label: 'Tarjetas Rojas', value: estadisticas?.total_rojas || 0, max: 5, isNegative: true }
+      ]
+    }
+  ];
+
   return (
     <div className="relative min-h-screen bg-background pt-28 pb-16 overflow-hidden">
       {/* Fondo Inmersivo HUD */}
@@ -230,25 +380,30 @@ export default function DetalleJugador() {
         className="absolute inset-0 bg-cover bg-center z-0"
         style={{ backgroundImage: "url('https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1920&auto=format&fit=crop')" }}
       >
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-background/85 to-background z-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-background/90 to-background z-10"></div>
       </div>
       
       {/* Resplandores ambientales según posición */}
-      <div className={`absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[350px] md:w-[600px] h-[350px] md:h-[600px] opacity-[0.04] blur-[130px] rounded-full pointer-events-none z-10 bg-current ${posStyles.textColor}`}></div>
+      <div className={`absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[350px] md:w-[600px] h-[350px] md:h-[600px] opacity-[0.06] blur-[130px] rounded-full pointer-events-none z-10 bg-current ${posStyles.textColor}`}></div>
 
-      <div className="relative z-20 max-w-5xl mx-auto px-6 lg:px-10 space-y-8 animate-fade-in-up">
+      <div className="relative z-20 max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 space-y-8 animate-fade-in-up">
         
         {/* Ficha Principal del Jugador */}
-        <div className="group relative border border-border/40 bg-card/15 backdrop-blur-md rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-8 shadow-2xl transition-all duration-300 hover:border-primary/25">
+        <div className={`group relative border border-border/40 bg-card/15 backdrop-blur-md rounded-2xl p-5 sm:p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-6 sm:gap-8 shadow-2xl transition-all duration-300 ${posStyles.glow}`}>
+          {/* Cyberpunk Grid Background Overlay */}
+          <div className="absolute inset-0 rounded-2xl pointer-events-none opacity-20" style={{ backgroundImage: 'linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
+          
           {/* Brackets decorativos HUD */}
-          <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-transparent transition-colors duration-300 group-hover:border-primary/45 rounded-tl-md pointer-events-none"></div>
-          <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-transparent transition-colors duration-300 group-hover:border-primary/45 rounded-tr-md pointer-events-none"></div>
-          <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-transparent transition-colors duration-300 group-hover:border-primary/45 rounded-bl-md pointer-events-none"></div>
-          <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-transparent transition-colors duration-300 group-hover:border-primary/45 rounded-br-md pointer-events-none"></div>
+          <div className={`absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-transparent transition-all duration-300 group-hover:${posStyles.brackets} rounded-tl-md pointer-events-none`}></div>
+          <div className={`absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-transparent transition-all duration-300 group-hover:${posStyles.brackets} rounded-tr-md pointer-events-none`}></div>
+          <div className={`absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-transparent transition-all duration-300 group-hover:${posStyles.brackets} rounded-bl-md pointer-events-none`}></div>
+          <div className={`absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-transparent transition-all duration-300 group-hover:${posStyles.brackets} rounded-br-md pointer-events-none`}></div>
 
           {/* Avatar del Jugador */}
-          <div className="relative shrink-0">
-            <div className={`w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden border bg-card/30 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-[1.02] relative ${posStyles.avatarGlow}`}>
+          <div className="relative shrink-0 group/avatar">
+            <div className={`w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-2xl overflow-hidden border bg-card/30 flex items-center justify-center shrink-0 transition-all duration-500 group-hover:scale-[1.03] group-hover:rotate-1 relative ${posStyles.avatarGlow}`}>
+              {/* Dynamic scanning laser line */}
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-foreground/[0.04] to-transparent w-full h-1/2 animate-scanline pointer-events-none"></div>
               {user.foto ? (
                 <img 
                   src={getImageUrl(user.foto)} 
@@ -263,14 +418,14 @@ export default function DetalleJugador() {
             </div>
 
             {contrato_activo?.dorsal && (
-              <span className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground text-xs font-mono font-black w-9 h-9 rounded-xl flex items-center justify-center border-2 border-background shadow-xl">
+              <span className={`absolute -bottom-2 -right-2 ${posStyles.glowBg} text-black dark:text-foreground text-xs font-mono font-black w-9 h-9 rounded-xl flex items-center justify-center border-2 border-background shadow-xl scale-100 group-hover/avatar:scale-110 transition-transform duration-300`}>
                 N°{contrato_activo.dorsal}
               </span>
             )}
           </div>
 
           {/* Información e Identidades */}
-          <div className="flex-1 text-center md:text-left space-y-4 min-w-0 w-full">
+          <div className="flex-1 text-center md:text-left space-y-4 min-w-0 w-full z-10">
             <div className="space-y-1">
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
                 <Badge variant="primary" className={`text-[10px] font-mono px-3 py-0.5 rounded font-black tracking-wider uppercase border ${posStyles.posColor}`}>
@@ -281,11 +436,11 @@ export default function DetalleJugador() {
                 </Badge>
               </div>
               
-              <h1 className="text-3xl md:text-4.5xl font-display font-extrabold uppercase tracking-tight text-foreground text-glow-primary mt-1 truncate">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold uppercase tracking-tight text-foreground text-glow-primary mt-1 truncate">
                 {user.name}
               </h1>
               
-              <span className="text-xs text-primary/95 font-mono block">
+              <span className="text-xs text-primary/90 font-mono block">
                 🎮 EA ID: <span className="text-foreground font-semibold">{user.gamertag || 'N/A'}</span>
               </span>
             </div>
@@ -301,7 +456,7 @@ export default function DetalleJugador() {
                       href={url} 
                       target="_blank" 
                       rel="noreferrer" 
-                      className="text-[9px] bg-background/65 border border-border/30 px-3 py-1.5 rounded-lg font-mono font-bold uppercase hover:bg-primary/10 hover:text-primary hover:border-primary/45 hover:shadow-[0_0_12px_hsla(var(--primary),0.1)] transition-all duration-300"
+                      className="text-[9px] bg-background/65 border border-border/30 px-3 py-1.5 rounded-lg font-mono font-bold uppercase hover:bg-primary/10 hover:text-primary hover:border-primary/45 hover:shadow-[0_0_12px_hsla(var(--primary),0.15)] hover:-translate-y-0.5 transition-all duration-300"
                     >
                       🔗 {red}
                     </a>
@@ -313,17 +468,16 @@ export default function DetalleJugador() {
             <div className="h-px bg-border/20"></div>
 
             {/* Ficha Física y Detalles */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
-              {[
-                { label: 'Demarcación', value: user.posicion || contrato_activo?.posicion_bloque || 'MC' },
-                { label: 'Nacionalidad', value: user.nacionalidad || 'Chilena' },
-                { label: 'Estatura', value: user.altura ? `${user.altura} cm` : '—' },
-                { label: 'Peso', value: user.peso ? `${user.peso} kg` : '—' },
-              ].map((item, idx) => (
-                <div key={idx} className="relative bg-background/35 border border-border/30 rounded-xl p-2.5 sm:p-3.5 space-y-0.5 group/spec transition-colors hover:border-primary/15">
-                  <div className="absolute top-0 right-0 w-5 h-5 bg-foreground/[0.005] pointer-events-none"></div>
-                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block font-mono">{item.label}</span>
-                  <strong className="text-sm font-black text-foreground uppercase block font-mono tracking-wide">{item.value}</strong>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-left w-full">
+              {specItems.map((item, idx) => (
+                <div key={idx} className="relative bg-background/40 border border-border/30 rounded-xl p-2.5 sm:p-4 space-y-1 sm:space-y-1.5 group/spec transition-all duration-300 hover:border-primary/20 hover:bg-background/60 hover:-translate-y-0.5 shadow-sm">
+                  {/* Subtle decoration line in corner */}
+                  <div className={`absolute top-0 right-0 w-3 h-3 border-t border-r border-transparent group-hover/spec:${posStyles.brackets} rounded-tr-md pointer-events-none transition-colors duration-300`}></div>
+                  <div className="flex items-center gap-1.5 text-muted-foreground group-hover/spec:text-foreground transition-colors duration-300">
+                    {item.icon}
+                    <span className="text-[9px] font-bold uppercase tracking-widest font-mono">{item.label}</span>
+                  </div>
+                  <strong className="text-sm sm:text-base font-black text-foreground uppercase block font-mono tracking-wide mt-0.5 truncate">{item.value}</strong>
                 </div>
               ))}
             </div>
@@ -331,7 +485,7 @@ export default function DetalleJugador() {
         </div>
 
         {/* Selector de Secciones (Tabs) */}
-        <div className="flex border border-border/40 p-1 bg-card/25 backdrop-blur-md rounded-2xl max-w-3xl mx-auto shadow-xl overflow-x-auto gap-1">
+        <div className="flex border border-border/40 p-1 bg-card/20 backdrop-blur-md rounded-2xl max-w-3xl mx-auto shadow-xl overflow-x-auto gap-1 no-scrollbar">
           {[
             { id: 'stats', label: '📊 Rendimiento' },
             { id: 'competencias', label: '🏆 Torneos y Club' },
@@ -342,9 +496,9 @@ export default function DetalleJugador() {
             <button 
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 min-w-[120px] py-3 px-4 text-xs font-condensed tracking-widest font-black uppercase rounded-xl transition-all duration-300 cursor-pointer whitespace-nowrap ${
+              className={`flex-1 min-w-[110px] py-2.5 px-3 sm:py-3 sm:px-4 text-[10px] sm:text-xs font-condensed tracking-widest font-black uppercase rounded-xl transition-all duration-300 cursor-pointer whitespace-nowrap ${
                 activeTab === tab.id 
-                  ? 'bg-primary text-primary-foreground shadow-[0_0_15px_hsla(var(--primary),0.3)]' 
+                  ? posStyles.tabActive 
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
               }`}
             >
@@ -358,7 +512,7 @@ export default function DetalleJugador() {
           <div className="space-y-6 animate-fade-in">
             
             {/* Filtros de Telemetría Táctica */}
-            <div className="border border-border/40 bg-card/15 backdrop-blur-md rounded-2xl p-5 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="border border-border/40 bg-card/15 backdrop-blur-md rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="text-left space-y-1 shrink-0 w-full md:w-auto">
                 <span className="text-[9px] font-mono font-black text-muted-foreground uppercase tracking-widest block">FILTROS DE TELEMETRÍA TÁCTICA</span>
                 <h4 className="text-sm font-display font-black text-foreground uppercase tracking-wide">Ámbito de Rendimiento</h4>
@@ -373,7 +527,7 @@ export default function DetalleJugador() {
                       setSelectedOrg(e.target.value);
                       setSelectedComp('todas');
                     }}
-                    className="w-full bg-background/55 border border-border/45 px-3 py-2 rounded-xl text-xs font-mono font-bold text-foreground focus:outline-none focus:border-primary/55 cursor-pointer uppercase select-none"
+                    className="w-full bg-background/55 border border-border/45 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold text-foreground focus:outline-none focus:border-primary/55 cursor-pointer uppercase select-none focus:ring-1 focus:ring-primary/25"
                   >
                     <option value="todas">🌍 Todas las Ligas</option>
                     {filtros_disponibles.organizaciones?.map((org) => (
@@ -389,7 +543,7 @@ export default function DetalleJugador() {
                   <select
                     value={selectedComp}
                     onChange={(e) => setSelectedComp(e.target.value)}
-                    className="w-full bg-background/55 border border-border/45 px-3 py-2 rounded-xl text-xs font-mono font-bold text-foreground focus:outline-none focus:border-primary/55 cursor-pointer uppercase select-none"
+                    className="w-full bg-background/55 border border-border/45 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold text-foreground focus:outline-none focus:border-primary/55 cursor-pointer uppercase select-none focus:ring-1 focus:ring-primary/25"
                   >
                     <option value="todas">⚔️ Todas las Competencias</option>
                     {filtros_disponibles.competencias
@@ -408,7 +562,13 @@ export default function DetalleJugador() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Club Actual e Info Rápida */}
               <div className="lg:col-span-1 space-y-6 order-2 lg:order-1">
-                <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-5 space-y-4 shadow-md relative overflow-hidden">
+                <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-4 sm:p-5 space-y-4 shadow-md relative overflow-hidden group/club-box">
+                  {/* Decortive hud corner frames */}
+                  <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-border/30 rounded-tl-sm pointer-events-none"></div>
+                  <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-border/30 rounded-tr-sm pointer-events-none"></div>
+                  <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-border/30 rounded-bl-sm pointer-events-none"></div>
+                  <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-border/30 rounded-br-sm pointer-events-none"></div>
+
                   <h3 className="text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2">
                     🛡️ VINCULACIÓN ACTUAL
                   </h3>
@@ -419,10 +579,10 @@ export default function DetalleJugador() {
                           <img 
                             src={getImageUrl(contrato_activo.equipo_logo)} 
                             alt={contrato_activo.equipo_nombre} 
-                            className="w-14 h-14 rounded-xl object-cover border border-border/40 shrink-0 shadow" 
+                            className="w-14 h-14 rounded-xl object-cover border border-border/40 shrink-0 shadow transition-transform duration-300 group-hover/club-box:scale-105" 
                           />
                         ) : (
-                          <div className="w-14 h-14 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center font-display font-black text-primary text-xl uppercase shrink-0">
+                          <div className="w-14 h-14 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center font-display font-black text-primary text-xl uppercase shrink-0 transition-transform duration-300 group-hover/club-box:scale-105">
                             {contrato_activo.equipo_nombre?.charAt(0)}
                           </div>
                         )}
@@ -442,7 +602,7 @@ export default function DetalleJugador() {
                   ) : (
                     <div className="flex flex-col gap-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-14 h-14 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 text-2xl shrink-0 shadow">
+                        <div className="w-14 h-14 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 text-2xl shrink-0 shadow animate-pulse">
                           🤝
                         </div>
                         <div className="min-w-0">
@@ -454,7 +614,7 @@ export default function DetalleJugador() {
                           </span>
                         </div>
                       </div>
-                      <div className="w-full text-center bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-black font-mono py-2.5 rounded-xl animate-pulse">
+                      <div className="w-full text-center bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-black font-mono py-2.5 rounded-xl animate-pulse shadow-sm">
                         ⚡ DISPONIBLE PARA FICHAJE
                       </div>
                     </div>
@@ -462,22 +622,49 @@ export default function DetalleJugador() {
                 </div>
 
                 {/* Carta OVR de Atributos */}
-                <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-6 shadow-md relative overflow-hidden flex flex-col items-center justify-center text-center space-y-4">
+                <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-5 sm:p-6 shadow-md relative overflow-hidden flex flex-col items-center justify-center text-center space-y-5">
                   <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 border-border/30 pointer-events-none"></div>
                   <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-border/30 pointer-events-none"></div>
                   
-                  <span className="text-[9px] font-mono font-black text-muted-foreground uppercase tracking-widest border-b border-border/20 pb-1.5 w-full">TELEMETRÍA TÁCTICA</span>
+                  <span className="text-[9px] font-mono font-black text-muted-foreground uppercase tracking-widest border-b border-border/20 pb-1.5 w-full">TELEMETRÍA GENERAL OVR</span>
                   
-                  {/* HUD OVR Badge */}
-                  <div className="relative flex items-center justify-center mt-2">
-                    <div className={`w-28 h-28 rounded-full border-4 flex flex-col items-center justify-center bg-background/45 ${posStyles.avatarGlow}`}>
-                      <span className="text-xs font-mono font-bold text-muted-foreground leading-none">OVR</span>
-                      <strong className="text-4xl font-display font-extrabold text-foreground leading-tight mt-0.5">
+                  {/* HUD OVR Badge Gauge */}
+                  <div className="relative flex items-center justify-center mt-3">
+                    {/* SVG Gauge */}
+                    <svg className="w-28 h-28 sm:w-32 sm:h-32 transform -rotate-90">
+                      {/* Track circle */}
+                      <circle
+                        cx="56"
+                        cy="56"
+                        r="46"
+                        className="stroke-muted/20"
+                        strokeWidth="5"
+                        fill="transparent"
+                      />
+                      {/* Progress circle with position color stroke */}
+                      <circle
+                        cx="56"
+                        cy="56"
+                        r="46"
+                        className={`transition-all duration-1000 ease-out stroke-current ${posStyles.textColor} drop-shadow-[0_0_8px_currentColor]`}
+                        strokeWidth="5"
+                        strokeLinecap="round"
+                        fill="transparent"
+                        strokeDasharray="289"
+                        strokeDashoffset={289 - (Math.min(10, Number(estadisticas.promedio_valoracion || 0)) / 10) * 289}
+                      />
+                    </svg>
+                    
+                    {/* Central Value */}
+                    <div className="absolute flex flex-col items-center justify-center text-center">
+                      <span className="text-[9px] font-mono font-bold text-muted-foreground tracking-wider uppercase leading-none">OVR</span>
+                      <strong className={`text-3xl sm:text-4xl font-display font-extrabold leading-none mt-1 ${posStyles.accentText}`}>
                         {estadisticas.promedio_valoracion ? Number(estadisticas.promedio_valoracion).toFixed(1) : '—'}
                       </strong>
                     </div>
-                    {/* Decorative glowing dots */}
-                    <div className={`absolute w-2 h-2 rounded-full -top-1 left-1/2 -translate-x-1/2 animate-ping bg-current ${posStyles.textColor}`}></div>
+
+                    {/* Dotted HUD outer ring */}
+                    <div className="absolute inset-0 rounded-full border border-dashed border-border/20 scale-[1.08] animate-spin [animation-duration:25s] pointer-events-none"></div>
                   </div>
 
                   <div className="space-y-1">
@@ -490,11 +677,11 @@ export default function DetalleJugador() {
                   </div>
 
                   <div className="w-full grid grid-cols-2 gap-2 pt-2 border-t border-border/20 text-center font-mono">
-                    <div className="bg-background/25 border border-border/20 rounded-xl p-2">
+                    <div className="bg-background/25 border border-border/20 rounded-xl p-2 hover:bg-background/40 transition-colors shadow-inner">
                       <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider block">Goles</span>
                       <strong className="text-sm font-black text-emerald-400">{estadisticas.total_goles || 0}</strong>
                     </div>
-                    <div className="bg-background/25 border border-border/20 rounded-xl p-2">
+                    <div className="bg-background/25 border border-border/20 rounded-xl p-2 hover:bg-background/40 transition-colors shadow-inner">
                       <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider block">MVPs</span>
                       <strong className="text-sm font-black text-amber-500">{estadisticas.total_mvp || 0} ⭐</strong>
                     </div>
@@ -508,16 +695,16 @@ export default function DetalleJugador() {
                 {/* Rankings Tácticos HUD */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Card Global */}
-                  <div className="relative border border-border/40 bg-card/10 backdrop-blur-md rounded-2xl p-4 sm:p-5 flex items-center justify-between overflow-hidden shadow-lg group/rank">
+                  <div className="relative border border-border/40 bg-card/10 backdrop-blur-md rounded-2xl p-4 sm:p-5 flex items-center justify-between overflow-hidden shadow-lg group/rank hover:border-primary/20 transition-all duration-300">
                     <div className="absolute top-0 right-0 w-24 h-full bg-gradient-to-l from-primary/5 to-transparent pointer-events-none"></div>
-                    <div className="space-y-1 text-left">
+                    <div className="space-y-1 text-left z-10">
                       <span className="text-[9px] font-mono font-black text-muted-foreground uppercase tracking-widest block">RANGO GLOBAL POR POSICIÓN</span>
                       <h4 className="text-xs font-display font-black text-foreground uppercase tracking-wide">Clasificación Mundial</h4>
                       <p className="text-[10px] text-muted-foreground font-mono mt-1 font-bold">
                         Categoría: <span className={posStyles.accentText}>{posGroup}</span>
                       </p>
                     </div>
-                    <div className="text-right flex flex-col items-end shrink-0">
+                    <div className="text-right flex flex-col items-end shrink-0 z-10">
                       {rank_global ? (
                         <>
                           <span className="text-3xl font-display font-extrabold text-foreground tracking-tighter">
@@ -526,7 +713,7 @@ export default function DetalleJugador() {
                           <span className="text-[9px] text-muted-foreground font-mono font-black uppercase mt-0.5">
                             de {total_global} jugadores
                           </span>
-                          <span className="text-[8px] bg-primary/15 text-primary border border-primary/25 rounded px-1.5 py-0.5 font-mono font-bold mt-2 uppercase tracking-wide">
+                          <span className="text-[8px] bg-primary/15 text-primary border border-primary/25 rounded px-1.5 py-0.5 font-mono font-bold mt-2 uppercase tracking-wide shadow-sm">
                             Top {Math.max(1, Math.round((rank_global / total_global) * 100))}%
                           </span>
                         </>
@@ -544,16 +731,16 @@ export default function DetalleJugador() {
                   </div>
 
                   {/* Card Liga */}
-                  <div className="relative border border-border/40 bg-card/10 backdrop-blur-md rounded-2xl p-4 sm:p-5 flex items-center justify-between overflow-hidden shadow-lg group/rank">
+                  <div className="relative border border-border/40 bg-card/10 backdrop-blur-md rounded-2xl p-4 sm:p-5 flex items-center justify-between overflow-hidden shadow-lg group/rank hover:border-emerald-500/20 transition-all duration-300">
                     <div className="absolute top-0 right-0 w-24 h-full bg-gradient-to-l from-emerald-500/5 to-transparent pointer-events-none"></div>
-                    <div className="space-y-1 text-left">
+                    <div className="space-y-1 text-left z-10">
                       <span className="text-[9px] font-mono font-black text-muted-foreground uppercase tracking-widest block">RANGO CIRCUITO ACTIVO</span>
                       <h4 className="text-xs font-display font-black text-foreground uppercase tracking-wide">Clasificación en Liga</h4>
                       <p className="text-[10px] text-muted-foreground font-mono mt-1 font-bold truncate max-w-[150px]">
                         Liga: <span className="text-foreground">{contrato_activo?.organizacion_nombre || 'Ninguna'}</span>
                       </p>
                     </div>
-                    <div className="text-right flex flex-col items-end shrink-0">
+                    <div className="text-right flex flex-col items-end shrink-0 z-10">
                       {rank_liga ? (
                         <>
                           <span className="text-3xl font-display font-extrabold text-foreground tracking-tighter">
@@ -562,7 +749,7 @@ export default function DetalleJugador() {
                           <span className="text-[9px] text-muted-foreground font-mono font-black uppercase mt-0.5">
                             de {total_liga} en liga
                           </span>
-                          <span className="text-[8px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 rounded px-1.5 py-0.5 font-mono font-bold mt-2 uppercase tracking-wide">
+                          <span className="text-[8px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 rounded px-1.5 py-0.5 font-mono font-bold mt-2 uppercase tracking-wide shadow-sm">
                             Top {Math.max(1, Math.round((rank_liga / total_liga) * 100))}%
                           </span>
                         </>
@@ -582,9 +769,9 @@ export default function DetalleJugador() {
 
                 {/* Líder de la Posición */}
                 {lider_posicion && lider_posicion.name && (
-                  <div className="relative border border-amber-500/30 bg-amber-500/[0.02] backdrop-blur-md rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 overflow-hidden shadow-lg group/leader">
-                    {/* Left elements: Info */}
-                    <div className="flex items-center gap-4 text-center sm:text-left">
+                  <div className="relative border border-amber-500/30 bg-amber-500/[0.02] backdrop-blur-md rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 overflow-hidden shadow-lg group/leader hover:border-amber-500/50 hover:bg-amber-500/[0.04] transition-all duration-300">
+                    <div className="absolute top-0 right-0 w-24 h-full bg-gradient-to-l from-amber-500/5 to-transparent pointer-events-none"></div>
+                    <div className="flex items-center gap-4 text-center sm:text-left z-10">
                       {/* Leader Avatar */}
                       <div className="w-12 h-12 rounded-xl border border-amber-500/30 overflow-hidden bg-background/45 flex items-center justify-center shrink-0 shadow-md">
                         {lider_posicion.foto ? (
@@ -611,7 +798,7 @@ export default function DetalleJugador() {
                     </div>
 
                     {/* Right: Rating */}
-                    <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
+                    <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto z-10">
                       <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl px-4 py-2 text-center w-full sm:w-auto">
                         <span className="text-[8px] font-bold text-amber-500 uppercase tracking-wider block font-mono">Valoración</span>
                         <strong className="text-base font-display font-black text-amber-400">{lider_posicion.avg_valoracion}</strong>
@@ -620,64 +807,67 @@ export default function DetalleJugador() {
                   </div>
                 )}
 
-                {/* Estadísticas Generales (Totals) */}
-                <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-5 space-y-4 shadow-md relative overflow-hidden">
+                {/* Panel Completo de Telemetría Avanzada (Todos los Atributos) */}
+                <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-5 space-y-6 shadow-md relative overflow-hidden">
                   <h3 className="text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2 flex items-center justify-between">
-                    <span>📊 ESTADÍSTICAS GENERALES DE CAMPAÑA (TOTALES)</span>
+                    <span>📋 HISTORIAL COMPLETO DE TELEMETRÍA TÁCTICA</span>
                     <span className={`text-[9px] font-mono font-bold ${posStyles.accentText}`}>{posStyles.label.toUpperCase()}</span>
                   </h3>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                    {(() => {
-                      const baseStats = [
-                        { label: 'Partidos Disputados', value: estadisticas.partidos_jugados || 0, max: 40 },
-                        { label: 'Goles Marcados', value: estadisticas.total_goles || 0, max: 20 },
-                        { label: 'Asistencias Entregadas', value: estadisticas.total_asistencias || 0, max: 20 },
-                        { label: 'Valoración Promedio', value: Number(estadisticas.promedio_valoracion || 0).toFixed(2), max: 10 },
-                        { label: 'Jugador del Partido (MVP)', value: estadisticas.total_mvp || 0, max: 10 },
-                      ];
 
-                      const pos = rawPos.toUpperCase();
+                  {/* Selector de sub-sección de Telemetría */}
+                  <div className="flex flex-wrap gap-1 sm:gap-1.5 border-b border-border/25 pb-3">
+                    {[
+                      { id: 'ataque', label: '🎯 Ofensiva', hoverColor: 'hover:text-rose-400' },
+                      { id: 'pase', label: '🪄 Distribución', hoverColor: 'hover:text-emerald-400' },
+                      { id: 'defensa', label: '🛡️ Defensa', hoverColor: 'hover:text-blue-400' },
+                      { id: 'porteria', label: '🧤 Portería', hoverColor: 'hover:text-amber-400' },
+                      { id: 'fisico', label: '⏱️ Físico', hoverColor: 'hover:text-purple-400' }
+                    ].map((sTab) => (
+                      <button
+                        key={sTab.id}
+                        onClick={() => setActiveStatSubTab(sTab.id)}
+                        className={`px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-mono font-bold uppercase transition-all duration-300 cursor-pointer ${
+                          activeStatSubTab === sTab.id
+                            ? `${posStyles.posColor} border shadow-[0_0_12px_rgba(255,255,255,0.02)]`
+                            : `text-muted-foreground bg-background/35 border border-border/10 ${sTab.hoverColor}`
+                        }`}
+                      >
+                        {sTab.label}
+                      </button>
+                    ))}
+                  </div>
 
-                      if (pos === 'POR' || pos === 'GK' || pos === 'PO' || pos === 'GOALKEEPER') {
-                        baseStats.push(
-                          { label: 'Atajadas Totales', value: estadisticas.total_atajadas || 0, max: 80 },
-                          { label: 'Goles Recibidos', value: estadisticas.total_goles_recibidos || 0, max: 40, alert: true }
-                        );
-                      } else if (['DFC', 'DFI', 'DFD', 'CB', 'LB', 'RB', 'DF', 'DEF', 'LD', 'LI', 'DD', 'DI', 'DEFENDER'].includes(pos)) {
-                        baseStats.push(
-                          { label: 'Entradas Exitosas', value: estadisticas.total_entradas || 0, max: 100 },
-                          { label: 'Éxito de Entradas (%)', value: Math.round(estadisticas.avg_exito_entradas || 0), max: 100 }
-                        );
-                      } else {
-                        baseStats.push(
-                          { label: 'Precisión de Pases (%)', value: Math.round(estadisticas.avg_precision_pases || 0), max: 100 },
-                          { label: 'Precisión de Tiros (%)', value: Math.round(estadisticas.avg_precision_tiro || 0), max: 100 }
-                        );
-                      }
-
-                      baseStats.push({ label: 'Expulsiones (T. Rojas)', value: estadisticas.total_rojas || 0, max: 4, alert: true });
-
-                      return baseStats.map((stat, idx) => (
-                        <div key={idx} className="space-y-1.5 bg-background/20 border border-border/20 rounded-xl p-3.5 relative overflow-hidden">
-                          <div className="absolute top-0 right-0 w-4 h-4 bg-foreground/[0.005] pointer-events-none"></div>
-                          <div className="flex justify-between items-end text-xs font-semibold font-mono z-10 relative">
-                            <span className="text-muted-foreground uppercase tracking-tight text-[10px]">{stat.label}</span>
-                            <strong className={`text-xs font-black ${stat.alert ? 'text-rose-500' : posStyles.accentText}`}>
-                              {stat.value}
-                            </strong>
+                  <div className="space-y-6 pt-2">
+                    {statsSections
+                      .filter((sec) => sec.id === activeStatSubTab)
+                      .map((sec, sIdx) => {
+                        return (
+                          <div key={sIdx} className="space-y-3">
+                            <h4 className={`text-[10px] font-mono font-black ${sec.color} uppercase tracking-widest flex items-center gap-1.5`}>
+                              {sec.title}
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
+                              {sec.items.map((stat, idx) => {
+                                const numValue = Number(stat.valForBar !== undefined ? stat.valForBar : (typeof stat.value === 'string' ? parseFloat(stat.value) : stat.value));
+                                const barPct = stat.pct !== undefined ? stat.pct : Math.min((numValue / stat.max) * 100, 100);
+                                return (
+                                  <div key={idx} className="bg-background/35 border border-border/20 hover:border-primary/15 rounded-xl p-3 sm:p-3.5 relative overflow-hidden text-left group/stat shadow-sm transition-all duration-300 hover:bg-background/50 hover:-translate-y-0.5 animate-fade-in">
+                                    <div className="absolute top-0 right-0 w-8 h-8 bg-gradient-to-bl from-foreground/[0.015] to-transparent pointer-events-none rounded-tr-xl"></div>
+                                    <span className="text-[8px] font-bold text-muted-foreground uppercase block font-mono">{stat.label}</span>
+                                    <strong className="text-sm font-black text-foreground block mt-1 font-mono tracking-wide">{stat.value}</strong>
+                                    <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden border border-border/10 mt-1.5">
+                                      <div 
+                                        className={`h-full rounded-full transition-all duration-1000 ${stat.isNegative ? 'bg-gradient-to-r from-red-600 to-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : sec.barColor}`} 
+                                        style={{ width: `${barPct}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                          <div className="h-2 bg-muted/40 rounded-lg overflow-hidden border border-border/10">
-                            <div 
-                              className={`h-full rounded-lg animate-fill-bar ${
-                                stat.alert ? 'bg-rose-500' : posStyles.barColor
-                              }`}
-                              style={{ width: `${Math.min((stat.value / stat.max) * 100, 100)}%`, animationDelay: `${idx * 0.08}s` }}
-                            ></div>
-                          </div>
-                        </div>
-                      ));
-                    })()}
+                        );
+                      })}
                   </div>
                 </div>
 
@@ -695,52 +885,55 @@ export default function DetalleJugador() {
                       const leaderPercent = Math.min((stat.leader / stat.max) * 100, 100);
 
                       return (
-                        <div key={idx} className="space-y-3 bg-background/25 border border-border/20 rounded-xl p-3.5 relative overflow-hidden flex flex-col justify-between">
+                        <div key={idx} className="space-y-4 bg-background/30 border border-border/20 hover:border-primary/20 rounded-xl p-3.5 sm:p-4 transition-all duration-300 relative overflow-hidden flex flex-col justify-between group/comp shadow-sm">
+                          <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-primary/5 to-transparent pointer-events-none rounded-tr-xl"></div>
                           <div>
-                            <span className="text-xs font-bold text-foreground uppercase tracking-wide font-mono block">
+                            <span className="text-xs font-bold text-foreground uppercase tracking-wider font-mono block group-hover/comp:text-primary transition-colors">
                               {stat.label}
                             </span>
 
-                            <div className="grid grid-cols-3 gap-1 font-mono text-[9px] bg-background/45 p-1.5 rounded-lg border border-border/10 mt-2">
+                            <div className="grid grid-cols-3 gap-2 font-mono text-[9px] bg-background/50 p-2 rounded-xl border border-border/10 mt-3 shadow-inner">
                               <div className="text-center border-r border-border/10">
-                                <span className="text-muted-foreground font-bold uppercase block text-[7px]">Tú</span>
-                                <strong className={`text-xs font-black ${stat.invertColor ? 'text-rose-400' : posStyles.accentText}`}>
+                                <span className="text-muted-foreground font-black uppercase block text-[7px] tracking-wider">Tú</span>
+                                <strong className={`text-sm font-black tracking-wide ${stat.invertColor ? 'text-rose-400' : posStyles.accentText}`}>
                                   {stat.format(stat.player)}
                                 </strong>
                               </div>
                               <div className="text-center border-r border-border/10">
-                                <span className="text-muted-foreground font-bold uppercase block text-[7px]">Media</span>
-                                <strong className="text-xs font-black text-muted-foreground">
+                                <span className="text-muted-foreground font-black uppercase block text-[7px] tracking-wider">Media</span>
+                                <strong className="text-sm font-black text-muted-foreground tracking-wide">
                                   {stat.format(stat.avg)}
                                 </strong>
                               </div>
                               <div className="text-center">
-                                <span className="text-muted-foreground font-bold uppercase block text-[7px]">Líder</span>
-                                <strong className="text-xs font-black text-amber-400">
+                                <span className="text-muted-foreground font-black uppercase block text-[7px] tracking-wider">Líder</span>
+                                <strong className="text-sm font-black text-amber-400 tracking-wide">
                                   {stat.format(stat.leader)}
                                 </strong>
                               </div>
                             </div>
                           </div>
 
-                          <div className="space-y-1.5 pt-2">
+                          <div className="space-y-2 pt-1">
                             {/* Tú bar */}
-                            <div className="space-y-0.5">
-                              <div className="flex justify-between items-center text-[7px] text-muted-foreground uppercase font-mono">
-                                <span>Tú</span>
+                            <div className="space-y-1">
+                              <div className="flex justify-between items-center text-[7px] text-muted-foreground uppercase font-mono tracking-wider font-bold">
+                                <span>Rendimiento Propio</span>
+                                <span className={stat.invertColor ? 'text-rose-400' : posStyles.accentText}>{Math.round(playerPercent)}%</span>
                               </div>
-                              <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden border border-border/10">
+                              <div className="h-2 bg-muted/40 rounded-full overflow-hidden border border-border/10 relative">
                                 <div 
-                                  className={`h-full rounded-full animate-fill-bar ${stat.invertColor ? 'bg-rose-500' : posStyles.barColor}`}
+                                  className={`h-full rounded-full animate-fill-bar ${stat.invertColor ? 'bg-gradient-to-r from-rose-600 to-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.4)]' : posStyles.barColor}`}
                                   style={{ width: `${playerPercent}%`, animationDelay: `${idx * 0.05}s` }}
                                 ></div>
                               </div>
                             </div>
 
                             {/* Media bar */}
-                            <div className="space-y-0.5">
-                              <div className="flex justify-between items-center text-[7px] text-muted-foreground uppercase font-mono">
+                            <div className="space-y-1">
+                              <div className="flex justify-between items-center text-[7px] text-muted-foreground uppercase font-mono tracking-wider font-bold">
                                 <span>Media del Servidor</span>
+                                <span>{Math.round(avgPercent)}%</span>
                               </div>
                               <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden border border-border/10">
                                 <div 
@@ -751,13 +944,14 @@ export default function DetalleJugador() {
                             </div>
 
                             {/* Líder bar */}
-                            <div className="space-y-0.5">
-                              <div className="flex justify-between items-center text-[7px] text-muted-foreground uppercase font-mono">
+                            <div className="space-y-1">
+                              <div className="flex justify-between items-center text-[7px] text-muted-foreground uppercase font-mono tracking-wider font-bold">
                                 <span>Líder Posicional</span>
+                                <span className="text-amber-400 font-bold">{Math.round(leaderPercent)}%</span>
                               </div>
                               <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden border border-border/10">
                                 <div 
-                                  className="h-full bg-amber-400 rounded-full animate-fill-bar"
+                                  className="h-full bg-gradient-to-r from-amber-600 to-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.3)] rounded-full animate-fill-bar"
                                   style={{ width: `${leaderPercent}%`, animationDelay: `${idx * 0.05 + 0.06}s` }}
                                 ></div>
                               </div>
@@ -776,27 +970,29 @@ export default function DetalleJugador() {
         )}
 
         {activeTab === 'competencias' && (
-          <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-5 space-y-4 shadow-md animate-fade-in">
+          <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-5 space-y-4 shadow-md animate-fade-in relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-border/30 rounded-tl-sm pointer-events-none"></div>
+            <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-border/30 rounded-br-sm pointer-events-none"></div>
             <h3 className="text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2">
               🏆 TORNEOS ACTIVOS DEL CLUB
             </h3>
             {competencias && competencias.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
                 {competencias.map((comp) => (
-                  <div key={comp.id} className="flex items-center gap-3.5 p-4 rounded-xl border border-border/30 bg-background/25 transition-all duration-300 hover:border-primary/20 hover:bg-background/45 relative group">
-                    <div className="absolute top-0 right-0 w-16 h-full bg-gradient-to-l from-primary/5 to-transparent pointer-events-none"></div>
+                  <div key={comp.id} className="flex items-center gap-3.5 p-4 rounded-xl border border-border/30 bg-background/25 transition-all duration-300 hover:border-primary/30 hover:bg-background/45 hover:-translate-y-1 relative group shadow-sm">
+                    <div className="absolute top-0 right-0 w-16 h-full bg-gradient-to-l from-primary/5 to-transparent pointer-events-none rounded-tr-xl"></div>
                     {comp.logo ? (
                       <img 
                         src={getImageUrl(comp.logo)} 
                         alt={comp.nombre} 
-                        className="w-12 h-12 object-cover rounded-lg border border-border/40 shrink-0 shadow" 
+                        className="w-12 h-12 object-cover rounded-lg border border-border/40 shrink-0 shadow transition-transform duration-300 group-hover:scale-105" 
                       />
                     ) : (
                       <div className="w-12 h-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary text-sm font-bold shrink-0">
                         🏆
                       </div>
                     )}
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 z-10">
                       <Link to={`/organizaciones/${comp.id}`} className="font-display font-black text-sm text-foreground uppercase tracking-wide hover:text-primary transition-colors block truncate">
                         {comp.nombre}
                       </Link>
@@ -828,7 +1024,7 @@ export default function DetalleJugador() {
                 
                 <div className="space-y-4">
                   {/* Account status badge */}
-                  <div className="flex justify-between items-center bg-background/25 border border-border/20 p-2.5 rounded-xl">
+                  <div className="flex justify-between items-center bg-background/25 border border-border/20 p-2.5 rounded-xl shadow-inner">
                     <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase">Estado del Perfil</span>
                     <span className={`text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded border ${
                       user.status === 'activo'
@@ -842,7 +1038,7 @@ export default function DetalleJugador() {
                   </div>
 
                   {/* Gamer credentials */}
-                  <div className="space-y-2.5 bg-background/25 border border-border/20 p-3.5 rounded-xl font-mono text-[11px] leading-relaxed">
+                  <div className="space-y-2.5 bg-background/25 border border-border/20 p-3.5 rounded-xl font-mono text-[11px] leading-relaxed shadow-inner">
                     <div className="flex justify-between items-center">
                       <span className="text-muted-foreground font-bold uppercase">Gamertag</span>
                       <strong className="text-foreground font-extrabold">{user.gamertag || 'N/A'}</strong>
@@ -874,7 +1070,8 @@ export default function DetalleJugador() {
                   </div>
 
                   {/* Biography section */}
-                  <div className="space-y-1.5 bg-background/25 border border-border/20 p-3.5 rounded-xl text-left">
+                  <div className="space-y-1.5 bg-background/30 border border-border/20 p-4 rounded-xl text-left relative shadow-sm">
+                    <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t border-r border-primary/30 rounded-tr-sm pointer-events-none"></div>
                     <span className="text-[9px] font-mono font-bold text-muted-foreground uppercase tracking-wider block">BIOGRAFÍA TÁCTICA</span>
                     <p className="text-xs text-foreground/80 leading-relaxed font-sans font-light italic">
                       "{user.biografia || 'Sin biografía táctica declarada en el perfil del competidor.'}"
@@ -888,19 +1085,19 @@ export default function DetalleJugador() {
             <div className="lg:col-span-2">
               <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-5 space-y-4 shadow-md relative overflow-hidden">
                 {/* Scanlines visual effect */}
-                <div className="absolute inset-0 broadcast-scanlines pointer-events-none opacity-[0.03]"></div>
+                <div className="absolute inset-0 broadcast-scanlines pointer-events-none opacity-[0.02]"></div>
                 
                 <h3 className="text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2">
                   🔄 CRONOLOGÍA DE FICHAJES Y TRANSFERENCIAS
                 </h3>
                 {traspasos && traspasos.length > 0 ? (
-                  <div className="relative border-l border-border/40 ml-4 pl-6 space-y-6 pt-2">
+                  <div className="relative border-l border-dashed border-border/45 ml-4 pl-6 space-y-6 pt-2">
                     {traspasos.map((t) => (
                       <div key={t.id} className="relative">
                         {/* Database dot connection */}
-                        <span className={`absolute -left-[31px] top-1.5 w-4 h-4 rounded-full border-2 border-background shadow-lg bg-current ${posStyles.textColor}`}></span>
+                        <span className={`absolute -left-[9px] top-1.5 w-4.5 h-4.5 rounded-full border-4 border-background shadow-[0_0_12px_currentColor] bg-current ${posStyles.textColor}`}></span>
                         
-                        <div className="space-y-2 bg-background/25 border border-border/30 p-4 rounded-xl transition-all hover:border-primary/20 hover:bg-background/40">
+                        <div className="space-y-2 bg-background/25 border border-border/30 p-3 sm:p-4 rounded-xl transition-all hover:border-primary/20 hover:bg-background/40 hover:-translate-y-0.5 duration-300 shadow-sm">
                           <div className="flex items-center justify-between flex-wrap gap-2">
                             <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-black px-2 py-0.5 rounded font-mono uppercase tracking-wide">
                               VINCULACIÓN APROBADA
@@ -932,7 +1129,7 @@ export default function DetalleJugador() {
                   </div>
                 ) : (
                   <div className="border border-border/30 bg-muted/10 rounded-2xl p-10 text-center flex flex-col items-center justify-center gap-2">
-                    <span className="text-2xl">🔄</span>
+                    <span className="text-2xl animate-pulse">🔄</span>
                     <p className="text-xs text-muted-foreground font-medium italic">No se registran movimientos ni transferencias oficiales para este competidor.</p>
                   </div>
                 )}
@@ -947,7 +1144,7 @@ export default function DetalleJugador() {
             <div className="absolute top-0 left-0 w-3.5 h-3.5 border-t-2 border-l-2 border-primary/45 rounded-tl-lg pointer-events-none"></div>
             <div className="absolute top-0 right-0 w-3.5 h-3.5 border-t-2 border-r-2 border-primary/45 rounded-tr-lg pointer-events-none"></div>
             <div className="absolute bottom-0 left-0 w-3.5 h-3.5 border-b-2 border-l-2 border-primary/45 rounded-bl-lg pointer-events-none"></div>
-            <div className="absolute bottom-0 right-0 w-3.5 h-3.5 border-b-2 border-r-2 border-primary/45 rounded-br-lg pointer-events-none"></div>
+            <div className="absolute bottom-0 right-0 w-3.5 h-3.5 border-b-2 border-r-2 border-primary/45 rounded-tr-lg pointer-events-none"></div>
             <Partidos forPlayer={true} hideHero={true} playerId={id} />
           </div>
         )}
@@ -967,21 +1164,21 @@ export default function DetalleJugador() {
               {historial_torneos && historial_torneos.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
                   {historial_torneos.map((hist, idx) => (
-                    <div key={idx} className="group border border-border/40 bg-background/20 backdrop-blur-md rounded-2xl p-5 relative overflow-hidden transition-all duration-300 hover:border-primary/30 flex flex-col gap-4 animate-fade-in-up" style={{ animationDelay: `${idx * 0.08}s` }}>
+                    <div key={idx} className="group border border-border/40 bg-background/20 backdrop-blur-md rounded-2xl p-4 sm:p-5 relative overflow-hidden transition-all duration-300 hover:border-primary/30 hover:bg-background/30 flex flex-col gap-4 animate-fade-in-up shadow-sm hover:shadow-md" style={{ animationDelay: `${idx * 0.08}s` }}>
                       {/* Brackets decorativos HUD */}
-                      <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 border-transparent transition-colors duration-300 group-hover:border-primary/30 rounded-tl-md pointer-events-none"></div>
-                      <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t-2 border-r-2 border-transparent transition-colors duration-300 group-hover:border-primary/30 rounded-tr-md pointer-events-none"></div>
-                      <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b-2 border-l-2 border-transparent transition-colors duration-300 group-hover:border-primary/30 rounded-bl-md pointer-events-none"></div>
-                      <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-transparent transition-colors duration-300 group-hover:border-primary/30 rounded-br-md pointer-events-none"></div>
+                      <div className={`absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 border-transparent transition-colors duration-300 group-hover:${posStyles.brackets} rounded-tl-md pointer-events-none`}></div>
+                      <div className={`absolute top-0 right-0 w-2.5 h-2.5 border-t-2 border-r-2 border-transparent transition-colors duration-300 group-hover:${posStyles.brackets} rounded-tr-md pointer-events-none`}></div>
+                      <div className={`absolute bottom-0 left-0 w-2.5 h-2.5 border-b-2 border-l-2 border-transparent transition-colors duration-300 group-hover:${posStyles.brackets} rounded-bl-md pointer-events-none`}></div>
+                      <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-transparent transition-colors duration-300 group-hover:${posStyles.brackets} rounded-br-md pointer-events-none`}></div>
                       
                       <div className="absolute -top-10 -right-10 w-24 h-24 bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 z-10">
                         {hist.equipo_logo ? (
                           <img 
                             src={getImageUrl(hist.equipo_logo)} 
                             alt={hist.equipo_nombre} 
-                            className="w-12 h-12 rounded-xl object-cover border border-border/40 shrink-0" 
+                            className="w-12 h-12 rounded-xl object-cover border border-border/40 shrink-0 shadow" 
                           />
                         ) : (
                           <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center font-display font-black text-primary text-lg uppercase shrink-0">
@@ -1001,27 +1198,27 @@ export default function DetalleJugador() {
                         </div>
                       </div>
 
-                      <div className="h-px bg-border/20"></div>
+                      <div className="h-px bg-border/20 z-10"></div>
 
                       {/* Resumen táctico de la temporada */}
-                      <div className="grid grid-cols-3 gap-2.5 font-mono text-center">
-                        <div className="bg-background/40 border border-border/25 rounded-xl p-2 hover:bg-background/60 transition-colors">
+                      <div className="grid grid-cols-3 gap-2.5 font-mono text-center z-10">
+                        <div className="bg-background/40 border border-border/25 rounded-xl p-2 hover:bg-background/60 transition-colors shadow-inner">
                           <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Partidos</span>
                           <strong className="text-sm font-black text-foreground">{hist.partidos_jugados}</strong>
                         </div>
-                        <div className="bg-background/40 border border-border/25 rounded-xl p-2 hover:bg-background/60 transition-colors">
+                        <div className="bg-background/40 border border-border/25 rounded-xl p-2 hover:bg-background/60 transition-colors shadow-inner">
                           <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Goles</span>
                           <strong className="text-sm font-black text-emerald-400">{hist.total_goles}</strong>
                         </div>
-                        <div className="bg-background/40 border border-border/25 rounded-xl p-2 hover:bg-background/60 transition-colors">
+                        <div className="bg-background/40 border border-border/25 rounded-xl p-2 hover:bg-background/60 transition-colors shadow-inner">
                           <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Asist.</span>
                           <strong className="text-sm font-black text-primary">{hist.total_asistencias}</strong>
                         </div>
-                        <div className="bg-background/40 border border-border/25 rounded-xl p-2 hover:bg-background/60 transition-colors col-span-1.5 flex items-center justify-between px-3">
+                        <div className="bg-background/40 border border-border/25 rounded-xl p-2 hover:bg-background/60 transition-colors col-span-1.5 flex items-center justify-between px-3 shadow-inner">
                           <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">MVP</span>
                           <strong className="text-sm font-black text-amber-500">{hist.total_mvp} ⭐</strong>
                         </div>
-                        <div className="bg-background/40 border border-border/25 rounded-xl p-2 hover:bg-background/60 transition-colors col-span-1.5 flex items-center justify-between px-3">
+                        <div className="bg-background/40 border border-border/25 rounded-xl p-2 hover:bg-background/60 transition-colors col-span-1.5 flex items-center justify-between px-3 shadow-inner">
                           <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Rating</span>
                           <strong className="text-sm font-black text-primary">{Number(hist.promedio_valoracion).toFixed(1)}</strong>
                         </div>

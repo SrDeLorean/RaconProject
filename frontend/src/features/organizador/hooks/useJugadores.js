@@ -132,7 +132,7 @@ export const useJugadores = () => {
           plataforma: jugador.plataforma || 'crossplay',
           nacionalidad: jugador.nacionalidad || '',
           posicion: jugador.posicion || '',
-          fecha_nacimiento: jugador.fecha_nacimiento || '',
+          fecha_nacimiento: jugador.fecha_nacimiento ? jugador.fecha_nacimiento.substring(0, 10) : '',
           altura: jugador.altura || '',
           peso: jugador.peso || '',
           telefono: jugador.telefono || ''

@@ -201,7 +201,7 @@ export default function PublicLayout() {
             <div className="relative group py-2">
               <button 
                 className={`nav-link-underline text-[11px] xl:text-xs font-black tracking-widest uppercase transition-colors duration-300 flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${
-                  isGroupActive(['/totw-tots', '/infografia'])
+                  isGroupActive(['/totw-tots', '/infografia', '/datos'])
                     ? 'text-primary' 
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
@@ -212,6 +212,7 @@ export default function PublicLayout() {
                 {[
                   { path: '/totw-tots', label: 'Once Ideal', icon: '⭐' },
                   { path: '/infografia', label: 'Infografía', icon: '📈' },
+                  { path: '/datos', label: 'Datos', icon: '📊' },
                 ].map((item) => (
                   <Link
                     key={item.path}
@@ -399,6 +400,7 @@ export default function PublicLayout() {
               {[
                 { path: '/totw-tots', label: 'Once Ideal' },
                 { path: '/infografia', label: 'Infografía' },
+                { path: '/datos', label: 'Datos' },
               ].map((item) => (
                 <Link
                   key={item.label}
@@ -516,6 +518,7 @@ export default function PublicLayout() {
                     { to: '/organizaciones', label: 'Circuitos Oficiales' },
                     { to: '/totw-tots', label: 'Once Ideal' },
                     { to: '/infografia', label: 'Infografía & Stats' },
+                    { to: '/datos', label: 'Centro de Datos' },
                   ].map(link => (
                     <Link key={link.to} to={link.to} className="text-xs text-muted-foreground hover:text-primary transition-colors duration-200 font-medium">
                       {link.label}

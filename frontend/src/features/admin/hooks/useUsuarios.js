@@ -16,7 +16,13 @@ export const useUsuarios = () => {
   
   const [selectedUsuario, setSelectedUsuario] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: '', status: 'activo' });
+  const defaultForm = {
+    name: '', email: '', password: '', role: '', status: 'activo',
+    gamertag: '', id_ea: '', plataforma: 'crossplay',
+    nacionalidad: '', posicion: '', fecha_nacimiento: '',
+    altura: '', peso: '', telefono: ''
+  };
+  const [formData, setFormData] = useState(defaultForm);
   
   // 🔥 MEJORA: Estado para los errores de validación de Laravel
   const [formErrors, setFormErrors] = useState({});
@@ -111,8 +117,23 @@ export const useUsuarios = () => {
     setSelectedUsuario(usuario);
     setFormErrors({}); // Limpiar errores al abrir el drawer
     setFormData(usuario 
-      ? { name: usuario.name, email: usuario.email, password: '', role: usuario.role, status: usuario.status || 'activo' }
-      : { name: '', email: '', password: '', role: '', status: 'activo' }
+      ? { 
+          name: usuario.name || '', 
+          email: usuario.email || '', 
+          password: '', 
+          role: usuario.role || '', 
+          status: usuario.status || 'activo',
+          gamertag: usuario.gamertag || '',
+          id_ea: usuario.id_ea || '',
+          plataforma: usuario.plataforma || 'crossplay',
+          nacionalidad: usuario.nacionalidad || '',
+          posicion: usuario.posicion || '',
+          fecha_nacimiento: usuario.fecha_nacimiento ? usuario.fecha_nacimiento.substring(0, 10) : '',
+          altura: usuario.altura || '',
+          peso: usuario.peso || '',
+          telefono: usuario.telefono || ''
+        }
+      : defaultForm
     );
     setIsDrawerOpen(true);
   }, []);

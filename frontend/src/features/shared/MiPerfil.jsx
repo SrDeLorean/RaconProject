@@ -587,49 +587,28 @@ export default function MiPerfil() {
                     Estadísticas & Ficha de Jugador
                   </h3>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-technical text-muted-foreground">EA ID</span>
-                        <div className="group relative cursor-pointer text-primary hover:text-destructive transition-colors text-xs font-bold bg-primary/10 w-4.5 h-4.5 rounded-full flex items-center justify-center">
-                          ℹ️
-                          <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2 text-[10px] leading-relaxed bg-card border border-border text-foreground rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50">
-                            Número que se encuentra en la configuración de cuenta de EA.
-                          </span>
-                        </div>
-                      </div>
-                      <Input 
-                        type="number"
-                        value={formData.id_ea} 
-                        onChange={(e) => setFormData({...formData, id_ea: e.target.value})} 
-                        icon={<span>🎮</span>}
-                        className="!gap-0"
-                      />
-                      <p className="text-[10px] text-muted-foreground mt-1 italic pl-1">
-                        * Número que se encuentra en la configuración de cuenta de EA.
-                      </p>
-                    </div>
-
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className="text-technical text-muted-foreground">GamerTAG (EA Nickname)</span>
                         <div className="group relative cursor-pointer text-primary hover:text-destructive transition-colors text-xs font-bold bg-primary/10 w-4.5 h-4.5 rounded-full flex items-center justify-center">
                           ℹ️
                           <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 text-[10px] leading-relaxed bg-card border border-border text-foreground rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50">
-                            NOMBRE EXACTO AL DE EA, es el nombre que aparece al ver el listado de jugadores conectados en el partido.
+                            Tu GamerTAG registrado. Si necesitas modificarlo, por favor contacta con la administración de la liga.
                           </span>
                         </div>
                       </div>
                       <Input 
                         value={formData.gamertag} 
-                        onChange={(e) => setFormData({...formData, gamertag: e.target.value})} 
+                        disabled
                         icon={<span>👾</span>}
-                        className="!gap-0"
+                        className="!gap-0 opacity-70 font-semibold"
                       />
-                      <p className="text-[10px] text-primary mt-1 italic pl-1 font-semibold">
-                        * NOMBRE EXACTO AL DE EA, es el nombre que aparece al ver el listado de jugadores conectados en el partido.
+                      <p className="text-[10px] text-muted-foreground mt-1 italic pl-1">
+                        * No modificable. Contacta a soporte para actualizaciones.
                       </p>
                     </div>
+                    
                     <Select 
                       label="Plataforma principal" 
                       value={formData.plataforma} 

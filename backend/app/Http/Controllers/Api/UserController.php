@@ -218,7 +218,21 @@ class UserController extends Controller
             DB::raw('AVG(estadisticas_jugadores.precision_pases) as avg_precision_pases'),
             DB::raw('AVG(estadisticas_jugadores.precision_tiro) as avg_precision_tiro'),
             DB::raw('SUM(estadisticas_jugadores.atajadas) as total_atajadas'),
-            DB::raw('SUM(estadisticas_jugadores.goles_recibidos) as total_goles_recibidos')
+            DB::raw('SUM(estadisticas_jugadores.goles_recibidos) as total_goles_recibidos'),
+            DB::raw('SUM(estadisticas_jugadores.tiros) as total_tiros'),
+            DB::raw('SUM(estadisticas_jugadores.pases_intentados) as total_pases_intentados'),
+            DB::raw('SUM(estadisticas_jugadores.pases_completados) as total_pases_completados'),
+            DB::raw('SUM(estadisticas_jugadores.entradas_intentadas) as total_entradas_intentadas'),
+            DB::raw('SUM(estadisticas_jugadores.atajadas_buena_colocacion) as total_atajadas_buena_colocacion'),
+            DB::raw('SUM(estadisticas_jugadores.atajadas_volada) as total_atajadas_volada'),
+            DB::raw('SUM(estadisticas_jugadores.atajadas_reflejos) as total_atajadas_reflejos'),
+            DB::raw('SUM(estadisticas_jugadores.centros_cortados) as total_centros_cortados'),
+            DB::raw('SUM(estadisticas_jugadores.despejes_punos) as total_despejes_punos'),
+            DB::raw('SUM(estadisticas_jugadores.desvios) as total_desvios'),
+            DB::raw('SUM(estadisticas_jugadores.segundos_jugados) as total_segundos_jugados'),
+            DB::raw('SUM(estadisticas_jugadores.tiempo_juego_motor) as total_tiempo_juego_motor'),
+            DB::raw('SUM(estadisticas_jugadores.tiempo_inactivo) as total_tiempo_inactivo'),
+            DB::raw('SUM(estadisticas_jugadores.tiempo_real_lag) as total_tiempo_real_lag')
         )->first();
 
         // Calcular comparativas y rankings posicionales
@@ -481,6 +495,20 @@ class UserController extends Controller
                 'avg_precision_tiro' => round($statsAcumuladas->avg_precision_tiro ?? 0, 1),
                 'total_atajadas' => (int)($statsAcumuladas->total_atajadas ?? 0),
                 'total_goles_recibidos' => (int)($statsAcumuladas->total_goles_recibidos ?? 0),
+                'total_tiros' => (int)($statsAcumuladas->total_tiros ?? 0),
+                'total_pases_intentados' => (int)($statsAcumuladas->total_pases_intentados ?? 0),
+                'total_pases_completados' => (int)($statsAcumuladas->total_pases_completados ?? 0),
+                'total_entradas_intentadas' => (int)($statsAcumuladas->total_entradas_intentadas ?? 0),
+                'total_atajadas_buena_colocacion' => (int)($statsAcumuladas->total_atajadas_buena_colocacion ?? 0),
+                'total_atajadas_volada' => (int)($statsAcumuladas->total_atajadas_volada ?? 0),
+                'total_atajadas_reflejos' => (int)($statsAcumuladas->total_atajadas_reflejos ?? 0),
+                'total_centros_cortados' => (int)($statsAcumuladas->total_centros_cortados ?? 0),
+                'total_despejes_punos' => (int)($statsAcumuladas->total_despejes_punos ?? 0),
+                'total_desvios' => (int)($statsAcumuladas->total_desvios ?? 0),
+                'total_segundos_jugados' => (int)($statsAcumuladas->total_segundos_jugados ?? 0),
+                'total_tiempo_juego_motor' => (int)($statsAcumuladas->total_tiempo_juego_motor ?? 0),
+                'total_tiempo_inactivo' => (int)($statsAcumuladas->total_tiempo_inactivo ?? 0),
+                'total_tiempo_real_lag' => (int)($statsAcumuladas->total_tiempo_real_lag ?? 0),
             ],
             'comparativas' => [
                 'posicion_grupo' => $posGroup,
@@ -813,6 +841,10 @@ class UserController extends Controller
                 DB::raw('SUM(estadisticas_jugadores.goles) as total_goles'),
                 DB::raw('SUM(estadisticas_jugadores.asistencias) as total_asistencias'),
                 DB::raw('AVG(estadisticas_jugadores.precision_tiro) as avg_precision_tiro'),
+                DB::raw('AVG(estadisticas_jugadores.precision_pases) as avg_precision_pases'),
+                DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_valoracion'),
+                DB::raw('COUNT(estadisticas_jugadores.id) as partidos_jugados'),
+                DB::raw('SUM(estadisticas_jugadores.jugador_partido) as total_mvp'),
                 DB::raw('ROUND(AVG(estadisticas_jugadores.valoracion) * 5 + SUM(estadisticas_jugadores.goles) * 7 + SUM(estadisticas_jugadores.asistencias) * 4, 1) as score')
             )
             ->groupBy('users.id', 'users.name', 'users.foto', 'equipos.nombre')
@@ -828,8 +860,13 @@ class UserController extends Controller
                 'users.name',
                 'users.foto',
                 'equipos.nombre as equipo_nombre',
+                DB::raw('SUM(estadisticas_jugadores.goles) as total_goles'),
                 DB::raw('SUM(estadisticas_jugadores.asistencias) as total_asistencias'),
                 DB::raw('AVG(estadisticas_jugadores.precision_pases) as avg_precision_pases'),
+                DB::raw('AVG(estadisticas_jugadores.precision_tiro) as avg_precision_tiro'),
+                DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_valoracion'),
+                DB::raw('COUNT(estadisticas_jugadores.id) as partidos_jugados'),
+                DB::raw('SUM(estadisticas_jugadores.jugador_partido) as total_mvp'),
                 DB::raw('ROUND(AVG(estadisticas_jugadores.valoracion) * 6 + SUM(estadisticas_jugadores.asistencias) * 8 + AVG(estadisticas_jugadores.precision_pases) * 0.2, 1) as score')
             )
             ->groupBy('users.id', 'users.name', 'users.foto', 'equipos.nombre')
@@ -845,8 +882,14 @@ class UserController extends Controller
                 'users.name',
                 'users.foto',
                 'equipos.nombre as equipo_nombre',
+                DB::raw('SUM(estadisticas_jugadores.goles) as total_goles'),
+                DB::raw('SUM(estadisticas_jugadores.asistencias) as total_asistencias'),
                 DB::raw('SUM(estadisticas_jugadores.entradas_exitosas) as total_entradas'),
                 DB::raw('AVG(estadisticas_jugadores.tasa_exito_entradas) as avg_exito_entradas'),
+                DB::raw('AVG(estadisticas_jugadores.precision_pases) as avg_precision_pases'),
+                DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_valoracion'),
+                DB::raw('COUNT(estadisticas_jugadores.id) as partidos_jugados'),
+                DB::raw('SUM(estadisticas_jugadores.jugador_partido) as total_mvp'),
                 DB::raw('ROUND(AVG(estadisticas_jugadores.valoracion) * 8 + SUM(estadisticas_jugadores.entradas_exitosas) * 5 + AVG(estadisticas_jugadores.tasa_exito_entradas) * 0.15 - SUM(estadisticas_jugadores.tarjetas_rojas) * 5, 1) as score')
             )
             ->groupBy('users.id', 'users.name', 'users.foto', 'equipos.nombre')
@@ -862,8 +905,14 @@ class UserController extends Controller
                 'users.name',
                 'users.foto',
                 'equipos.nombre as equipo_nombre',
+                DB::raw('SUM(estadisticas_jugadores.goles) as total_goles'),
+                DB::raw('SUM(estadisticas_jugadores.asistencias) as total_asistencias'),
                 DB::raw('SUM(estadisticas_jugadores.atajadas) as total_atajadas'),
                 DB::raw('SUM(estadisticas_jugadores.goles_recibidos) as total_goles_recibidos'),
+                DB::raw('AVG(estadisticas_jugadores.precision_pases) as avg_precision_pases'),
+                DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_valoracion'),
+                DB::raw('COUNT(estadisticas_jugadores.id) as partidos_jugados'),
+                DB::raw('SUM(estadisticas_jugadores.jugador_partido) as total_mvp'),
                 DB::raw('ROUND(AVG(estadisticas_jugadores.valoracion) * 10 + SUM(estadisticas_jugadores.atajadas) * 4 - SUM(estadisticas_jugadores.goles_recibidos) * 3, 1) as score')
             )
             ->groupBy('users.id', 'users.name', 'users.foto', 'equipos.nombre')
@@ -937,6 +986,61 @@ class UserController extends Controller
             ->orderByDesc('total_goles')
             ->first();
 
+        $todosJugadores = null;
+        $todosEquipos = null;
+
+        if ($request->query('all') === 'true') {
+            $todosJugadores = (clone $queryJugadoresBase)->select(
+                'users.id',
+                'users.name',
+                'users.foto',
+                'equipos.nombre as equipo_nombre',
+                'estadisticas_jugadores.posicion',
+                DB::raw('SUM(estadisticas_jugadores.goles) as total_goles'),
+                DB::raw('SUM(estadisticas_jugadores.asistencias) as total_asistencias'),
+                DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_valoracion'),
+                DB::raw('COUNT(estadisticas_jugadores.id) as partidos_jugados'),
+                DB::raw('SUM(estadisticas_jugadores.jugador_partido) as total_mvp'),
+                DB::raw('AVG(estadisticas_jugadores.precision_pases) as avg_precision_pases'),
+                DB::raw('AVG(estadisticas_jugadores.precision_tiro) as avg_precision_tiro'),
+                DB::raw('SUM(estadisticas_jugadores.entradas_exitosas) as total_entradas'),
+                DB::raw('AVG(estadisticas_jugadores.tasa_exito_entradas) as avg_exito_entradas'),
+                DB::raw('SUM(estadisticas_jugadores.atajadas) as total_atajadas'),
+                DB::raw('SUM(estadisticas_jugadores.goles_recibidos) as total_goles_recibidos'),
+                
+                // Nuevas estadísticas
+                DB::raw('SUM(estadisticas_jugadores.tiros) as total_tiros'),
+                DB::raw('SUM(estadisticas_jugadores.tarjetas_rojas) as total_tarjetas_rojas'),
+                DB::raw('SUM(estadisticas_jugadores.pases_intentados) as total_pases_intentados'),
+                DB::raw('SUM(estadisticas_jugadores.pases_completados) as total_pases_completados'),
+                DB::raw('SUM(estadisticas_jugadores.entradas_intentadas) as total_entradas_intentadas'),
+                DB::raw('SUM(estadisticas_jugadores.atajadas_buena_colocacion) as total_atajadas_buena_colocacion'),
+                DB::raw('SUM(estadisticas_jugadores.atajadas_volada) as total_atajadas_volada'),
+                DB::raw('SUM(estadisticas_jugadores.atajadas_reflejos) as total_atajadas_reflejos'),
+                DB::raw('SUM(estadisticas_jugadores.centros_cortados) as total_centros_cortados'),
+                DB::raw('SUM(estadisticas_jugadores.despejes_punos) as total_despejes_punos'),
+                DB::raw('SUM(estadisticas_jugadores.desvios) as total_desvios'),
+                DB::raw('SUM(estadisticas_jugadores.segundos_jugados) as total_segundos_jugados')
+            )
+            ->groupBy('users.id', 'users.name', 'users.foto', 'equipos.nombre', 'estadisticas_jugadores.posicion')
+            ->orderByDesc('avg_valoracion')
+            ->get();
+
+            $todosEquipos = (clone $queryEquiposBase)->select(
+                'equipos.id',
+                'equipos.nombre',
+                'equipos.logo',
+                DB::raw('SUM(estadisticas_equipos.goles_favor) as total_goles_favor'),
+                DB::raw('SUM(estadisticas_equipos.goles_en_contra) as total_goles_recibidos'),
+                DB::raw('ROUND(AVG(estadisticas_equipos.precision_pases), 1) as avg_precision_pases'),
+                DB::raw('ROUND(AVG(estadisticas_equipos.tasa_exito_entradas), 1) as avg_tasa_exito_entradas'),
+                DB::raw('COUNT(estadisticas_equipos.id) as partidos_jugados')
+            )
+            ->groupBy('equipos.id', 'equipos.nombre', 'equipos.logo')
+            ->orderByDesc('total_goles_favor')
+            ->get();
+        }
+
         return response()->json([
             'total_partidos' => $totalPartidos,
             'goles_totales' => $golesTotales,
@@ -952,11 +1056,13 @@ class UserController extends Controller
             'prestigio_medios' => $prestigioMedios,
             'prestigio_defensas' => $prestigioDefensas,
             'prestigio_porteros' => $prestigioPorteros,
+            'todos_jugadores' => $todosJugadores,
 
             // Equipos
             'equipos_goleadores' => $equiposGoleadores,
             'equipos_pases' => $equiposPases,
             'equipos_defensa' => $equiposDefensa,
+            'todos_equipos' => $todosEquipos,
             
             'precision_pases' => round($promediosEquipo->avg_pases ?? 78.5, 1),
             'precision_tackles' => round($promediosEquipo->avg_entradas ?? 62.4, 1),
@@ -1065,6 +1171,16 @@ class UserController extends Controller
                         'organizacion' => $orgName,
                         'tipo' => 'sin_capitan',
                         'mensaje' => "El equipo {$equipo->nombre} no cuenta con un capitán asignado."
+                    ];
+                }
+
+                if (empty($equipo->club_id_ea)) {
+                    $equiposWarnings[] = [
+                        'equipo_id' => $equipo->id,
+                        'nombre' => $equipo->nombre,
+                        'organizacion' => $orgName,
+                        'tipo' => 'sin_club_id_ea',
+                        'mensaje' => "El equipo {$equipo->nombre} no tiene registrado su EA Club ID."
                     ];
                 }
             }

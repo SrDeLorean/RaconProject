@@ -44,7 +44,7 @@ export default function AcercaDe() {
               🛡️ Nuestra Identidad Competitiva
             </Badge>
 
-            <h1 className="animate-fade-in-up text-6xl sm:text-8xl md:text-9xl font-display font-black text-foreground uppercase tracking-[0.01em] leading-[0.82] drop-shadow-2xl z-10 mt-2 select-none" style={{ animationDelay: '0.1s' }}>
+            <h1 className="animate-fade-in-up text-4xl sm:text-8xl md:text-9xl font-display font-black text-foreground uppercase tracking-[0.01em] leading-[0.82] drop-shadow-2xl z-10 mt-2 select-none" style={{ animationDelay: '0.1s' }}>
               QUIÉNES <br />
               <span className="text-primary tracking-tight font-black shimmer-text">
                 SOMOS.

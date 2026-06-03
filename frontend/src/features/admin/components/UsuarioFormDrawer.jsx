@@ -77,7 +77,7 @@ export default function UsuarioFormDrawer({
             value={formData.role} 
             onChange={(e) => setFormData({ ...formData, role: e.target.value })} 
             disabled={isSaving} 
-            error={formErrors?.role?.[0]} // 🔥
+            error={formErrors?.role?.[0]} 
             options={[
               { value: 'administrador', label: 'Administrador (⚡)' }, 
               { value: 'organizador', label: 'Organizador (🏢)' }, 
@@ -89,7 +89,7 @@ export default function UsuarioFormDrawer({
             value={formData.status} 
             onChange={(e) => setFormData({ ...formData, status: e.target.value })} 
             disabled={isSaving} 
-            error={formErrors?.status?.[0]} // 🔥
+            error={formErrors?.status?.[0]} 
             options={[
               { value: 'activo', label: 'Activo' }, 
               { value: 'inactivo', label: 'Inactivo' }, 
@@ -97,6 +97,106 @@ export default function UsuarioFormDrawer({
             ]} 
           />
         </div>
+
+        {/* --- DATOS EXCLUSIVOS DEL JUGADOR (SI ROL ES JUGADOR) --- */}
+        {formData.role === 'jugador' && (
+          <div className="space-y-6 mt-4 pt-4 border-t border-border/40 animate-fade-in">
+            {/* Sección: Identidad Gamer */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold text-primary uppercase tracking-widest border-b border-border/50 pb-2">Identidad E-Sports</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input 
+                  label="Gamertag (Apodo) *" 
+                  placeholder="Ej. xX_ProGamer_Xx" 
+                  value={formData.gamertag || ''} 
+                  onChange={(e) => setFormData({ ...formData, gamertag: e.target.value })} 
+                  disabled={isSaving} 
+                  error={formErrors?.gamertag?.[0]} 
+                  required
+                />
+                <Input 
+                  label="EA ID (Cuenta Origin) *" 
+                  placeholder="EA_NickName" 
+                  value={formData.id_ea || ''} 
+                  onChange={(e) => setFormData({ ...formData, id_ea: e.target.value })} 
+                  disabled={isSaving} 
+                  error={formErrors?.id_ea?.[0]} 
+                  required
+                />
+              </div>
+              <Select 
+                label="Plataforma Principal" 
+                value={formData.plataforma || 'crossplay'} 
+                onChange={(e) => setFormData({ ...formData, plataforma: e.target.value })} 
+                disabled={isSaving} 
+                error={formErrors?.plataforma?.[0]} 
+                options={[
+                  { value: 'crossplay', label: 'Crossplay (Cualquiera)' }, 
+                  { value: 'ps5', label: 'PlayStation 5' }, 
+                  { value: 'xbox', label: 'Xbox Series X/S' },
+                  { value: 'pc', label: 'PC (Origin/Steam)' }
+                ]} 
+              />
+            </div>
+
+            {/* Sección: Perfil Deportivo */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest border-b border-border/50 pb-2">Perfil Deportivo</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <Input 
+                  label="Nacionalidad" 
+                  placeholder="Ej. Chile" 
+                  value={formData.nacionalidad || ''} 
+                  onChange={(e) => setFormData({ ...formData, nacionalidad: e.target.value })} 
+                  disabled={isSaving} 
+                  error={formErrors?.nacionalidad?.[0]} 
+                />
+                <Input 
+                  label="Posición" 
+                  placeholder="Ej. DFC, MC, DC" 
+                  value={formData.posicion || ''} 
+                  onChange={(e) => setFormData({ ...formData, posicion: e.target.value })} 
+                  disabled={isSaving} 
+                  error={formErrors?.posicion?.[0]} 
+                />
+                <Input 
+                  label="Nacimiento" 
+                  type="date"
+                  value={formData.fecha_nacimiento || ''} 
+                  onChange={(e) => setFormData({ ...formData, fecha_nacimiento: e.target.value })} 
+                  disabled={isSaving} 
+                  error={formErrors?.fecha_nacimiento?.[0]} 
+                />
+                <Input 
+                  label="Altura (cm)" 
+                  type="number"
+                  placeholder="180" 
+                  value={formData.altura || ''} 
+                  onChange={(e) => setFormData({ ...formData, altura: e.target.value })} 
+                  disabled={isSaving} 
+                  error={formErrors?.altura?.[0]} 
+                />
+                <Input 
+                  label="Peso (kg)" 
+                  type="number"
+                  placeholder="75" 
+                  value={formData.peso || ''} 
+                  onChange={(e) => setFormData({ ...formData, peso: e.target.value })} 
+                  disabled={isSaving} 
+                  error={formErrors?.peso?.[0]} 
+                />
+                <Input 
+                  label="Teléfono / WhatsApp" 
+                  placeholder="+56 9 1234 5678" 
+                  value={formData.telefono || ''} 
+                  onChange={(e) => setFormData({ ...formData, telefono: e.target.value })} 
+                  disabled={isSaving} 
+                  error={formErrors?.telefono?.[0]} 
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </form>
     </Drawer>
   );

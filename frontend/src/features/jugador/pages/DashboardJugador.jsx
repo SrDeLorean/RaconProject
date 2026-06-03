@@ -115,8 +115,6 @@ export default function DashboardJugador() {
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1">Identidad Deportiva</span>
                   {(() => {
                     const missing = [];
-                    if (!profileData?.gamertag) missing.push('Gamertag');
-                    if (!profileData?.id_ea) missing.push('EA ID');
                     if (!profileData?.plataforma) missing.push('Plataforma');
                     if (!profileData?.nacionalidad) missing.push('Nacionalidad');
                     
