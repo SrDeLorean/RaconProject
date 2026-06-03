@@ -75,9 +75,20 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
   // Load organizations
   useEffect(() => {
     api.get('/organizaciones')
-      .then(res => setOrganizaciones(res.data.data || res.data || []))
+      .then(res => {
+        const list = res.data.data || res.data || [];
+        if (forOrganizer && user) {
+          const filtered = list.filter(org => org.owner_id === user.id);
+          setOrganizaciones(filtered);
+          if (filtered.length > 0) {
+            setOrgFiltro(filtered[0].id);
+          }
+        } else {
+          setOrganizaciones(list);
+        }
+      })
       .catch(err => console.error("Error loading organizations:", err));
-  }, []);
+  }, [forOrganizer, user]);
 
   // Load competitions based on organization selection
   useEffect(() => {
@@ -411,10 +422,14 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
     }));
   }, [filteredMatches]);
 
-  const activeFiltersCount = [orgFiltro, compFiltro, searchText.trim()].filter(Boolean).length;
+  const activeFiltersCount = [(forOrganizer ? null : orgFiltro), compFiltro, searchText.trim()].filter(Boolean).length;
 
   function resetFilters() {
-    setOrgFiltro(null);
+    if (forOrganizer && organizaciones.length > 0) {
+      setOrgFiltro(organizaciones[0].id);
+    } else {
+      setOrgFiltro(null);
+    }
     setCompFiltro(null);
     setSearchText('');
     setDateIndex(0);
@@ -587,20 +602,22 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
           </div>
 
           {/* PRIMER NIVEL: Circuitos / Organizaciones Habilitados */}
-          {organizaciones.length > 0 && (
+          {organizaciones.length > (forOrganizer ? 1 : 0) && (
             <div className="space-y-2.5 border-t border-border/20 dark:border-white/[0.05] pt-4.5 font-sans">
               <p className="text-[9px] font-condensed font-black uppercase tracking-[0.2em] text-muted-foreground">CIRCUITOS DISPONIBLES</p>
               <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => { setOrgFiltro(null); setCompFiltro(null); }}
-                  className={`px-4.5 py-2 rounded-xl text-[10px] font-condensed font-black uppercase tracking-widest border transition-all duration-300 cursor-pointer ${
-                    orgFiltro === null
-                      ? 'bg-primary/15 text-primary border-primary/40'
-                      : 'bg-white/60 dark:bg-card/40 text-muted-foreground border-border/30 dark:border-white/[0.06] hover:bg-white/95 dark:hover:bg-card/65 hover:border-primary/45 hover:text-foreground'
-                  }`}
-                >
-                  TODOS ({partidos.length})
-                </button>
+                {!forOrganizer && (
+                  <button
+                    onClick={() => { setOrgFiltro(null); setCompFiltro(null); }}
+                    className={`px-4.5 py-2 rounded-xl text-[10px] font-condensed font-black uppercase tracking-widest border transition-all duration-300 cursor-pointer ${
+                      orgFiltro === null
+                        ? 'bg-primary/15 text-primary border-primary/40'
+                        : 'bg-white/60 dark:bg-card/40 text-muted-foreground border-border/30 dark:border-white/[0.06] hover:bg-white/95 dark:hover:bg-card/65 hover:border-primary/45 hover:text-foreground'
+                    }`}
+                  >
+                    TODOS ({partidos.length})
+                  </button>
+                )}
                 {organizaciones.map(org => (
                   <button
                     key={org.id}
