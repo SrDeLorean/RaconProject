@@ -271,15 +271,17 @@ class ReporteController extends Controller
                     'estado'         => $estado,
                 ]);
 
-                if (!$user) {
-                    continue;
+                if ($user) {
+                    // Borrar previo por si es reporte corregido
+                    EstadisticaJugador::where([
+                        'jugador_id' => $user->id,
+                        'partido_id' => $partido->id
+                    ])->delete();
                 }
 
-                // Borrar previo por si es reporte corregido
-                EstadisticaJugador::where([
-                    'jugador_id' => $user->id,
-                    'partido_id' => $partido->id
-                ])->delete();
+                if (!$procesado) {
+                    continue;
+                }
 
                 EstadisticaJugador::create(
                     EaPlayerStatsMapper::map(

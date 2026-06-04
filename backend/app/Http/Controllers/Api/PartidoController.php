@@ -18,8 +18,8 @@ class PartidoController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Partido::with([
-            'local:id,nombre,logo,abreviatura',
-            'visitante:id,nombre,logo,abreviatura',
+            'local:id,nombre,logo,abreviatura,club_id_ea',
+            'visitante:id,nombre,logo,abreviatura,club_id_ea',
             'competencia.temporada.organizacion:id,nombre,logo',
         ]);
 
@@ -247,8 +247,8 @@ class PartidoController extends Controller
     public function show($id): JsonResponse
     {
         $partido = Partido::with([
-            'local:id,nombre,logo,abreviatura,id_capitan',
-            'visitante:id,nombre,logo,abreviatura,id_capitan',
+            'local:id,nombre,logo,abreviatura,id_capitan,club_id_ea',
+            'visitante:id,nombre,logo,abreviatura,id_capitan,club_id_ea',
             'competencia.temporada.organizacion'
         ])->findOrFail($id);
 

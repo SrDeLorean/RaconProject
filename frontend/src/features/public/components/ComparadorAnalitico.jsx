@@ -23,13 +23,38 @@ export default function ComparadorAnalitico({ playersList }) {
     });
   }, [playersList, searchB, playerBId]);
 
-  // Set default selected players when list is loaded
+  // Set default selected players when list is loaded (consistently as string)
   useEffect(() => {
     if (playersList && playersList.length >= 2) {
-      setPlayerAId(playersList[0].id);
-      setPlayerBId(playersList[1].id);
+      setPlayerAId(String(playersList[0].id));
+      setPlayerBId(String(playersList[1].id));
     }
   }, [playersList]);
+
+  // Auto-select first matching player when typing search queries
+  useEffect(() => {
+    if (searchA.trim() !== '') {
+      const match = playersList.find(p => 
+        p.name?.toLowerCase().includes(searchA.toLowerCase()) || 
+        p.equipo_nombre?.toLowerCase().includes(searchA.toLowerCase())
+      );
+      if (match && String(match.id) !== String(playerAId)) {
+        setPlayerAId(String(match.id));
+      }
+    }
+  }, [searchA, playersList]);
+
+  useEffect(() => {
+    if (searchB.trim() !== '') {
+      const match = playersList.find(p => 
+        p.name?.toLowerCase().includes(searchB.toLowerCase()) || 
+        p.equipo_nombre?.toLowerCase().includes(searchB.toLowerCase())
+      );
+      if (match && String(match.id) !== String(playerBId)) {
+        setPlayerBId(String(match.id));
+      }
+    }
+  }, [searchB, playersList]);
 
   // Find player objects
   const playerA = useMemo(() => playersList.find(p => String(p.id) === String(playerAId)), [playersList, playerAId]);

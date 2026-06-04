@@ -1,11 +1,74 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
 import Card from '@/components/shared/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import api from '@/api/axios';
-import Partidos from '@/features/public/pages/Partidos';
+
+const ResumenTab = lazy(() => import('./components/tabs/ResumenTab'));
+const EquiposTab = lazy(() => import('./components/tabs/EquiposTab'));
+const JugadoresTab = lazy(() => import('./components/tabs/JugadoresTab'));
+const TraspasosTab = lazy(() => import('./components/tabs/TraspasosTab'));
+const ReportesTab = lazy(() => import('./components/tabs/ReportesTab'));
+const TemporadasTab = lazy(() => import('./components/tabs/TemporadasTab'));
+const CompetenciasTab = lazy(() => import('./components/tabs/CompetenciasTab'));
+const CalendarioTab = lazy(() => import('./components/tabs/CalendarioTab'));
+
+const getTabIcon = (id, className = "w-4 h-4") => {
+  switch (id) {
+    case 'resumen':
+      return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+      );
+    case 'equipos':
+      return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 005.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+        </svg>
+      );
+    case 'jugadores':
+      return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+      );
+    case 'traspasos':
+      return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+        </svg>
+      );
+    case 'partidos':
+      return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      );
+    case 'temporadas':
+      return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      );
+    case 'competencias':
+      return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 14c2.21 0 4-1.79 4-4V5c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v5c0 2.21 1.79 4 4 4zm0 0v6m-4 0h8M4 7h2m12 0h2" />
+        </svg>
+      );
+    case 'calendario':
+      return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+};
 
 export default function DashboardOrganizador() {
   const { user } = useAuthStore();
@@ -13,7 +76,7 @@ export default function DashboardOrganizador() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [misCompetencias, setMisCompetencias] = useState([]);
-  const [activeTab, setActiveTab] = useState('perfil');
+  const [activeTab, setActiveTab] = useState('resumen');
   const [playersAudit, setPlayersAudit] = useState({ missingData: [], similarGroups: [] });
 
   useEffect(() => {
@@ -27,98 +90,94 @@ export default function DashboardOrganizador() {
         const compArray = responseComp.data.data ? responseComp.data.data : (Array.isArray(responseComp.data) ? responseComp.data : []);
         setMisCompetencias(compArray);
 
-        // Obtener jugadores para la auditoría
-        const responsePlayers = await api.get('/usuarios', { params: { role: 'jugador', per_page: 1000 } });
-        const allPlayers = responsePlayers.data?.data || responsePlayers.data || [];
+        // Fetch de jugadores para realizar la auditoria
+        try {
+          const responsePlayers = await api.get('/usuarios', { params: { role: 'jugador', per_page: 1000 } });
+          const allPlayers = responsePlayers.data?.data || responsePlayers.data || [];
+          
+          const missing = [];
+          allPlayers.forEach(p => {
+            const missingEa = !p.id_ea || p.id_ea.trim() === '';
+            const missingGt = !p.gamertag || p.gamertag.trim() === '';
+            if (missingEa || missingGt) {
+              missing.push({ ...p, missingEa, missingGt });
+            }
+          });
 
-        // Calcular auditoría de jugadores
-        const missing = [];
-        allPlayers.forEach(p => {
-          const missingEa = !p.id_ea || p.id_ea.trim() === '';
-          const missingGt = !p.gamertag || p.gamertag.trim() === '';
-          if (missingEa || missingGt) {
-            missing.push({
-              ...p,
-              missingEa,
-              missingGt
-            });
-          }
-        });
+          const playersWithGt = allPlayers.filter(p => p.gamertag && p.gamertag.trim() !== '');
+          const visited = new Set();
+          const similarGroups = [];
 
-        // Agrupamiento por similitud
-        const playersWithGt = allPlayers.filter(p => p.gamertag && p.gamertag.trim() !== '');
-        const visited = new Set();
-        const similarGroups = [];
-
-        const getLevenshteinDistance = (a, b) => {
-          const matrix = [];
-          for (let i = 0; i <= b.length; i++) matrix[i] = [i];
-          for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
-          for (let i = 1; i <= b.length; i++) {
-            for (let j = 1; j <= a.length; j++) {
-              if (b.charAt(i - 1) === a.charAt(j - 1)) {
-                matrix[i][j] = matrix[i - 1][j - 1];
-              } else {
-                matrix[i][j] = Math.min(
-                  matrix[i - 1][j - 1] + 1,
-                  matrix[i][j - 1] + 1,
-                  matrix[i - 1][j] + 1
-                );
+          const getLevenshteinDistance = (a, b) => {
+            const matrix = [];
+            for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= b.length; i++) {
+              for (let j = 1; j <= a.length; j++) {
+                if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                  matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                  matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1,
+                    matrix[i][j - 1] + 1,
+                    matrix[i - 1][j] + 1
+                  );
+                }
               }
             }
-          }
-          return matrix[b.length][a.length];
-        };
-
-        const isSimilar = (gt1, gt2) => {
-          if (!gt1 || !gt2) return false;
-          const clean = (str) => {
-            return str
-              .toLowerCase()
-              .replace(/[\s\._\-]/g, '')
-              .replace(/0/g, 'o')
-              .replace(/1/g, 'i')
-              .replace(/3/g, 'e')
-              .replace(/4/g, 'a')
-              .replace(/5/g, 's')
-              .replace(/7/g, 't')
-              .replace(/8/g, 'b');
+            return matrix[b.length][a.length];
           };
-          const c1 = clean(gt1);
-          const c2 = clean(gt2);
-          if (c1 === c2) return true;
-          
-          const dist = getLevenshteinDistance(c1, c2);
-          if (dist <= 2 && Math.min(c1.length, c2.length) >= 4) {
-            return true;
-          }
-          return false;
-        };
 
-        for (let i = 0; i < playersWithGt.length; i++) {
-          const p1 = playersWithGt[i];
-          if (visited.has(p1.id)) continue;
+          const isSimilar = (gt1, gt2) => {
+            if (!gt1 || !gt2) return false;
+            const clean = (str) => {
+              return str
+                .toLowerCase()
+                .replace(/[\s\._\-]/g, '')
+                .replace(/0/g, 'o')
+                .replace(/1/g, 'i')
+                .replace(/3/g, 'e')
+                .replace(/4/g, 'a')
+                .replace(/5/g, 's')
+                .replace(/7/g, 't')
+                .replace(/8/g, 'b');
+            };
+            const c1 = clean(gt1);
+            const c2 = clean(gt2);
+            if (c1 === c2) return true;
+            
+            const dist = getLevenshteinDistance(c1, c2);
+            return dist <= 2 && Math.min(c1.length, c2.length) >= 4;
+          };
 
-          const currentGroup = [p1];
-          for (let j = i + 1; j < playersWithGt.length; j++) {
-            const p2 = playersWithGt[j];
-            if (visited.has(p2.id)) continue;
+          for (let i = 0; i < playersWithGt.length; i++) {
+            const p1 = playersWithGt[i];
+            if (visited.has(p1.id)) continue;
 
-            if (isSimilar(p1.gamertag, p2.gamertag)) {
-              currentGroup.push(p2);
+            const currentGroup = [p1];
+            for (let j = i + 1; j < playersWithGt.length; j++) {
+              const p2 = playersWithGt[j];
+              if (visited.has(p2.id)) continue;
+
+              if (isSimilar(p1.gamertag, p2.gamertag)) {
+                currentGroup.push(p2);
+              }
+            }
+
+            if (currentGroup.length > 1) {
+              currentGroup.forEach(p => visited.add(p.id));
+              similarGroups.push(currentGroup);
             }
           }
 
-          if (currentGroup.length > 1) {
-            currentGroup.forEach(p => visited.add(p.id));
-            similarGroups.push(currentGroup);
-          }
+          setPlayersAudit({
+            missingData: missing,
+            similarGroups: similarGroups
+          });
+        } catch (errPl) {
+          console.error("Error al auditar jugadores en dashboard principal:", errPl);
         }
 
-        setPlayersAudit({
-          missingData: missing,
-          similarGroups: similarGroups
-        });
       } catch (error) {
         console.error("Error al obtener estadísticas de organizador:", error);
       } finally {
@@ -127,6 +186,30 @@ export default function DashboardOrganizador() {
     };
     fetchStatsAndCompetencias();
   }, []);
+
+  // Cálculos de alertas generales
+  const perfilUsuarioCount = stats?.audits?.perfil?.usuario?.length || 0;
+  const perfilOrgCount = stats?.audits?.perfil?.organizaciones?.reduce((acc, o) => acc + (o.campos_faltantes?.length || 0), 0) || 0;
+  const totalAlertasResumen = 
+    (stats?.audits?.partidos?.length || 0) + 
+    (stats?.audits?.equipos?.length || 0) + 
+    (stats?.audits?.traspasos?.length || 0) + 
+    (stats?.audits?.competencias?.length || 0) + 
+    (playersAudit.missingData.length + playersAudit.similarGroups.length) +
+    (perfilUsuarioCount + perfilOrgCount);
+
+  const activeSeasonsWarns = stats?.audits?.temporadas?.filter(t => !t.activa || (t.fecha_fin && new Date(t.fecha_fin) < new Date())).length || 0;
+
+  const tabsConfig = [
+    { id: 'resumen', label: 'Resumen', count: totalAlertasResumen, type: 'error' },
+    { id: 'equipos', label: 'Plantillas & Caps', count: stats?.audits?.equipos?.length || 0, type: 'error' },
+    { id: 'jugadores', label: 'Auditoría Jugadores', count: (playersAudit.missingData.length + playersAudit.similarGroups.length), type: 'error' },
+    { id: 'traspasos', label: 'Traspasos', count: stats?.audits?.traspasos?.length || 0, type: 'warning' },
+    { id: 'partidos', label: 'Falta Reporte', count: stats?.audits?.partidos?.length || 0, type: 'error' },
+    { id: 'temporadas', label: 'Temporadas', count: activeSeasonsWarns, type: 'warning' },
+    { id: 'competencias', label: 'Competencias', count: stats?.audits?.competencias?.length || 0, type: 'error' },
+    { id: 'calendario', label: 'Calendario', count: stats?.mis_partidos_pendientes || 0, type: 'info' },
+  ];
 
   return (
     <div className="animate-fade-in space-y-8">
@@ -155,7 +238,11 @@ export default function DashboardOrganizador() {
                   <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mb-1">Mis Organizaciones</p>
                   <h3 className="text-4xl font-display font-black text-foreground">{stats.mis_organizaciones}</h3>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xl shadow-inner">🏢</div>
+                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-inner">
+                  <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v12m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
               </div>
             </Card>
 
@@ -165,7 +252,11 @@ export default function DashboardOrganizador() {
                   <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mb-1">Temporadas Pro</p>
                   <h3 className="text-4xl font-display font-black text-foreground">{stats.mis_temporadas}</h3>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xl shadow-inner">📅</div>
+                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-inner">
+                  <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
               </div>
             </Card>
 
@@ -175,7 +266,11 @@ export default function DashboardOrganizador() {
                   <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mb-1">Competencias / Ligas</p>
                   <h3 className="text-4xl font-display font-black text-foreground">{stats.mis_competencias}</h3>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xl shadow-inner">🏆</div>
+                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-inner">
+                  <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 14c2.21 0 4-1.79 4-4V5c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v5c0 2.21 1.79 4 4 4zm0 0v6m-4 0h8M4 7h2m12 0h2" />
+                  </svg>
+                </div>
               </div>
             </Card>
 
@@ -185,7 +280,11 @@ export default function DashboardOrganizador() {
                   <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mb-1">Partidos por Reportar</p>
                   <h3 className="text-4xl font-display font-black text-primary">{stats.mis_partidos_pendientes}</h3>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xl shadow-inner">⚠️</div>
+                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-inner">
+                  <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
               </div>
             </Card>
 
@@ -197,7 +296,11 @@ export default function DashboardOrganizador() {
                     {stats.mis_traspasos_pendientes ?? 0}
                   </h3>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xl shadow-inner">🔁</div>
+                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-inner">
+                  <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                </div>
               </div>
             </Card>
 
@@ -207,24 +310,19 @@ export default function DashboardOrganizador() {
           <div className="border border-border/40 bg-card/25 rounded-3xl p-6 shadow-xl space-y-6">
             <div>
               <h2 className="text-xl font-display font-black text-foreground uppercase tracking-wider flex items-center gap-2">
-                🛡️ Centro de Control y Auditoría
+                <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                Centro de Control y Auditoría
               </h2>
               <p className="text-xs text-muted-foreground">
                 Supervisa el estado reglamentario, deportivo y de branding de tus ligas y organizaciones en tiempo real.
               </p>
             </div>
 
-            {/* Selector de pestañas (7 vistas) */}
+            {/* Selector de pestañas (8 vistas) */}
             <div className="flex flex-wrap gap-2 border-b border-border/20 pb-3">
-              {[
-                { id: 'perfil', label: '🏢 Perfil & Orgs', count: (stats.audits?.perfil?.usuario?.length || 0) + (stats.audits?.perfil?.organizaciones?.reduce((acc, o) => acc + (o.campos_faltantes?.length || 0), 0) || 0) },
-                { id: 'equipos', label: '👥 Plantillas & Caps', count: stats.audits?.equipos?.length || 0 },
-                { id: 'traspasos', label: '🔁 Traspasos', count: stats.audits?.traspasos?.length || 0 },
-                { id: 'partidos', label: '🏟️ Falta Reporte', count: stats.audits?.partidos?.length || 0 },
-                { id: 'temporadas', label: '📅 Temporadas', count: stats.audits?.temporadas?.length || 0 },
-                { id: 'competencias', label: '🏆 Competencias', count: stats.audits?.competencias?.length || 0 },
-                { id: 'jugadores', label: '🎮 Auditoría Jugadores', count: playersAudit.missingData.length + playersAudit.similarGroups.length },
-              ].map((tab) => {
+              {tabsConfig.map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
                   <button
@@ -236,10 +334,17 @@ export default function DashboardOrganizador() {
                         : 'bg-card/65 text-muted-foreground border-border/50 hover:text-foreground hover:border-primary/30'
                     }`}
                   >
+                    {getTabIcon(tab.id, `w-4 h-4 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`)}
                     <span>{tab.label}</span>
                     {tab.count > 0 && (
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
-                        isActive ? 'bg-primary-foreground text-primary' : 'bg-destructive/20 text-destructive border border-destructive/30 animate-pulse'
+                        isActive 
+                          ? 'bg-primary-foreground text-primary' 
+                          : tab.type === 'error'
+                          ? 'bg-destructive/20 text-destructive border border-destructive/30 animate-pulse'
+                          : tab.type === 'warning'
+                          ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 animate-pulse'
+                          : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
                       }`}>
                         {tab.count}
                       </span>
@@ -249,383 +354,23 @@ export default function DashboardOrganizador() {
               })}
             </div>
 
-            {/* Contenido de la pestaña activa */}
+            {/* Contenido de la pestaña activa cargado on-demand */}
             <div className="bg-card/40 border border-border/30 rounded-2xl p-5 min-h-[200px]">
-              
-              {/* VISTA 1: Perfil & Orgs */}
-              {activeTab === 'perfil' && (
-                <div className="space-y-4">
-                  <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">🏢 Perfil y Datos Organizacionales</h4>
-                  
-                  {/* Usuario */}
-                  {stats.audits?.perfil?.usuario?.length > 0 ? (
-                    <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2">
-                      <p className="text-xs text-amber-500 font-bold flex items-center gap-1.5">
-                        ⚠️ Tu perfil de organizador tiene campos incompletos
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Para mayor transparencia, completa los siguientes datos: <strong className="text-foreground">{stats.audits.perfil.usuario.join(', ')}</strong>.
-                      </p>
-                      <Button variant="outline" size="sm" className="text-xs border-amber-500/30 hover:bg-amber-500/10 text-amber-500" onClick={() => navigate('/organizador/perfil')}>
-                        Completar Perfil
-                      </Button>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-green-500 font-bold flex items-center gap-1">✅ Tu perfil de organizador está completo.</p>
-                  )}
-
-                  {/* Organizaciones */}
-                  {stats.audits?.perfil?.organizaciones?.length > 0 ? (
-                    <div className="space-y-3">
-                      {stats.audits.perfil.organizaciones.map((org) => (
-                        <div key={org.id} className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                          <div className="space-y-1">
-                            <span className="text-xs font-black text-foreground uppercase">{org.nombre}</span>
-                            <p className="text-[11px] text-muted-foreground">
-                              Faltan cargar los siguientes datos: <strong className="text-foreground">{org.campos_faltantes.join(', ')}</strong>.
-                            </p>
-                          </div>
-                          <Button size="sm" className="text-xs font-bold whitespace-nowrap bg-amber-600 text-white hover:bg-amber-700" onClick={() => navigate('/organizador/perfil')}>
-                            Editar Organización
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-green-500 font-bold flex items-center gap-1">✅ Todas tus organizaciones tienen branding y datos de contacto completos.</p>
-                  )}
+              <Suspense fallback={
+                <div className="py-12 flex flex-col items-center justify-center gap-2">
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider animate-pulse">Cargando módulo de auditoría...</span>
                 </div>
-              )}
-
-              {/* VISTA 2: Plantillas & Capitanes */}
-              {activeTab === 'equipos' && (
-                <div className="space-y-4">
-                  <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">👥 Auditoría de Equipos (Plantillas y Capitanes)</h4>
-                  {stats.audits?.equipos?.length === 0 ? (
-                    <p className="text-xs text-green-500 font-bold flex items-center gap-1">✅ Todos los equipos participantes cuentan con plantillas, capitán asignado y EA ID registrado.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {stats.audits.equipos.map((warning, idx) => (
-                        <div key={idx} className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl flex items-center justify-between gap-3">
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-foreground">{warning.nombre}</span>
-                            <span className="text-[10px] text-muted-foreground uppercase font-mono">{warning.organizacion}</span>
-                            <span className="text-[11px] text-destructive/90 mt-1 font-medium">{warning.mensaje}</span>
-                          </div>
-                          <Badge variant="error" className="uppercase text-[8px] font-black tracking-wider shrink-0">
-                            {warning.tipo === 'plantilla_vacia' ? 'Sin Roster' : warning.tipo === 'sin_capitan' ? 'Sin Cap' : 'Sin EA ID'}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* VISTA 3: Traspasos */}
-              {activeTab === 'traspasos' && (
-                <div className="space-y-4">
-                  <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">🔁 Traspasos y Solicitudes de Fichaje / Despido</h4>
-                  {stats.audits?.traspasos?.length === 0 ? (
-                    <p className="text-xs text-green-500 font-bold flex items-center gap-1">✅ No tienes solicitudes de fichaje o despido pendientes de firma.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {stats.audits.traspasos.map((traspaso) => (
-                        <div key={traspaso.id} className="p-3 bg-card border border-border/50 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-xs font-bold text-foreground">{traspaso.jugador}</span>
-                              <Badge variant={traspaso.tipo === 'despido' ? 'error' : 'brand'} className="uppercase text-[8px] font-black">
-                                {traspaso.tipo === 'despido' ? 'Despido / Libre' : 'Fichaje'}
-                              </Badge>
-                              <span className="text-[10px] text-muted-foreground font-mono">{traspaso.organizacion}</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Origen: <span className="text-foreground font-medium">{traspaso.equipo_origen}</span> → Destino: <span className="text-foreground font-medium">{traspaso.equipo_destino}</span>
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-[10px] text-muted-foreground font-mono">{new Date(traspaso.fecha).toLocaleDateString()}</span>
-                            <Button size="sm" variant="outline" className="h-7 text-[10px] font-bold" onClick={() => navigate('/organizador/traspasos')}>
-                              Firmar / Revisar
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* VISTA 4: Falta Reporte */}
-              {activeTab === 'partidos' && (
-                <div className="space-y-4">
-                  <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">🏟️ Partidos Pendientes de Reporte Oficial</h4>
-                  {stats.audits?.partidos?.length === 0 ? (
-                    <p className="text-xs text-green-500 font-bold flex items-center gap-1">✅ Todos los partidos en curso están al día con sus reportes oficiales.</p>
-                  ) : (
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                      {stats.audits.partidos.map((partido) => (
-                        <div key={partido.id} className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-xs font-bold text-foreground">{partido.local} vs {partido.visitante}</span>
-                              <span className="text-[10px] text-muted-foreground uppercase font-mono">{partido.competencia}</span>
-                            </div>
-                            <p className="text-[11px] text-muted-foreground mt-0.5">
-                              Programado: <strong className="text-foreground">{partido.fecha} {partido.hora || 'Por definir'}</strong> ({partido.organizacion})
-                            </p>
-                          </div>
-                          <Button size="sm" variant="outline" className="h-7 text-[10px] font-bold border-amber-500/30 text-amber-500 hover:bg-amber-500/10 shrink-0" onClick={() => navigate('/organizador/partidos')}>
-                            Reportar Resultado
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* VISTA 5: Temporadas */}
-              {activeTab === 'temporadas' && (
-                <div className="space-y-4">
-                  <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">📅 Control de Temporadas y Mercados de Pases</h4>
-                  {stats.audits?.temporadas?.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No hay temporadas registradas bajo tus organizaciones.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {stats.audits.temporadas.map((temp) => (
-                        <div key={temp.id} className="p-4 bg-card border border-border/50 rounded-xl space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs font-black text-foreground uppercase">{temp.nombre}</span>
-                            <Badge variant={temp.activa ? 'success' : 'neutral'} className="text-[8px] uppercase tracking-wider font-bold">
-                              {temp.activa ? 'Activa' : 'Inactiva'}
-                            </Badge>
-                          </div>
-                          <p className="text-[10px] text-muted-foreground uppercase font-mono">{temp.organizacion}</p>
-                          <div className="flex justify-between items-center text-xs pt-1 border-t border-border/20">
-                            <span className="text-muted-foreground">Mercado:</span>
-                            <span className={`font-bold ${temp.estado_mercado === 'abierto' ? 'text-green-500' : 'text-destructive'}`}>
-                              {temp.estado_mercado === 'abierto' ? '🟢 Abierto' : '🔴 Cerrado'}
-                            </span>
-                          </div>
-                          <div className="text-[11px] text-muted-foreground flex justify-between">
-                            <span>Vigencia:</span>
-                            <span>{temp.fecha_inicio ? new Date(temp.fecha_inicio).toLocaleDateString() : 'N/A'} - {temp.fecha_fin ? new Date(temp.fecha_fin).toLocaleDateString() : 'N/A'}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* VISTA 6: Competencias */}
-              {activeTab === 'competencias' && (
-                <div className="space-y-4">
-                  <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">🏆 Estructura y Configuración de Competencias / Ligas</h4>
-                  {stats.audits?.competencias?.length === 0 ? (
-                    <p className="text-xs text-green-500 font-bold flex items-center gap-1">✅ Todas las competencias tienen una estructura deportiva y de branding completa.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {stats.audits.competencias.map((comp) => (
-                        <div key={comp.id} className="p-4 bg-destructive/5 border border-destructive/20 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-black text-foreground uppercase">{comp.nombre}</span>
-                              <span className="text-[10px] text-muted-foreground font-mono">({comp.organizacion})</span>
-                              <Badge variant="neutral" className="uppercase text-[8px] font-bold">{comp.estado}</Badge>
-                            </div>
-                            <ul className="list-disc pl-4 space-y-1">
-                              {comp.warnings.map((warn, idx) => (
-                                <li key={idx} className="text-xs text-muted-foreground">{warn}</li>
-                              ))}
-                            </ul>
-                          </div>
-                          <Button size="sm" variant="outline" className="text-xs font-bold shrink-0" onClick={() => navigate(`/organizador/competencias/${comp.id}`)}>
-                            Gestionar
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* VISTA 7: Auditoría de Jugadores */}
-              {activeTab === 'jugadores' && (
-                <div className="space-y-6">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-border/10 pb-3">
-                    <div>
-                      <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">🎮 Auditoría y Control de Calidad de Jugadores</h4>
-                      <p className="text-xs text-muted-foreground">Verificación de identificadores y detección de posibles cuentas similares o duplicadas.</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Tarjeta 1: Datos Faltantes */}
-                    <div className="space-y-3">
-                      <h5 className="text-xs font-black text-foreground uppercase tracking-wider flex items-center gap-1.5 text-amber-500">
-                        ⚠️ Fichas Incompletas ({playersAudit.missingData.length})
-                      </h5>
-                      {playersAudit.missingData.length === 0 ? (
-                        <p className="text-xs text-green-500 font-bold bg-green-500/5 border border-green-500/10 rounded-xl p-4">
-                          ✅ Todos los jugadores registrados tienen completo su GamerTAG y EA ID.
-                        </p>
-                      ) : (
-                        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-                          {playersAudit.missingData.map((player) => (
-                            <div key={player.id} className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl flex items-center justify-between gap-3">
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-xs font-bold text-foreground truncate">{player.name}</span>
-                                <span className="text-[10px] text-muted-foreground truncate">{player.email}</span>
-                                <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                  {player.missingGt && (
-                                    <span className="text-[8px] font-black uppercase tracking-wider bg-destructive/20 text-destructive border border-destructive/30 px-1.5 py-0.5 rounded">
-                                      Falta GamerTAG
-                                    </span>
-                                  )}
-                                  {player.missingEa && (
-                                    <span className="text-[8px] font-black uppercase tracking-wider bg-destructive/20 text-destructive border border-destructive/30 px-1.5 py-0.5 rounded">
-                                      Falta EA ID
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Tarjeta 2: Similitud / Duplicados */}
-                    <div className="space-y-3">
-                      <h5 className="text-xs font-black text-foreground uppercase tracking-wider flex items-center gap-1.5 text-destructive animate-pulse">
-                        🚨 Advertencia de GamerTAGs Similares ({playersAudit.similarGroups.length})
-                      </h5>
-                      {playersAudit.similarGroups.length === 0 ? (
-                        <p className="text-xs text-green-500 font-bold bg-green-500/5 border border-green-500/10 rounded-xl p-4">
-                          ✅ No se han detectado GamerTAGs sospechosamente similares o duplicados.
-                        </p>
-                      ) : (
-                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-                          {playersAudit.similarGroups.map((group, idx) => (
-                            <div key={idx} className="p-4 bg-destructive/5 border border-destructive/20 rounded-xl space-y-2">
-                              <p className="text-xs text-destructive font-black uppercase tracking-wide flex items-center gap-1">
-                                📢 Posible Conflicto / Duplicado
-                              </p>
-                              <div className="divide-y divide-border/10">
-                                {group.map((player) => (
-                                  <div key={player.id} className="py-2 first:pt-0 last:pb-0 flex items-center justify-between text-xs gap-3">
-                                    <div className="min-w-0">
-                                      <span className="font-bold text-foreground block truncate">{player.gamertag}</span>
-                                      <span className="text-[10px] text-muted-foreground block truncate">{player.name} ({player.email})</span>
-                                    </div>
-                                    <span className="text-[9px] bg-card border border-border/50 text-muted-foreground px-2 py-0.5 rounded uppercase font-mono shrink-0">
-                                      ID: {player.id}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-            </div>
-          </div>
-
-          {/* Sección de Detalle en el Dashboard */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* Listado de Ligas en curso */}
-            <div className="lg:col-span-2 space-y-4">
-              <h3 className="text-lg font-black text-foreground uppercase tracking-wide flex items-center gap-2">
-                🏆 Divisiones Recientes
-              </h3>
-              
-              {misCompetencias.length === 0 ? (
-                <div className="p-8 border border-dashed border-border/60 bg-muted/10 rounded-2xl text-center text-xs text-muted-foreground">
-                  Aún no has registrado competencias en tus organizaciones. ¡Comienza creando una nueva!
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-3">
-                  {misCompetencias.map((comp) => {
-                    const variant = comp.estado === 'en_curso' ? 'success' : comp.estado === 'inscripciones' ? 'brand' : comp.estado === 'finalizada' ? 'error' : 'neutral';
-                    return (
-                      <div key={comp.id} className="flex justify-between items-center p-4 bg-card/45 border border-border/50 rounded-xl hover:border-primary/30 transition-all shadow-sm">
-                        <div className="flex items-center gap-3">
-                          <div className="w-4 h-4 rounded-full border border-border/50" style={{ backgroundColor: comp.color_tema || '#ef4444' }} />
-                          <div className="flex flex-col">
-                            <span className="font-bold text-foreground text-sm uppercase">{comp.nombre}</span>
-                            <span className="text-[10px] text-muted-foreground uppercase font-mono">{comp.formato} • {comp.plataforma}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Badge variant={variant} className="uppercase text-[9px] tracking-wider font-bold">{comp.estado}</Badge>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="h-8 text-xs font-bold"
-                            onClick={() => navigate(`/organizador/competencias/${comp.id}`)}
-                          >
-                            Gestionar
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Accesos directos y guía */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-black text-foreground uppercase tracking-wide flex items-center gap-2">
-                ⚡ Consola Rápida
-              </h3>
-              <div className="border border-border/50 bg-card p-5 rounded-2xl space-y-4 shadow-xl relative overflow-hidden">
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Como Organizador de torneos, controlas el matchmaking, las inscripciones de equipos y el registro de marcadores oficiales (manual o sincronizado por EA API).
-                </p>
-                <div className="flex flex-col gap-2 pt-2 border-t border-border/30">
-                  <Button 
-                    className="w-full text-xs font-bold bg-primary text-primary-foreground"
-                    onClick={() => navigate('/organizador/competencias')}
-                  >
-                    🏆 Consola de Divisiones
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full text-xs font-bold"
-                    onClick={() => navigate('/organizador/partidos')}
-                  >
-                    🏟️ Reportar Partidos
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full text-xs font-bold"
-                    onClick={() => navigate('/organizador/traspasos')}
-                  >
-                    🔁 Gestionar Traspasos
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Calendario de Mis Competencias */}
-          <div className="border-t border-border/20 pt-8 space-y-4">
-            <h3 className="text-xl font-display font-black text-foreground uppercase tracking-wider flex items-center gap-2">
-              🏟️ Calendario Oficial de mis Competencias
-            </h3>
-            <div className="bg-card/25 border border-border/40 rounded-3xl p-4 md:p-6 shadow-inner">
-              <Partidos forOrganizer={true} hideHero={true} />
+              }>
+                {activeTab === 'resumen' && <ResumenTab stats={stats} navigate={navigate} misCompetencias={misCompetencias} playersAudit={playersAudit} />}
+                {activeTab === 'equipos' && <EquiposTab stats={stats} />}
+                {activeTab === 'jugadores' && <JugadoresTab playersAudit={playersAudit} />}
+                {activeTab === 'traspasos' && <TraspasosTab stats={stats} navigate={navigate} />}
+                {activeTab === 'partidos' && <ReportesTab stats={stats} navigate={navigate} />}
+                {activeTab === 'temporadas' && <TemporadasTab stats={stats} />}
+                {activeTab === 'competencias' && <CompetenciasTab stats={stats} navigate={navigate} />}
+                {activeTab === 'calendario' && <CalendarioTab />}
+              </Suspense>
             </div>
           </div>
 

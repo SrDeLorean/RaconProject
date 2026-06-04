@@ -20,10 +20,10 @@ class AmcDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $sqlPath = base_path('comunid6_comunidad_amc (3).sql');
+        $sqlPath = base_path('comunid6_comunidad_amc (4).sql');
 
         if (!file_exists($sqlPath)) {
-            $this->command->error("No se encontró el archivo comunid6_comunidad_amc (3).sql en " . $sqlPath);
+            $this->command->error("No se encontró el archivo comunid6_comunidad_amc (4).sql en " . $sqlPath);
             return;
         }
 
@@ -44,6 +44,9 @@ class AmcDatabaseSeeder extends Seeder
         DB::table('organizaciones')->truncate();
         DB::table('equipos')->truncate();
         DB::table('users')->truncate();
+        DB::table('solicitudes_fichaje')->truncate();
+        DB::table('equipo_jugador')->truncate();
+        DB::table('competencia_equipo_usuario')->truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         // 2. Crear la Organización "Comunidad AMC" y el Administrador
@@ -160,13 +163,13 @@ class AmcDatabaseSeeder extends Seeder
     ): void {
         switch ($table) {
             case 'users':
+                $passwordHash = Hash::make('password123');
                 foreach ($rows as $row) {
                     if (count($row) >= 23) {
                         $id = (int)$row[0];
                         $name = $row[1];
                         $id_ea = $row[2];
                         $email = $row[3];
-                        $password = $row[5] ?: Hash::make('password123');
                         $role = $row[6];
                         $foto = $row[7] ?: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop';
                         $nacionalidad = $row[8];
@@ -199,7 +202,8 @@ class AmcDatabaseSeeder extends Seeder
                             'id' => $id,
                             'name' => $name,
                             'email' => $email,
-                            'password' => $password,
+                            'password' => $passwordHash,
+                            'email_verified_at' => now(),
                             'role' => $role,
                             'status' => 'activo',
                             'gamertag' => $gamertag,

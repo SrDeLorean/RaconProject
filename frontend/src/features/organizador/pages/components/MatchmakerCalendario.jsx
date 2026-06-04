@@ -5,6 +5,8 @@ import Select from '@/components/ui/Select';
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/shared/Card';
 import api from '@/api/axios';
+import Modal from '@/components/ui/Modal';
+
 
 export default function MatchmakerCalendario({ equipos = [], competenciaId = null }) {
   const [formatoTorneo, setFormatoTorneo] = useState('liga'); // 'liga' | 'playoff' | 'copa'
@@ -30,6 +32,8 @@ export default function MatchmakerCalendario({ equipos = [], competenciaId = nul
   const [eaClubVisitanteId, setEaClubVisitanteId] = useState('');
   const [eaProcessing, setEaProcessing] = useState(false);
   const [eaWarnings, setEaWarnings] = useState(null);
+  const [eaMismatchModal, setEaMismatchModal] = useState(null);
+
 
   // Roster ficticio del equipo para estadísticas de jugadores
   const mockRoster = [
@@ -515,9 +519,24 @@ export default function MatchmakerCalendario({ equipos = [], competenciaId = nul
     const matchContainsVisit = idLocalMap === dbVisitEaId || idVisitMap === dbVisitEaId;
 
     if (!matchContainsLocal || !matchContainsVisit) {
-      alert("❌ Error de validación: Los IDs de Club mapeados no corresponden a los del partido oficial.");
+      const matchObj = eaMatches.find(m => m.matchId === selectedEaMatchId);
+      const keys = matchObj && matchObj.clubs ? Object.keys(matchObj.clubs) : [];
+      const clubA = keys[0] ? (matchObj.clubs[keys[0]]?.details?.name || 'Club A') : 'Desconocido';
+      const clubB = keys[1] ? (matchObj.clubs[keys[1]]?.details?.name || 'Club B') : 'Desconocido';
+
+      setEaMismatchModal({
+        expectedLocal: selectedMatch.local?.nombre || 'Local Oficial',
+        expectedVisitante: selectedMatch.visitante?.nombre || 'Visitante Oficial',
+        expectedLocalId: dbLocalEaId,
+        expectedVisitanteId: dbVisitEaId,
+        receivedLocal: clubA,
+        receivedVisitante: clubB,
+        receivedLocalId: idLocalMap,
+        receivedVisitanteId: idVisitMap,
+      });
       return;
     }
+
 
     setEaProcessing(true);
     setEaWarnings(null);
@@ -1298,12 +1317,24 @@ export default function MatchmakerCalendario({ equipos = [], competenciaId = nul
                               const hasVisit = isMatch0Visit || isMatch1Visit;
                               
                               if (!hasLocal || !hasVisit) {
-                                alert("⚠️ Los clubes de este partido en EA Sports no corresponden a los del partido oficial (Local: " + (selectedMatch.local?.nombre || 'TBD') + ", Visitante: " + (selectedMatch.visitante?.nombre || 'TBD') + "). Por favor selecciona el partido correcto.");
+                                const clubA = mObj.clubs[keys[0]]?.details?.name || 'Club A';
+                                const clubB = mObj.clubs[keys[1]]?.details?.name || 'Club B';
+                                setEaMismatchModal({
+                                  expectedLocal: selectedMatch.local?.nombre || 'Local Oficial',
+                                  expectedVisitante: selectedMatch.visitante?.nombre || 'Visitante Oficial',
+                                  expectedLocalId: dbLocalEaId,
+                                  expectedVisitanteId: dbVisitEaId,
+                                  receivedLocal: clubA,
+                                  receivedVisitante: clubB,
+                                  receivedLocalId: key0,
+                                  receivedVisitanteId: key1,
+                                });
                                 setSelectedEaMatchId('');
                                 setEaClubLocalId('');
                                 setEaClubVisitanteId('');
                                 return;
                               }
+
                               
                               // Asignar determinando quién es quién
                               if (isMatch0Local) {
@@ -1388,15 +1419,7 @@ export default function MatchmakerCalendario({ equipos = [], competenciaId = nul
                       💡 Hablar con un administrador u organizador para actualizar este tema, de lo contrario el equipo rival puede reclamar los puntos por no jugar en las condiciones pactadas.
                     </p>
 
-                    <div className="flex gap-2 justify-end pt-1.5 border-t border-border/20">
-                      <Button 
-                        size="sm"
-                        onClick={() => setEaWarnings(null)}
-                        variant="outline"
-                        className="h-8 text-[9px] uppercase tracking-wider font-bold"
-                      >
-                        Cancelar
-                      </Button>
+                    <div className="flex justify-end pt-1.5 border-t border-border/20">
                       <Button 
                         size="sm"
                         onClick={() => handleEaReportSubmit(true)}
@@ -1430,6 +1453,72 @@ export default function MatchmakerCalendario({ equipos = [], competenciaId = nul
         </div>
       )}
 
+      {/* Modal de Mismatch de Clubes EA Sports */}
+      <Modal
+        isOpen={eaMismatchModal !== null}
+        onClose={() => setEaMismatchModal(null)}
+        title="⚠️ Discrepancia de Clubes EA Sports"
+        maxWidth="max-w-lg"
+        zIndex="z-[130]"
+      >
+        <div className="space-y-4">
+          <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-xl">
+            <p className="text-xs text-destructive-foreground font-semibold leading-relaxed">
+              Los clubes detectados en el partido de EA Sports no corresponden con los clubes del partido oficial programado. Por favor, selecciona el partido correcto o verifica los IDs en la configuración.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Partido Programado Oficial */}
+            <div className="space-y-2.5 p-3 rounded-xl bg-card border border-border/45">
+              <h4 className="text-[10px] font-black text-primary uppercase tracking-wider border-b border-border/20 pb-1">
+                📌 Partido Programado (DB)
+              </h4>
+              <div className="space-y-1.5 text-xs">
+                <div>
+                  <span className="text-[9px] text-muted-foreground block uppercase font-bold">Local</span>
+                  <span className="font-bold text-foreground truncate block">{eaMismatchModal?.expectedLocal}</span>
+                  <code className="block text-[10px] text-primary/80 font-mono mt-0.5">ID EA: {eaMismatchModal?.expectedLocalId || 'Sin ID'}</code>
+                </div>
+                <div className="pt-1.5 border-t border-border/10">
+                  <span className="text-[9px] text-muted-foreground block uppercase font-bold">Visitante</span>
+                  <span className="font-bold text-foreground truncate block">{eaMismatchModal?.expectedVisitante}</span>
+                  <code className="block text-[10px] text-primary/80 font-mono mt-0.5">ID EA: {eaMismatchModal?.expectedVisitanteId || 'Sin ID'}</code>
+                </div>
+              </div>
+            </div>
+
+            {/* Partido Detectado en EA */}
+            <div className="space-y-2.5 p-3 rounded-xl bg-muted/10 border border-border/45">
+              <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-wider border-b border-border/20 pb-1">
+                🎮 Detectado en EA Sports
+              </h4>
+              <div className="space-y-1.5 text-xs">
+                <div>
+                  <span className="text-[9px] text-muted-foreground block uppercase font-bold">Club A</span>
+                  <span className="font-bold text-amber-400 truncate block">{eaMismatchModal?.receivedLocal}</span>
+                  <code className="block text-[10px] text-amber-500/80 font-mono mt-0.5">ID EA: {eaMismatchModal?.receivedLocalId}</code>
+                </div>
+                <div className="pt-1.5 border-t border-border/10">
+                  <span className="text-[9px] text-muted-foreground block uppercase font-bold">Club B</span>
+                  <span className="font-bold text-amber-400 truncate block">{eaMismatchModal?.receivedVisitante}</span>
+                  <code className="block text-[10px] text-amber-500/80 font-mono mt-0.5">ID EA: {eaMismatchModal?.receivedVisitanteId}</code>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button 
+              onClick={() => setEaMismatchModal(null)} 
+              className="px-4 py-2 text-xs bg-muted/30 border border-border/60 hover:bg-muted text-foreground font-bold rounded-lg transition-all"
+            >
+              Entendido
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
+

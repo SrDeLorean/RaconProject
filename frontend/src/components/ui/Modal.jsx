@@ -6,7 +6,8 @@ export default function Modal({
   onClose, 
   title, 
   children, 
-  maxWidth = 'max-w-md' 
+  maxWidth = 'max-w-md',
+  zIndex = 'z-[100]'
 }) {
   // Bloquear el scroll de la página de fondo cuando el modal esté abierto
   useEffect(() => {
@@ -21,7 +22,8 @@ export default function Modal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4`}>
+
       {/* Telón de fondo oscuro translúcido con desenfoque (Glassmorphism Overlay) */}
       <div 
         className="fixed inset-0 bg-background/80 backdrop-blur-sm transition-opacity duration-300"
