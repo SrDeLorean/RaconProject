@@ -26,16 +26,16 @@ class AuthController extends Controller
         try {
             \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($user, $verificationToken, $verificationUrl) {
                 $message->to($user->email)
-                        ->subject('Activa tu cuenta en RaconPro')
+                        ->subject('Activa tu cuenta en Torneos Pro FC')
                         ->html("
                             <div style='font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #2d3748; border-radius: 16px; background-color: #0f172a; color: #f8fafc;'>
                                 <div style='text-align: center; margin-bottom: 28px;'>
-                                    <div style='display: inline-block; width: 60px; height: 60px; line-height: 60px; border-radius: 16px; background: linear-gradient(135deg, #e11d48, #be123c); color: #ffffff; font-size: 28px; font-weight: 900; box-shadow: 0 4px 15px rgba(225,29,72,0.4);'>R</div>
+                                    <div style='display: inline-block; width: 60px; height: 60px; line-height: 60px; border-radius: 16px; background: linear-gradient(135deg, #e11d48, #be123c); color: #ffffff; font-size: 28px; font-weight: 900; box-shadow: 0 4px 15px rgba(225,29,72,0.4);'>T</div>
                                     <h1 style='font-size: 22px; font-weight: bold; margin-top: 16px; color: #ffffff; letter-spacing: 0.05em;'>ACTIVA TU CUENTA</h1>
-                                    <p style='font-size: 13px; color: #94a3b8; margin-top: 4px;'>Centro de Mando RaconPro</p>
+                                    <p style='font-size: 13px; color: #94a3b8; margin-top: 4px;'>Centro de Mando Torneos Pro FC</p>
                                 </div>
                                 <p style='font-size: 15px; line-height: 1.6;'>Hola <strong>{$user->name}</strong>,</p>
-                                <p style='font-size: 15px; line-height: 1.6;'>Gracias por unirte a la plataforma de torneos <strong>RaconPro</strong>. Para poder acceder a tu panel de control, primero debes activar tu cuenta verificando tu correo electrónico.</p>
+                                <p style='font-size: 15px; line-height: 1.6;'>Gracias por unirte a la plataforma de torneos <strong>Torneos Pro FC</strong>. Para poder acceder a tu panel de control, primero debes activar tu cuenta verificando tu correo electrónico.</p>
                                 
                                 <div style='margin: 32px 0; text-align: center;'>
                                     <a href='{$verificationUrl}' style='display: inline-block; padding: 14px 28px; font-size: 14px; font-weight: bold; color: #ffffff; background: linear-gradient(135deg, #e11d48, #be123c); border-radius: 8px; text-decoration: none; box-shadow: 0 4px 12px rgba(225,29,72,0.3); text-transform: uppercase; letter-spacing: 0.05em;'>Activar mi Cuenta</a>
@@ -50,7 +50,7 @@ class AuthController extends Controller
                                 
                                 <p style='font-size: 12px; line-height: 1.6; color: #f43f5e; font-weight: bold; text-align: center;'>⚠ IMPORTANTE: Tienes un plazo de 24 horas para activar tu cuenta. De lo contrario, será eliminada de forma automática.</p>
                                 <hr style='border: 0; border-top: 1px solid #334155; margin: 30px 0;' />
-                                <p style='font-size: 11px; color: #64748b; text-align: center;'>Este correo es automático, por favor no respondas directamente. &copy; RaconPro.</p>
+                                <p style='font-size: 11px; color: #64748b; text-align: center;'>Este correo es automático, por favor no respondas directamente. &copy; Torneos Pro FC.</p>
                             </div>
                         ");
             });
@@ -256,16 +256,16 @@ class AuthController extends Controller
         try {
             \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($request, $token) {
                 $message->to($request->email)
-                        ->subject('Recuperación de Contraseña - RaconPro')
+                        ->subject('Recuperación de Contraseña - Torneos Pro FC')
                         ->html("
                             <div style='font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #2d3748; border-radius: 16px; background-color: #0f172a; color: #f8fafc;'>
                                 <div style='text-align: center; margin-bottom: 28px;'>
-                                    <div style='display: inline-block; width: 60px; height: 60px; line-height: 60px; border-radius: 16px; background: linear-gradient(135deg, #e11d48, #be123c); color: #ffffff; font-size: 28px; font-weight: 900; box-shadow: 0 4px 15px rgba(225,29,72,0.4);'>R</div>
+                                    <div style='display: inline-block; width: 60px; height: 60px; line-height: 60px; border-radius: 16px; background: linear-gradient(135deg, #e11d48, #be123c); color: #ffffff; font-size: 28px; font-weight: 900; box-shadow: 0 4px 15px rgba(225,29,72,0.4);'>T</div>
                                     <h1 style='font-size: 22px; font-weight: bold; margin-top: 16px; color: #ffffff; letter-spacing: 0.05em;'>RECUPERACIÓN DE CONTRASEÑA</h1>
-                                    <p style='font-size: 13px; color: #94a3b8; margin-top: 4px;'>Centro de Mando RaconPro</p>
+                                    <p style='font-size: 13px; color: #94a3b8; margin-top: 4px;'>Centro de Mando Torneos Pro FC</p>
                                 </div>
                                 <p style='font-size: 15px; line-height: 1.6;'>Hola <strong>{$token}</strong> (Token de Seguridad),</p>
-                                <p style='font-size: 15px; line-height: 1.6;'>Has recibido este correo porque solicitaste restablecer la contraseña de tu cuenta en la plataforma de torneos <strong>RaconPro</strong>.</p>
+                                <p style='font-size: 15px; line-height: 1.6;'>Has recibido este correo porque solicitaste restablecer la contraseña de tu cuenta en la plataforma de torneos <strong>Torneos Pro FC</strong>.</p>
                                 
                                 <div style='margin: 32px 0; text-align: center;'>
                                     <p style='font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: #94a3b8; margin-bottom: 10px; font-weight: bold;'>Tu Código Seguro de Restablecimiento:</p>
@@ -277,7 +277,7 @@ class AuthController extends Controller
                                 <p style='font-size: 14px; line-height: 1.6; color: #94a3b8;'>Por favor, copia y pega este código en el formulario de la aplicación para poder asignar tu nueva clave de acceso.</p>
                                 <p style='font-size: 14px; line-height: 1.6; color: #64748b;'>Si no realizaste esta solicitud, puedes ignorar este mensaje de forma segura.</p>
                                 <hr style='border: 0; border-top: 1px solid #334155; margin: 30px 0;' />
-                                <p style='font-size: 11px; color: #64748b; text-align: center;'>Este correo es automático, por favor no respondas directamente. &copy; RaconPro.</p>
+                                <p style='font-size: 11px; color: #64748b; text-align: center;'>Este correo es automático, por favor no respondas directamente. &copy; Torneos Pro FC.</p>
                             </div>
                         ");
             });

@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\EquipoResource;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 
 class EquipoController extends Controller
 {
@@ -144,7 +145,9 @@ class EquipoController extends Controller
 
     public function show(Equipo $equipo): JsonResponse
     {
-        $equipo->load('capitan');
+        $cacheKey = 'equipo_show_' . $equipo->id;
+        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($equipo) {
+            $equipo->load('capitan');
 
         $roster = \App\Models\OrganizacionEquipoUsuario::with(['jugador', 'organizacion'])
             ->where('equipo_id', $equipo->id)
@@ -425,32 +428,35 @@ class EquipoController extends Controller
                 ];
               });
 
-        return response()->json([
-            'id' => $equipo->id,
-            'nombre' => $equipo->nombre,
-            'abreviatura' => $equipo->abreviatura,
-            'descripcion' => $equipo->descripcion,
-            'logo' => $equipo->logo,
-            'banner' => $equipo->banner,
-            'plataforma' => $equipo->plataforma,
-            'redes_sociales' => $equipo->redes_sociales,
-            'capitan' => $equipo->capitan ? [
-                'name' => $equipo->capitan->name,
-                'gamertag' => $equipo->capitan->gamertag ?? 'N/A',
-                'email' => $equipo->capitan->email,
-            ] : null,
-            'roster' => $roster,
-            'competencias' => $competencias,
-            'traspasos' => $traspasos,
-            'partidos' => $partidos,
-            'goleadores' => $goleadoresClub,
-            'asistentes' => $asistentesClub,
-            'mejores_arqueros' => $mejoresArqueros,
-            'mejores_defensores' => $mejoresDefensores,
-            'mejores_medios' => $mejoresMedios,
-            'historial_club' => $historialClub,
-            'estadisticas' => $stats
-        ]);
+            return [
+                'id' => $equipo->id,
+                'nombre' => $equipo->nombre,
+                'abreviatura' => $equipo->abreviatura,
+                'descripcion' => $equipo->descripcion,
+                'logo' => $equipo->logo,
+                'banner' => $equipo->banner,
+                'plataforma' => $equipo->plataforma,
+                'redes_sociales' => $equipo->redes_sociales,
+                'capitan' => $equipo->capitan ? [
+                    'name' => $equipo->capitan->name,
+                    'gamertag' => $equipo->capitan->gamertag ?? 'N/A',
+                    'email' => $equipo->capitan->email,
+                ] : null,
+                'roster' => $roster,
+                'competencias' => $competencias,
+                'traspasos' => $traspasos,
+                'partidos' => $partidos,
+                'goleadores' => $goleadoresClub,
+                'asistentes' => $asistentesClub,
+                'mejores_arqueros' => $mejoresArqueros,
+                'mejores_defensores' => $mejoresDefensores,
+                'mejores_medios' => $mejoresMedios,
+                'historial_club' => $historialClub,
+                'estadisticas' => $stats
+            ];
+        });
+
+        return response()->json($data);
     }
 
     /**
@@ -459,6 +465,7 @@ class EquipoController extends Controller
     public function update(EquipoRequest $request, Equipo $equipo): JsonResponse
     {
         $equipo->update($request->validated());
+        Cache::forget('equipo_show_' . $equipo->id);
 
         return response()->json(new EquipoResource($equipo));
     }
@@ -468,6 +475,7 @@ class EquipoController extends Controller
      */
     public function destroy(Equipo $equipo): Response
     {
+        Cache::forget('equipo_show_' . $equipo->id);
         $equipo->delete();
 
         return response()->noContent();
@@ -518,6 +526,8 @@ class EquipoController extends Controller
             'fecha_vinculacion' => now(),
         ]);
 
+        Cache::forget('equipo_show_' . $equipo->id);
+
         return response()->json(['message' => 'Jugador incorporado exitosamente al roster de la organización.'], 200);
     }
 
@@ -559,6 +569,8 @@ class EquipoController extends Controller
 
             $rosterMember->delete();
 
+            Cache::forget('equipo_show_' . $equipo->id);
+
             return response()->json(['message' => 'Jugador desvinculado del roster de la organización y registrado como libre.'], 200);
         }
 
@@ -598,6 +610,8 @@ class EquipoController extends Controller
             'dorsal' => $request->dorsal,
             'posicion_bloque' => $request->posicion,
         ]);
+
+        Cache::forget('equipo_show_' . $equipo->id);
 
         return response()->json(['message' => 'Ficha táctica actualizada con éxito.'], 200);
     }

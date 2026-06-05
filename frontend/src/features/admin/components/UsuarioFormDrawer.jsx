@@ -54,7 +54,7 @@ export default function UsuarioFormDrawer({
         <Input 
           label="Correo Electrónico *" 
           type="email" 
-          placeholder="juan@raconpro.com" 
+          placeholder="juan@torneosprofc.com" 
           value={formData.email} 
           onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
           disabled={isSaving} 

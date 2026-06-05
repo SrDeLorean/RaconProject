@@ -5,6 +5,7 @@ import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
 import bgRegister from '@/assets/images/bg-register.jpg';
+import logoImg from '@/assets/images/logo.png';
 
 // Vector Icons
 const MailIcon = () => (
@@ -119,8 +120,8 @@ export default function VerificarCorreo() {
         <div className="absolute inset-0 bg-primary/10 mix-blend-overlay"></div>
         
         <div className="relative z-10 flex flex-col justify-end p-12 h-full max-w-2xl text-white">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-destructive flex items-center justify-center text-primary-foreground font-display font-black text-3xl mb-6 shadow-[0_0_20px_hsla(var(--primary),0.5)]">
-            R
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-[0_0_20px_hsla(var(--primary),0.5)]">
+            <img src={logoImg} alt="Torneos Pro FC" className="w-10 h-10 object-contain" />
           </div>
           <h1 className="text-5xl font-display font-extrabold uppercase tracking-tight mb-4 leading-none text-white">
             Verificación <br/>
@@ -129,7 +130,7 @@ export default function VerificarCorreo() {
             </span>
           </h1>
           <p className="text-base text-gray-300 font-medium max-w-lg leading-relaxed">
-            Activa tu cuenta de competidor para acceder a la arena. En RaconPro, la seguridad y veracidad de cada ficha de jugador es nuestra prioridad.
+            Activa tu cuenta de competidor para acceder a la arena. En Torneos Pro FC, la seguridad y veracidad de cada ficha de jugador es nuestra prioridad.
           </p>
         </div>
       </div>

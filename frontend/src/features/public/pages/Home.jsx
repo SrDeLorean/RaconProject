@@ -7,7 +7,7 @@ import api from '@/api/axios';
 export default function Home() {
   const navigate = useNavigate();
 
-  // Métricas analíticas reales cargadas dinámicamente con fallbacks del sistema Racon
+  // Métricas analíticas reales cargadas dinámicamente con fallbacks del sistema Torneos Pro FC
   const [stats, setStats] = useState({
     leagues: 16,
     tournaments: 25,
@@ -45,7 +45,7 @@ export default function Home() {
           setLiveMatches(matchesRes.data.slice(0, 4));
         }
       } catch (err) {
-        console.warn("Usando partidos de simulación premium Racon Pro.");
+        console.warn("Usando partidos de simulación premium Torneos Pro FC.");
       } finally {
         setLoading(false);
       }
@@ -54,7 +54,7 @@ export default function Home() {
     fetchAnalyticsAndMatches();
   }, []);
 
-  // Datos de Demostración del Contexto Racon (Espacio Gamer, Comunidad AMC, GamerCup, etc.)
+  // Datos de Demostración del Contexto Torneos Pro FC (Espacio Gamer, Comunidad AMC, GamerCup, etc.)
   const defaultLiveMatches = useMemo(() => {
     return [
       {
@@ -108,7 +108,7 @@ export default function Home() {
       <section className="relative z-10 min-h-[90vh] flex items-center px-6 md:px-12 lg:px-24 py-16 md:py-24 border-b border-border/40">
         <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           
-          {/* Columna Izquierda: Información Racon Pro */}
+          {/* Columna Izquierda: Información Torneos Pro FC */}
           <div className="lg:col-span-6 space-y-6 text-left animate-fade-in-up">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-red-600/10 border border-red-500/25">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
@@ -156,7 +156,7 @@ export default function Home() {
               <div className="flex justify-between items-center border-b border-border/40 pb-4 mb-4">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                  <span className="text-[10px] font-condensed font-black tracking-widest text-muted-foreground uppercase">TELEMETRÍA RACON PRO v2.8</span>
+                  <span className="text-[10px] font-condensed font-black tracking-widest text-muted-foreground uppercase">TELEMETRÍA TORNEOS PRO FC v2.8</span>
                 </div>
                 <div className="flex gap-1.5 bg-muted/40 p-1 rounded border border-border/45">
                   <button 
@@ -292,7 +292,7 @@ export default function Home() {
         <div className="animate-marquee-slow gap-14 font-condensed font-black text-[10px] text-white uppercase tracking-[0.25em]">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="flex gap-14 shrink-0 items-center">
-              <span>🏆 CIRCUITO DE LIGAS RACON PRO — COPAS EN CURSO</span>
+              <span>🏆 CIRCUITO DE LIGAS TORNEOS PRO FC — COPAS EN CURSO</span>
               <span>•</span>
               <span className="font-sans font-bold">Espacio Gamer: Mapache Esports 2–1 Espacio Gamer Club</span>
               <span>•</span>
@@ -382,7 +382,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 5. ORGANIZACIONES OFICIALES DEL SISTEMA Racon ── */}
+      {/* ── 5. ORGANIZACIONES OFICIALES DEL SISTEMA Torneos Pro FC ── */}
       <section className="relative z-10 max-w-7xl mx-auto px-6 md:px-12 py-24 space-y-12 border-t border-border/40">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div className="space-y-2 text-left">
@@ -744,7 +744,7 @@ export default function Home() {
             <span className="bg-clip-text bg-gradient-to-r from-red-500 to-foreground text-transparent text-glow-red">MÁS ALTO NIVEL?</span>
           </h2>
           <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-            Inscribe a tu club, sincroniza tus cuentas de EA Sports y lidera las tablas oficiales del circuito profesional Racon Pro.
+            Inscribe a tu club, sincroniza tus cuentas de EA Sports y lidera las tablas oficiales del circuito profesional Torneos Pro FC.
           </p>
         </div>
 

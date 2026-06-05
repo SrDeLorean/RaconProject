@@ -160,7 +160,7 @@ export default function Jugadores() {
             </h1>
 
             <p className="animate-fade-in-up text-xs md:text-sm text-muted-foreground font-sans max-w-xl leading-relaxed tracking-wide font-light z-10 mt-2" style={{ animationDelay: '0.2s' }}>
-              Conoce a todos los competidores, agentes libres y estrellas de Clubes Pro inscritas en las ligas de RaconPro.
+              Conoce a todos los competidores, agentes libres y estrellas de Clubes Pro inscritas en las ligas de Torneos Pro FC.
             </p>
           </div>
 

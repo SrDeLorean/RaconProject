@@ -1,17 +1,137 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import api from '@/api/axios';
+import totsTemplate from '@/assets/images/cartas/tots.png';
+import totwTemplate from '@/assets/images/cartas/totw.png';
 
 /**
- * Helper to resolve dynamic eSports stats based on player position/role.
- * GK (Portero): Estirada, Reflejos, Saque, Posicionamiento, Reflejos 1v1, Anticipación.
- * DEF (Defensa): Entradas, Marcaje, Intercepciones, Fuerza, Agresividad, Juego Aéreo.
- * MID (Mediocampista): Visión, Pases Clave, Regate, Control de Balón, Resistencia, Pases Largos.
- * DEL (Delantero): Definición, Desmarque, Potencia de Tiro, Aceleración, Agilidad, Voleas.
+ * 3D Tilt Wrapper Component for cards
+ */
+export function CardTilt({ children, className = '', disableTilt = false }) {
+  const cardRef = useRef(null);
+  const [style, setStyle] = useState({});
+
+  if (disableTilt) {
+    return <div className={`bg-transparent ${className}`} style={{ containerType: 'inline-size', backgroundColor: 'transparent' }}>{children}</div>;
+  }
+
+  const handleMouseMove = (e) => {
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const xc = rect.width / 2;
+    const yc = rect.height / 2;
+    const angleX = -(y - yc) / 12; // Rotate on X axis
+    const angleY = (x - xc) / 12;  // Rotate on Y axis
+    
+    const glareX = (x / rect.width) * 100;
+    const glareY = (y / rect.height) * 100;
+
+    setStyle({
+      transform: `perspective(1000px) rotateX(${angleX}deg) rotateY(${angleY}deg) scale3d(1.04, 1.04, 1.04)`,
+      transition: 'transform 0.08s ease-out',
+      glare: {
+        background: `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255, 255, 255, 0.15) 0%, transparent 75%)`
+      }
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setStyle({
+      transform: 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
+      transition: 'transform 0.4s ease-out',
+      glare: {
+        background: 'transparent'
+      }
+    });
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className={`relative bg-transparent transition-all duration-300 ${className}`}
+      style={{
+        transformStyle: 'preserve-3d',
+        transform: style.transform || 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
+        transition: style.transition,
+        containerType: 'inline-size',
+        backgroundColor: 'transparent'
+      }}
+    >
+      <div 
+        className="absolute inset-0 pointer-events-none z-30 transition-all duration-300 rounded-[inherit]"
+        style={style.glare}
+      />
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Helper to resolve dynamic, realistic FUT card stats based on overall rating and position.
+ */
+export function getFUTStats(player = {}, isTOTS = false) {
+  const position = (player.position || player.pos || 'MC').toUpperCase();
+  const stats = player.stats || {};
+
+  const isGK = ['GK', 'PO', 'ARQ', 'POR'].includes(position);
+  const isDEF = ['DFC', 'LI', 'LD', 'DFI', 'DFD', 'DF', 'DFC1', 'DFC2', 'CB', 'LB', 'RB', 'DEFENDER'].includes(position);
+  const isMID = ['MC', 'MCD', 'MCO', 'MVs', 'MC1', 'MC2', 'VOL', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'MIDFIELDER'].includes(position);
+
+  if (isGK) {
+    const atajadas = player.total_atajadas || stats.atajadas || 0;
+    const imbatidos = player.arcos_imbatidos || stats.arcos_imbatidos || 0;
+    const recibidos = player.total_goles_recibidos || stats.goles_recibidos || 0;
+    return [
+      { label: 'ATAJ', val: atajadas },
+      { label: 'A. IMB', val: imbatidos },
+      { label: 'REC', val: recibidos }
+    ];
+  } else if (isDEF) {
+    const entradas = player.total_entradas || stats.entradas_exitosas || stats.entradas || 0;
+    const exito = Math.round(player.avg_exito_entradas || stats.tasa_exito_entradas || 0);
+    return [
+      { label: 'ENT', val: entradas },
+      { label: '% EXT', val: `${exito}%` }
+    ];
+  } else if (isMID) {
+    const pasesComp = player.total_pases_completados || stats.pases_completados || 0;
+    const pasesInt = player.total_pases_intentados || stats.pases_intentados || 0;
+    const exitoPases = Math.round(player.avg_precision_pases || stats.precision_pases || 0);
+    const entradas = player.total_entradas || stats.entradas_exitosas || stats.entradas || 0;
+    return [
+      { label: 'PAS C', val: pasesComp },
+      { label: 'PAS I', val: pasesInt },
+      { label: '% EXT', val: `${exitoPases}%` },
+      { label: 'ENT', val: entradas }
+    ];
+  } else {
+    // Delanteros / Atacantes
+    const tiros = player.total_tiros || stats.tiros || 0;
+    const goles = player.total_goles || stats.goles || 0;
+    const acierto = Math.round(player.avg_precision_tiro || stats.precision_tiro || 0);
+    const asistencias = player.total_asistencias || stats.asistencias || 0;
+    return [
+      { label: 'TIROS', val: tiros },
+      { label: 'GOLES', val: goles },
+      { label: '% ACI', val: `${acierto}%` },
+      { label: 'ASIS', val: asistencias }
+    ];
+  }
+}
+
+
+/**
+ * Helper to resolve dynamic eSports stats based on player position/role in the stats modal.
  */
 export function getPlayerRoleStats(position = 'MC', ratingVal = 85, stats = {}, idx = 0) {
   const pos = position.toUpperCase();
   const baseRating = ratingVal || 85;
 
-  if (['GK', 'PO', 'ARQ'].includes(pos)) {
+  if (['GK', 'PO', 'ARQ', 'POR'].includes(pos)) {
     return {
       role: 'Portero',
       list: [
@@ -39,7 +159,7 @@ export function getPlayerRoleStats(position = 'MC', ratingVal = 85, stats = {}, 
     };
   }
 
-  if (['MC', 'MCD', 'MCO', 'MVs', 'MC1', 'MC2'].includes(pos)) {
+  if (['MC', 'MCD', 'MCO', 'MVs', 'MC1', 'MC2', 'VOL'].includes(pos)) {
     return {
       role: 'Mediocampista',
       list: [
@@ -53,7 +173,6 @@ export function getPlayerRoleStats(position = 'MC', ratingVal = 85, stats = {}, 
     };
   }
 
-  // Delantero (DC, ST, EI, ED, DEL, DEL1, DEL2, DEL3)
   return {
     role: 'Delantero',
     list: [
@@ -67,6 +186,97 @@ export function getPlayerRoleStats(position = 'MC', ratingVal = 85, stats = {}, 
   };
 }
 
+/**
+ * Helper to map nationalities to FlagCDN country codes
+ */
+export const getFlagUrl = (nationality) => {
+  if (!nationality) return null;
+  const normalized = nationality.toLowerCase().trim();
+  const countryCodes = {
+    'chile': 'cl',
+    'chileno': 'cl',
+    'chilena': 'cl',
+    'argentina': 'ar',
+    'argentino': 'ar',
+    'uruguay': 'uy',
+    'uruguayo': 'uy',
+    'brazil': 'br',
+    'brasil': 'br',
+    'brasileño': 'br',
+    'colombia': 'co',
+    'colombiano': 'co',
+    'peru': 'pe',
+    'perú': 'pe',
+    'peruano': 'pe',
+    'ecuador': 'ec',
+    'ecuatoriano': 'ec',
+    'venezuela': 've',
+    'venezolano': 've',
+    'bolivia': 'bo',
+    'boliviano': 'bo',
+    'paraguay': 'py',
+    'paraguayo': 'py',
+    'españa': 'es',
+    'español': 'es',
+    'mexico': 'mx',
+    'méxico': 'mx',
+    'mexicano': 'mx',
+    'eeuu': 'us',
+    'usa': 'us',
+    'estados unidos': 'us',
+    'united states': 'us'
+  };
+  const code = countryCodes[normalized] || 'cl';
+  return `https://flagcdn.com/w80/${code}.png`;
+};
+
+/**
+ * Helper to translate English positions to Spanish abbreviations
+ */
+export const translatePosition = (pos) => {
+  if (!pos) return 'MC';
+  const p = pos.toUpperCase().trim();
+  const map = {
+    'GK': 'POR',
+    'PO': 'POR',
+    'POR': 'POR',
+    'ARQ': 'POR',
+    'GOALKEEPER': 'POR',
+    'CB': 'DFC',
+    'DFC': 'DFC',
+    'DF': 'DFC',
+    'LB': 'LI',
+    'LI': 'LI',
+    'DFI': 'LI',
+    'RB': 'LD',
+    'LD': 'LD',
+    'DFD': 'LD',
+    'CDM': 'MCD',
+    'MCD': 'MCD',
+    'CM': 'MC',
+    'MC': 'MC',
+    'CAM': 'MCO',
+    'MCO': 'MCO',
+    'LM': 'MI',
+    'MI': 'MI',
+    'RM': 'MD',
+    'MD': 'MD',
+    'ST': 'DC',
+    'CF': 'DC',
+    'DC': 'DC',
+    'DEL': 'DC',
+    'FORWARD': 'DC',
+    'LW': 'EI',
+    'EI': 'EI',
+    'RW': 'ED',
+    'ED': 'ED'
+  };
+  return map[p] || p;
+};
+
+/**
+ * Re-designed PlayerCard component utilizing only totw.png image background
+ */
 export default function PlayerCard({ 
   player = {}, 
   variant = 'dynamic', 
@@ -83,166 +293,174 @@ export default function PlayerCard({
     playerImage = '',
     countryFlag = '',
     clubBadge = '',
-    theme = 'totw', // champions-league | totw | gold | icon
+    theme = 'totw', // champions-league (TOTS blue/cyan style) | totw (Black/gold style)
   } = player;
 
-  const activePosition = position || pos || 'MC';
-  const displayImage = playerImage || (foto ? (foto.startsWith('http') ? foto : `http://localhost:8000${foto}`) : null);
-
-  // Dynamic statistics mapping by player position
-  const resolvedStats = getPlayerRoleStats(activePosition, rating, player.stats || {}, id);
-
-  const themeStyles = {
-    'champions-league': {
-      card: 'bg-gradient-to-br from-indigo-950 via-slate-950 to-cyan-950 shadow-[0_0_20px_rgba(99,102,241,0.25)]',
-      border: 'border-indigo-400',
-      textRating: 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]',
-      textName: 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]',
-      textStats: 'text-cyan-400 font-bold',
-      glow: 'shadow-indigo-500/40',
-      stroke: '#6366f1'
-    },
-    'totw': {
-      card: 'bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 shadow-[0_0_25px_rgba(245,158,11,0.25)]',
-      border: 'border-amber-400',
-      textRating: 'text-amber-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]',
-      textName: 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]',
-      textStats: 'text-amber-500 font-bold',
-      glow: 'shadow-amber-500/40',
-      stroke: '#f59e0b'
-    },
-    'gold': {
-      card: 'bg-gradient-to-br from-amber-700 via-yellow-600 to-amber-900 shadow-[0_0_20px_rgba(245,158,11,0.2)]',
-      border: 'border-yellow-400',
-      textRating: 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]',
-      textName: 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]',
-      textStats: 'text-yellow-300 font-bold',
-      glow: 'shadow-yellow-500/30',
-      stroke: '#eab308'
-    },
-    'icon': {
-      card: 'bg-gradient-to-br from-neutral-100 via-stone-200 to-neutral-100 shadow-[0_0_20px_rgba(245,158,11,0.3)]',
-      border: 'border-amber-400',
-      textRating: 'text-slate-900 drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)]',
-      textName: 'text-slate-950 font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)]',
-      textStats: 'text-amber-600 font-bold',
-      glow: 'shadow-amber-600/40',
-      stroke: '#b45309'
+  // Safe Image resolution helper
+  const getImageUrl = (path) => {
+    if (!path) return null;
+    if (path.includes('default-user.png')) {
+      return '/images/users/default-user.png';
     }
+    if (path.startsWith('http')) {
+      return path;
+    }
+    const separator = path.startsWith('/') ? '' : '/';
+    const apiBaseUrl = api.defaults.baseURL || 'http://localhost:8000/api';
+    return `${apiBaseUrl}/media?path=${encodeURIComponent(separator + path)}`;
   };
 
-  const currentTheme = themeStyles[theme] || themeStyles['totw'];
+  const displayImage = playerImage || getImageUrl(foto);
 
-  // FUT Card shield polygon clip-path matching Image 2 TOTW exactly
-  const shieldClipPath = {
-    clipPath: 'polygon(16% 5%, 50% 0%, 84% 5%, 100% 16%, 100% 82%, 50% 100%, 0% 82%, 0% 16%)'
-  };
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const imageRef = useRef(null);
 
-  const displayDorsal = player.dorsal || (player.contrato_activo?.dorsal) || id || 10;
+  useEffect(() => {
+    if (imageRef.current && imageRef.current.complete) {
+      setImageLoaded(true);
+    } else {
+      setImageLoaded(false);
+    }
+  }, [displayImage]);
+
+  const activePosition = translatePosition(player.posReal || position || pos || 'MC');
+  const resolvedFlag = countryFlag || (player.nacionalidad ? getFlagUrl(player.nacionalidad) : null);
+  
+  const isTOTS = theme === 'champions-league' || theme === 'tots';
+  const cardStats = getFUTStats(player, isTOTS);
+
+  // Card template image - loaded from local assets (no backend request needed)
+  const cardTemplateUrl = isTOTS ? totsTemplate : totwTemplate;
+  const displayDorsal = player.dorsal || (player.contrato_activo?.dorsal) || (id % 99) || 10;
 
   return (
-    <div 
-      className={`group relative w-full aspect-[5/7] select-none overflow-hidden transition-all duration-300 ${
-        disableHover 
-          ? '' 
-          : 'hover:-translate-y-2 hover:scale-[1.02] active:scale-98'
-      } ${currentTheme.card} ${className}`}
-      style={shieldClipPath}
-    >
-      {/* Glare shine reflection overlay */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-tr from-transparent via-white/10 to-transparent transition-opacity duration-500 pointer-events-none z-30" />
-
-      {/* Premium SVG Shield Border Overlay to prevent clip-path clipping of standard borders */}
-      <svg 
-        className="absolute inset-0 w-full h-full pointer-events-none z-30" 
-        viewBox="0 0 100 140" 
-        preserveAspectRatio="none"
-      >
-        <polygon 
-          points="16,7.8 50,0.8 84,7.8 99.2,22.8 99.2,114.2 50,139.2 0.8,114.2 0.8,22.8" 
-          fill="none" 
-          stroke={currentTheme.stroke} 
-          strokeWidth="2" 
-        />
-      </svg>
-
-      <div className="w-full h-full relative z-10">
+    <CardTilt disableTilt={disableHover} className={`w-full bg-transparent aspect-[5/7] select-none pointer-events-auto transition-all duration-300 relative ${className}`}>
+      
+      <div className="w-full h-full bg-transparent relative" style={{ backgroundColor: 'transparent' }}>
         
-        {/* Top-Left Section: Absolute Wrapper flex column layout to prevent overlap */}
-        <div className="absolute top-4 left-4 flex flex-col items-center gap-1.5 leading-none font-mono z-20 shrink-0 select-none">
-          <span className={`text-3.5xl font-black tracking-tight ${currentTheme.textRating}`}>
-            {rating}
-          </span>
-          <span className="text-[9px] font-bold text-amber-500 uppercase tracking-widest border-b border-amber-500/20 pb-0.5 w-full text-center">
-            {activePosition}
-          </span>
+        {/* Background Card Template Image loaded from backend - ONLY this image forms the background */}
+        <img 
+          src={cardTemplateUrl} 
+          alt="Card Template" 
+          className="absolute inset-0 w-full h-full object-contain z-0 select-none pointer-events-none bg-transparent" 
+          style={{ backgroundColor: 'transparent' }}
+        />
 
-          {/* Dorsal Number Badge */}
-          <span className="text-[10px] font-black text-white/90 bg-slate-950/70 border border-amber-500/20 px-1.5 py-0.5 rounded shadow-sm mt-0.5">
-            #{displayDorsal}
-          </span>
+        {/* Card Content Overlay */}
+        <div className="w-full h-full absolute inset-0 z-20 pointer-events-none select-none">
+          
+          {/* Top-Left Column: Rating / Pos / Logo (Lowered) */}
+          <div className="absolute top-[21%] left-[16.5%] flex flex-col items-center leading-none">
+            {/* Jersey Number */}
+            <span className="text-[14.5cqi] font-black tracking-tighter text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.85)] font-display">
+              {displayDorsal}
+            </span>
+            
+            {/* Position */}
+            <span className="text-[4.5cqi] font-black tracking-widest uppercase text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] mt-0.5">
+              {activePosition}
+            </span>
 
-          {/* Country Flag */}
-          {countryFlag ? (
-            <img 
-              src={countryFlag} 
-              alt="Flag" 
-              className="w-4 h-2.5 object-cover rounded shadow-sm mt-0.5" 
-            />
-          ) : (
-            <div className="w-4 h-2.5 bg-sky-600 rounded mt-0.5 opacity-30 shadow-inner flex items-center justify-center text-[4px] text-white">CL</div>
-          )}
-
-          {/* Club Badge */}
-          {clubBadge ? (
-            <img 
-              src={clubBadge} 
-              alt="Club" 
-              className="w-5 h-5 object-contain mt-0.5 drop-shadow" 
-            />
-          ) : (
-            <div className="w-5 h-5 rounded-full bg-slate-900 border border-amber-500/20 flex items-center justify-center font-display font-extrabold text-[7px] text-amber-500">SXS</div>
-          )}
-        </div>
-
-        {/* Center/Right Section: Cropped Player Avatar with strict bounds */}
-        <div className="absolute right-[-10px] top-[10px] w-[70%] h-[72%] z-10 flex items-end justify-center overflow-hidden pointer-events-none">
-          {displayImage ? (
-            <img 
-              src={displayImage} 
-              alt={name} 
-              className="max-h-[100%] max-w-[110%] object-cover object-center drop-shadow-[0_6px_10px_rgba(0,0,0,0.65)] translate-y-1 group-hover:scale-105 transition-all duration-300"
-            />
-          ) : (
-            // Silhouette Fallback
-            <div className="absolute inset-0 flex items-center justify-center opacity-[0.06] select-none text-9xl font-black uppercase text-white font-sans">
-              {name.charAt(0)}
+            {/* Club badge instead of generic SVG shield */}
+            <div className="mt-1 opacity-90 drop-shadow w-[19cqi] h-[19cqi] flex items-center justify-center">
+              {clubBadge ? (
+                <img src={getImageUrl(clubBadge)} alt="Club Crest" className="w-[19cqi] h-[19cqi] object-contain" />
+              ) : (
+                <div className={`w-[19cqi] h-[19cqi] rounded-full border flex items-center justify-center font-display font-black text-[5.8cqi] ${
+                  isTOTS ? 'bg-cyan-950/45 border-cyan-500/30 text-cyan-300' : 'bg-amber-950/45 border-amber-500/30 text-amber-400'
+                }`}>
+                  SXS
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Bottom Section: absolute bottom-0 w-full black gradient footer */}
-        <div className="absolute bottom-0 left-0 w-full pb-4 pt-10 px-4 bg-gradient-to-t from-black/95 via-black/60 to-transparent z-20 text-center flex flex-col justify-end">
+          {/* Right Side: Player portrait cutout - centered and slightly shrunk */}
+          <div className="absolute right-[2%] top-[13.5%] w-[74%] h-[52%] flex items-end justify-center overflow-hidden pointer-events-none z-10">
+            {!imageLoaded && displayImage && (
+              <div className="absolute inset-0 bg-white/5 animate-pulse rounded-full filter blur-xl max-w-[80%] max-h-[80%] m-auto pointer-events-none opacity-40" />
+            )}
+            {displayImage ? (
+              <img 
+                ref={imageRef}
+                src={displayImage} 
+                alt={name} 
+                onLoad={() => setImageLoaded(true)}
+                className={`max-h-[100%] max-w-[120%] object-cover object-top drop-shadow-[0_8px_12px_rgba(0,0,0,0.85)] transition-all duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                  imageLoaded ? 'opacity-100 translate-y-0 scale-105' : 'opacity-0 translate-y-6 scale-[0.96]'
+                }`}
+                style={{
+                  maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%)',
+                  WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%)'
+                }}
+              />
+            ) : (
+              <div className="opacity-[0.06] select-none text-[8.5rem] font-black uppercase leading-none text-white">
+                {name.charAt(0)}
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Area: Name, Stats, Logos */}
           
           {/* Player Name */}
-          <h4 className={`text-center text-base font-black uppercase tracking-wider mb-1 w-full truncate ${currentTheme.textName}`}>
-            {name.substring(0, 14)}
-          </h4>
-
-          {/* Stats Divider Line */}
-          <div className="border-t border-amber-500/20 mb-1.5 w-[85%] mx-auto" />
-
-          {/* Posición Ideal Box */}
-          <div className="flex flex-col items-center justify-center">
-            <span className="text-[7px] text-muted-foreground uppercase tracking-widest font-mono leading-none">
-              Posición Ideal
-            </span>
-            <span className="text-[11px] font-black text-amber-400 uppercase tracking-widest font-mono mt-0.5 leading-none">
-              {resolvedStats.role}
-            </span>
+          <div className="absolute top-[64.5%] left-0 right-0 text-center z-20">
+            <h4 className="text-white text-[6.5cqi] font-black tracking-widest uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
+              {name.substring(0, 14)}
+            </h4>
           </div>
+
+          {/* Stats Row */}
+          <div className="absolute top-[69.5%] left-0 right-0 px-[11%] z-20">
+            <div className={`grid gap-0 text-center w-full px-1 text-white font-mono ${
+              cardStats.length === 4 ? 'grid-cols-4' :
+              cardStats.length === 3 ? 'grid-cols-3' : 'grid-cols-2'
+            }`}>
+              {cardStats.map((s, idx) => (
+                <div key={idx} className="flex flex-col items-center">
+                  <span className="text-[3.6cqi] font-bold tracking-wider text-slate-300 opacity-90 uppercase">
+                    {s.label}
+                  </span>
+                  <span className="text-[5.8cqi] font-black tracking-tight text-white mt-0.5 leading-none">
+                    {s.val}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom Logos: Flag, League logo, Club badge (Raised & Compacted) */}
+          <div className="absolute bottom-[14.0%] left-0 right-0 flex items-center justify-center gap-[3cqi] z-20">
+            {/* Country Flag */}
+            {resolvedFlag ? (
+              <img src={resolvedFlag} alt="Flag" className="w-[7.5cqi] h-[4.5cqi] object-cover rounded-[1px] shadow-sm animate-fadeIn" />
+            ) : (
+              <div className="w-[7.5cqi] h-[4.5cqi] bg-slate-800 border border-white/20 rounded-[1px] flex items-center justify-center text-[2cqi] font-bold text-white">CL</div>
+            )}
+
+            {/* League Logo (Center) */}
+            <div className={`w-[7cqi] h-[7cqi] flex items-center justify-center text-[3cqi] font-black rounded-full border ${
+              isTOTS ? 'text-cyan-300 border-cyan-500/30 bg-cyan-950/45' : 'text-amber-400 border-amber-500/30 bg-amber-950/45'
+            }`}>
+              ⚽
+            </div>
+
+            {/* Club badge */}
+            {clubBadge ? (
+              <img src={getImageUrl(clubBadge)} alt="Crest" className="w-[7cqi] h-[7cqi] object-contain" />
+            ) : (
+              <div className={`w-[7cqi] h-[7cqi] rounded-full border flex items-center justify-center font-display font-black text-[2.5cqi] ${
+                isTOTS ? 'bg-cyan-950/45 border-cyan-500/30 text-cyan-300' : 'bg-amber-950/45 border-amber-500/30 text-amber-400'
+              }`}>
+                SXS
+              </div>
+            )}
+          </div>
+
         </div>
+
       </div>
-    </div>
+
+    </CardTilt>
   );
 }

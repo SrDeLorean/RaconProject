@@ -8,6 +8,7 @@ use App\Http\Requests\CompetenciaRequest;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CompetenciaResource;
+use Illuminate\Support\Facades\Cache;
 
 class CompetenciaController extends Controller
 {
@@ -64,13 +65,18 @@ class CompetenciaController extends Controller
 
     public function show(Competencia $competencia)
     {
-        $competencia->load([
-            'equipos',
-            'temporada.organizacion',
-            'partidos.local',
-            'partidos.visitante',
-        ]);
-        return response()->json(['data' => $competencia]);
+        $cacheKey = 'competencia_show_' . $competencia->id;
+        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($competencia) {
+            $competencia->load([
+                'equipos',
+                'temporada.organizacion',
+                'partidos.local',
+                'partidos.visitante',
+            ]);
+            return ['data' => $competencia];
+        });
+
+        return response()->json($data);
     }
 
     public function store(CompetenciaRequest $request): JsonResponse
@@ -82,11 +88,13 @@ class CompetenciaController extends Controller
     public function update(CompetenciaRequest $request, Competencia $competencia): JsonResponse
     {
         $competencia->update($request->validated());
+        Cache::forget('competencia_show_' . $competencia->id);
         return response()->json(new CompetenciaResource($competencia));
     }
 
     public function destroy(Competencia $competencia): \Illuminate\Http\Response
     {
+        Cache::forget('competencia_show_' . $competencia->id);
         $competencia->delete();
         return response()->noContent();
     }

@@ -841,7 +841,7 @@ export default function Clasificacion() {
               </div>
 
               <p className="text-[11px] text-muted-foreground leading-relaxed font-sans font-light">
-                Tabla ponderada por partidos oficiales finalizados y reportados en el sistema de RaconPro.
+                Tabla ponderada por partidos oficiales finalizados y reportados en el sistema de Torneos Pro FC.
               </p>
 
               <button 

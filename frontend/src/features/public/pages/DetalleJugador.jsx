@@ -1157,7 +1157,7 @@ export default function DetalleJugador() {
                   📜 ARCHIVO HISTÓRICO Y RESUMEN TÁCTICO
                 </h3>
                 <p className="text-xs text-muted-foreground font-light mt-1">
-                  Estadísticas acumuladas e historial de torneos disputados por el jugador a lo largo de las temporadas en RaconPro.
+                  Estadísticas acumuladas e historial de torneos disputados por el jugador a lo largo de las temporadas en Torneos Pro FC.
                 </p>
               </div>
 

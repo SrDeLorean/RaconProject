@@ -13,11 +13,11 @@ export default function Configuracion() {
 
   // Estados locales cargados desde localStorage o por defecto
   const [timezone, setTimezone] = useState(() => {
-    return localStorage.getItem('racon_timezone') || 'America/Santiago';
+    return localStorage.getItem('torneosprofc_timezone') || 'America/Santiago';
   });
 
   const [notifications, setNotifications] = useState(() => {
-    const saved = localStorage.getItem('racon_notifications');
+    const saved = localStorage.getItem('torneosprofc_notifications');
     return saved ? JSON.parse(saved) : {
       emailMatches: true,
       emailUpdates: false,
@@ -34,7 +34,7 @@ export default function Configuracion() {
   const handleTimezoneChange = (e) => {
     const newTz = e.target.value;
     setTimezone(newTz);
-    localStorage.setItem('racon_timezone', newTz);
+    localStorage.setItem('torneosprofc_timezone', newTz);
     showTempFeedback('Zona horaria actualizada correctamente.');
   };
 
@@ -42,7 +42,7 @@ export default function Configuracion() {
   const handleToggle = (key) => {
     const updated = { ...notifications, [key]: !notifications[key] };
     setNotifications(updated);
-    localStorage.setItem('racon_notifications', JSON.stringify(updated));
+    localStorage.setItem('torneosprofc_notifications', JSON.stringify(updated));
     showTempFeedback('Preferencias de notificación guardadas.');
   };
 
@@ -57,7 +57,7 @@ export default function Configuracion() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(user, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `racon_profile_data_${user.name.toLowerCase().replace(/\s+/g, '_')}.json`);
+    downloadAnchor.setAttribute("download", `torneosprofc_profile_data_${user.name.toLowerCase().replace(/\s+/g, '_')}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();

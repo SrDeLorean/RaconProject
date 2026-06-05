@@ -2,9 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import gsap from 'gsap';
-import PlayerCard, { getPlayerRoleStats } from '@/components/ui/PlayerCard';
+import api from '@/api/axios';
+import PlayerCard, { getPlayerRoleStats, getFUTStats, getFlagUrl, translatePosition } from '@/components/ui/PlayerCard';
+import totsTemplate from '@/assets/images/cartas/tots.png';
+import totwTemplate from '@/assets/images/cartas/totw.png';
 
-export default function TacticVisualizer3D({ players = [] }) {
+export default function TacticVisualizer3D({ players = [], activeTab = 'totw', customColor = null }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const cameraRef = useRef(null);
@@ -16,15 +19,15 @@ export default function TacticVisualizer3D({ players = [] }) {
   // Logical 3D coordinate layout for 4-3-3 formation
   const formationPositions = [
     { idx: 0, x: 0, y: 0.8, z: 8.5, role: 'GK' },    // GK
-    { idx: 1, x: -7, y: 0.8, z: 4.5, role: 'DFI' },  // LFB / DFI
-    { idx: 2, x: -2.5, y: 0.8, z: 5.0, role: 'DFC' }, // LCB / DFC1
-    { idx: 3, x: 2.5, y: 0.8, z: 5.0, role: 'DFC' },  // RCB / DFC2
-    { idx: 4, x: 7, y: 0.8, z: 4.5, role: 'DFD' },   // RFB / DFD
-    { idx: 5, x: -4.5, y: 0.8, z: 0.5, role: 'MC' },  // LCM / MC1
-    { idx: 6, x: 0, y: 0.8, z: 1.5, role: 'MCD' },   // CM / MCD
-    { idx: 7, x: 4.5, y: 0.8, z: 0.5, role: 'MC' },   // RCM / MC2
+    { idx: 1, x: -7, y: 0.8, z: 4.0, role: 'DFI' },  // LFB / DFI (more forward)
+    { idx: 2, x: -2.5, y: 0.8, z: 5.2, role: 'DFC' }, // LCB / DFC1 (more backward)
+    { idx: 3, x: 2.5, y: 0.8, z: 5.2, role: 'DFC' },  // RCB / DFC2 (more backward)
+    { idx: 4, x: 7, y: 0.8, z: 4.0, role: 'DFD' },   // RFB / DFD (more forward)
+    { idx: 5, x: -4.5, y: 0.8, z: 1.2, role: 'MC' },  // LCM / MC1 (more backward)
+    { idx: 6, x: 0, y: 0.8, z: 0.0, role: 'MCD' },   // CM / MCD (more forward)
+    { idx: 7, x: 4.5, y: 0.8, z: 1.2, role: 'MC' },   // RCM / MC2 (more backward)
     { idx: 8, x: -5.0, y: 0.8, z: -3.8, role: 'DEL' }, // LW / DEL1
-    { idx: 9, x: 0, y: 0.8, z: -4.8, role: 'DEL' },   // ST / DEL2
+    { idx: 9, x: 0, y: 0.8, z: -5.2, role: 'DEL' },   // ST / DEL2 (more forward)
     { idx: 10, x: 5.0, y: 0.8, z: -3.8, role: 'DEL' }  // RW / DEL3
   ];
 
@@ -72,9 +75,9 @@ export default function TacticVisualizer3D({ players = [] }) {
     const width = container.clientWidth;
     const height = container.clientHeight;
 
-    // 1. Scene & Renderer Setup (Champions Night Dark Blue & Purple fog)
+    // 1. Scene & Renderer Setup (Deep Night Blue Fog)
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x020a16, 0.035);
+    scene.fog = new THREE.FogExp2(0x020612, 0.022);
 
     const renderer = new THREE.WebGLRenderer({
       canvas,
@@ -98,41 +101,65 @@ export default function TacticVisualizer3D({ players = [] }) {
     controls.dampingFactor = 0.05;
     controls.maxPolarAngle = Math.PI / 2.1;
     controls.minDistance = 5;
-    controls.maxDistance = 25;
+    controls.maxDistance = 35; // Increased to allow seeing the entire stadium stands
     controls.enablePan = false;
     controls.minAzimuthAngle = -Math.PI / 4;
     controls.maxAzimuthAngle = Math.PI / 4;
     controlsRef.current = controls;
 
-    // 4. Lights: Epic Stadium Spotlights nocturnos
-    const ambientLight = new THREE.AmbientLight(0x0a1428, 0.9); // Starry blue ambient
+    // 4. Lights: Warm-White & Bright Floodlights (adjusted for crisp texture contrast)
+    const ambientLight = new THREE.AmbientLight(0x0f172a, 0.8); // Deep night-blue ambient light
     scene.add(ambientLight);
 
-    // Deep Purple backlight
-    const purpleLight = new THREE.DirectionalLight(0x7c3aed, 1.2);
-    purpleLight.position.set(-8, 6, -8);
-    scene.add(purpleLight);
+    const floodlightLeft = new THREE.DirectionalLight(0xffffff, 1.2);
+    floodlightLeft.position.set(-10, 15, -10);
+    floodlightLeft.castShadow = true;
+    scene.add(floodlightLeft);
 
-    // Volumetric spotlight pointing downwards at the center
-    const spotlight = new THREE.SpotLight(0x06b6d4, 10, 40, Math.PI / 3, 0.5, 1);
-    spotlight.position.set(0, 15, 0);
-    spotlight.castShadow = true;
-    spotlight.shadow.mapSize.width = 1024;
-    spotlight.shadow.mapSize.height = 1024;
-    scene.add(spotlight);
+    const floodlightRight = new THREE.DirectionalLight(0xffffff, 1.4);
+    floodlightRight.position.set(10, 15, 10);
+    floodlightRight.castShadow = true;
+    scene.add(floodlightRight);
 
-    // Cyan key light
-    const keyLight = new THREE.DirectionalLight(0x00d8f6, 1.8);
-    keyLight.position.set(5, 12, 5);
-    keyLight.castShadow = true;
-    scene.add(keyLight);
+    const pitchSpot = new THREE.SpotLight(0xfffaed, 5.0, 35, Math.PI / 3, 0.6, 1);
+    pitchSpot.position.set(0, 16, 0);
+    pitchSpot.castShadow = true;
+    scene.add(pitchSpot);
 
     // 5. Grass Field Ground Mesh
+    const grassCanvas = document.createElement('canvas');
+    grassCanvas.width = 256;
+    grassCanvas.height = 512;
+    const gCtx = grassCanvas.getContext('2d');
+    
+    // Draw base dark green
+    gCtx.fillStyle = '#1b4a1e';
+    gCtx.fillRect(0, 0, 256, 512);
+    
+    // Draw lighter stripes
+    gCtx.fillStyle = '#225d26';
+    const stripeHeight = 512 / 10;
+    for (let i = 0; i < 10; i += 2) {
+      gCtx.fillRect(0, i * stripeHeight, 256, stripeHeight);
+    }
+    
+    // Add grass blades noise
+    for (let i = 0; i < 4000; i++) {
+      const rx = Math.random() * 256;
+      const ry = Math.random() * 512;
+      const rSize = Math.random() * 1.2 + 0.4;
+      gCtx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+      gCtx.fillRect(rx, ry, rSize, rSize);
+    }
+    
+    const grassTexture = new THREE.CanvasTexture(grassCanvas);
+    grassTexture.flipY = false;
+    grassTexture.premultiplyAlpha = false;
     const fieldGeometry = new THREE.PlaneGeometry(24, 30);
     const fieldMaterial = new THREE.MeshStandardMaterial({
-      color: 0x031812, // Dark lawn
-      roughness: 0.8,
-      metalness: 0.1,
+      map: grassTexture,
+      roughness: 0.95,
+      metalness: 0.02,
     });
     const field = new THREE.Mesh(fieldGeometry, fieldMaterial);
     field.rotation.x = -Math.PI / 2;
@@ -143,10 +170,10 @@ export default function TacticVisualizer3D({ players = [] }) {
     const linesGroup = new THREE.Group();
     scene.add(linesGroup);
 
-    // Field perimeter line
+    // Field perimeter line (Chalk white line)
     const perimeterGeom = new THREE.PlaneGeometry(20, 24);
     const edges = new THREE.EdgesGeometry(perimeterGeom);
-    const lineMat = new THREE.LineBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.3 });
+    const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.65 });
     const perimeterLines = new THREE.LineSegments(edges, lineMat);
     perimeterLines.rotation.x = -Math.PI / 2;
     perimeterLines.position.y = 0.01;
@@ -154,28 +181,28 @@ export default function TacticVisualizer3D({ players = [] }) {
 
     // Center circle
     const circleGeom = new THREE.RingGeometry(3.5, 3.52, 64);
-    const circleMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, side: THREE.DoubleSide, transparent: true, opacity: 0.25 });
+    const circleMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.55 });
     const centerCircle = new THREE.Mesh(circleGeom, circleMat);
     centerCircle.rotation.x = -Math.PI / 2;
     centerCircle.position.y = 0.01;
     linesGroup.add(centerCircle);
 
-    // Concentric grass cutting rings (Champions league pattern)
+    // Concentric grass cutting rings
     for (let r = 2; r <= 13; r += 2.5) {
       const ringGeom = new THREE.RingGeometry(r, r + 0.03, 64);
-      const ringMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, side: THREE.DoubleSide, transparent: true, opacity: 0.1 });
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.12 });
       const ring = new THREE.Mesh(ringGeom, ringMat);
       ring.rotation.x = -Math.PI / 2;
       ring.position.y = 0.01;
       linesGroup.add(ring);
     }
 
-    // Center line
-    const centerLineGeom = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(-10, 0.01, 0),
-      new THREE.Vector3(10, 0.01, 0)
-    ]);
-    const centerLine = new THREE.Line(centerLineGeom, lineMat);
+    // Center line (halfway dividing line drawn as a flat mesh plane to ensure high visibility)
+    const centerLineGeom = new THREE.PlaneGeometry(20, 0.08);
+    const centerLineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.55 });
+    const centerLine = new THREE.Mesh(centerLineGeom, centerLineMat);
+    centerLine.rotation.x = -Math.PI / 2;
+    centerLine.position.set(0, 0.011, 0);
     linesGroup.add(centerLine);
 
     // Top Penalty Area
@@ -197,6 +224,45 @@ export default function TacticVisualizer3D({ players = [] }) {
     ]);
     const bottomAreaLine = new THREE.Line(bottomAreaGeom, lineMat);
     linesGroup.add(bottomAreaLine);
+
+    // Top Penalty D-Arc (facing South, centered at Z = -9.5)
+    const topArcGeom = new THREE.RingGeometry(3.0, 3.02, 32, 1, Math.PI + 0.65, Math.PI - 1.3);
+    const topArc = new THREE.Mesh(topArcGeom, circleMat);
+    topArc.rotation.x = -Math.PI / 2;
+    topArc.position.set(0, 0.012, -9.5);
+    linesGroup.add(topArc);
+
+    // Bottom Penalty D-Arc (facing North, centered at Z = 9.5)
+    const bottomArcGeom = new THREE.RingGeometry(3.0, 3.02, 32, 1, 0.65, Math.PI - 1.3);
+    const bottomArc = new THREE.Mesh(bottomArcGeom, circleMat);
+    bottomArc.rotation.x = -Math.PI / 2;
+    bottomArc.position.set(0, 0.012, 9.5);
+    linesGroup.add(bottomArc);
+
+    // Quarter-circle corner arcs
+    const swArcGeom = new THREE.RingGeometry(0.8, 0.82, 16, 1, 0, Math.PI / 2);
+    const swArc = new THREE.Mesh(swArcGeom, circleMat);
+    swArc.rotation.x = -Math.PI / 2;
+    swArc.position.set(-10, 0.012, 12);
+    linesGroup.add(swArc);
+
+    const seArcGeom = new THREE.RingGeometry(0.8, 0.82, 16, 1, Math.PI / 2, Math.PI / 2);
+    const seArc = new THREE.Mesh(seArcGeom, circleMat);
+    seArc.rotation.x = -Math.PI / 2;
+    seArc.position.set(10, 0.012, 12);
+    linesGroup.add(seArc);
+
+    const neArcGeom = new THREE.RingGeometry(0.8, 0.82, 16, 1, Math.PI, Math.PI / 2);
+    const neArc = new THREE.Mesh(neArcGeom, circleMat);
+    neArc.rotation.x = -Math.PI / 2;
+    neArc.position.set(10, 0.012, -12);
+    linesGroup.add(neArc);
+
+    const nwArcGeom = new THREE.RingGeometry(0.8, 0.82, 16, 1, 1.5 * Math.PI, Math.PI / 2);
+    const nwArc = new THREE.Mesh(nwArcGeom, circleMat);
+    nwArc.rotation.x = -Math.PI / 2;
+    nwArc.position.set(-10, 0.012, -12);
+    linesGroup.add(nwArc);
 
     // 5.5 3D White Goals with Nets
     const createGoal = (z) => {
@@ -241,57 +307,156 @@ export default function TacticVisualizer3D({ players = [] }) {
     scene.add(createGoal(-12));
     scene.add(createGoal(12));
 
-    // 5.6 3D Neon-Stepped Stadium Galleries (Galerias)
-    const createStands = (sideX) => {
-      const standsGroup = new THREE.Group();
-      const standMat = new THREE.MeshStandardMaterial({
-        color: 0x050c14,
-        roughness: 0.6,
-        metalness: 0.7
-      });
+    // 5.6 Create realistic Night Stadium Bowl environment (Camp Nou style)
+    const createStadiumBowl = () => {
+      const bowlGroup = new THREE.Group();
 
-      const trimMat = new THREE.MeshBasicMaterial({
-        color: 0x06b6d4, // Cyan glow
-        transparent: true,
-        opacity: 0.4
-      });
+      // 1. Generate repeating crowd texture dynamically using a canvas
+      const crowdCanvas = document.createElement('canvas');
+      crowdCanvas.width = 128;
+      crowdCanvas.height = 128;
+      const ctx = crowdCanvas.getContext('2d');
+      ctx.fillStyle = '#151b26'; // Dark seating structure base
+      ctx.fillRect(0, 0, 128, 128);
 
-      for (let i = 0; i < 3; i++) {
-        const stepHeight = 0.8 * (i + 1);
-        const geom = new THREE.BoxGeometry(2.0, stepHeight, 28);
-        const step = new THREE.Mesh(geom, standMat);
-        const xOffset = sideX < 0 ? sideX - i * 2 : sideX + i * 2;
-        step.position.set(xOffset, stepHeight / 2, 0);
-        step.castShadow = true;
-        step.receiveShadow = true;
-        standsGroup.add(step);
-
-        // Cyber neon lighting edge
-        const edgeGeom = new THREE.BoxGeometry(2.02, 0.05, 28.02);
-        const edge = new THREE.Mesh(edgeGeom, trimMat);
-        edge.position.set(xOffset, stepHeight, 0);
-        standsGroup.add(edge);
+      // Draw tiny multi-colored crowd pixels (spectators)
+      const colors = ['#ef4444', '#fbbf24', '#3b82f6', '#10b981', '#ffffff', '#4b5563', '#1f2937'];
+      for (let i = 0; i < 1500; i++) {
+        const cx = Math.random() * 128;
+        const cy = Math.random() * 128;
+        ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+        ctx.fillRect(cx, cy, 1.5, 1.5);
       }
-      return standsGroup;
+
+      const crowdTexture = new THREE.CanvasTexture(crowdCanvas);
+      crowdTexture.flipY = false;
+      crowdTexture.premultiplyAlpha = false;
+      crowdTexture.wrapS = THREE.RepeatWrapping;
+      crowdTexture.wrapT = THREE.RepeatWrapping;
+      crowdTexture.repeat.set(4, 1);
+
+      // Stand material for the tiers
+      const standMat = new THREE.MeshStandardMaterial({
+        map: crowdTexture,
+        roughness: 0.85,
+        metalness: 0.1,
+      });
+
+      // Support structures & back walls material (dark concrete)
+      const concreteMat = new THREE.MeshStandardMaterial({
+        color: 0x111622,
+        roughness: 0.9,
+        metalness: 0.2,
+      });
+
+      // Glowing emissive floodlight bulbs material (always bright)
+      const bulbMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        fog: false
+      });
+
+      // Volumetric spotlight cone geometry & material
+      // We create a ConeGeometry pointing downwards (additive blending, low opacity)
+      // Height of 15, tip at 0 (translated Y offset -7.5)
+      const beamGeom = new THREE.ConeGeometry(0.1, 4.5, 15.0, 16, 1, true);
+      beamGeom.translate(0, -7.5, 0); // Rotate/scale around tip at top
+
+      // 36 segments distributed in an oval shape surrounding the 24x30 pitch
+      const segments = 36;
+      const xRadius = 18.5;
+      const zRadius = 21.5;
+      const tiers = 12;
+      const tierD = 0.65;
+      const tierH = 0.55;
+
+      for (let i = 0; i < segments; i++) {
+        const theta = (i / segments) * Math.PI * 2;
+        const cosT = Math.cos(theta);
+        const sinT = Math.sin(theta);
+
+        // Position on the base oval
+        const bx = xRadius * cosT;
+        const bz = zRadius * sinT;
+
+        const segmentGroup = new THREE.Group();
+        segmentGroup.position.set(bx, 0, bz);
+
+        // Calculate rotation angle to look at the center (0, 0, 0)
+        // Since we build tiers going outwards in positive local Z direction, 
+        // the front face of stands should face negative local Z direction (towards center).
+        const angle = Math.atan2(bx, bz);
+        segmentGroup.rotation.y = angle;
+
+        // Build 12 tiers of stands for each segment
+        for (let j = 0; j < tiers; j++) {
+          const standGeom = new THREE.BoxGeometry(3.8, tierH, tierD);
+          const stand = new THREE.Mesh(standGeom, standMat);
+          
+          // Position tier box going up and back
+          stand.position.set(0, j * tierH + tierH / 2, j * tierD + tierD / 2);
+          stand.castShadow = true;
+          stand.receiveShadow = true;
+          segmentGroup.add(stand);
+        }
+
+        // Add back barrier wall at the top tier to close the stadium bowl
+        const topZ = tiers * tierD;
+        const topY = tiers * tierH;
+        
+        const barrierGeom = new THREE.BoxGeometry(3.8, 1.8, 0.1);
+        const barrier = new THREE.Mesh(barrierGeom, concreteMat);
+        barrier.position.set(0, topY + 0.9, topZ + 0.05);
+        barrier.castShadow = true;
+        segmentGroup.add(barrier);
+
+        // Add support structural beam/column going from ground to the top
+        const columnGeom = new THREE.CylinderGeometry(0.12, 0.2, topY + 1.8, 8);
+        const column = new THREE.Mesh(columnGeom, concreteMat);
+        column.position.set(0, (topY + 1.8) / 2, topZ + 0.2);
+        column.castShadow = true;
+        segmentGroup.add(column);
+
+        // Add cantilevered floodlight roof bar (pointing slightly inwards)
+        const roofBarGeom = new THREE.BoxGeometry(0.4, 0.2, 1.8);
+        const roofBar = new THREE.Mesh(roofBarGeom, concreteMat);
+        roofBar.position.set(0, topY + 1.8, topZ - 0.7);
+        roofBar.castShadow = true;
+        segmentGroup.add(roofBar);
+
+        // Place 4 glowing bulbs under the roof bar
+        for (let b = 0; b < 4; b++) {
+          const bulbGeom = new THREE.CylinderGeometry(0.08, 0.08, 0.06, 8);
+          const bulb = new THREE.Mesh(bulbGeom, bulbMat);
+          // Distribute along the roof bar (Z offset)
+          const bulbZ = topZ - 0.7 - 0.6 + (b * 0.4);
+          bulb.position.set(0, topY + 1.68, bulbZ);
+          segmentGroup.add(bulb);
+        }
+
+        // Add beautiful transparent volumetric cone beam pointing inwards and downwards
+        const beamMat = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.18,
+          blending: THREE.AdditiveBlending,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+          fog: false // Volumetric lights ignore fog to stand out dramatically
+        });
+        const beam = new THREE.Mesh(beamGeom, beamMat);
+        // Position at the tip of the light canopy
+        beam.position.set(0, topY + 1.68, topZ - 0.8);
+        
+        // Tilt the beam inwards (rotate around local X-axis)
+        beam.rotation.x = Math.PI / 4.5;
+        segmentGroup.add(beam);
+
+        bowlGroup.add(segmentGroup);
+      }
+
+      return bowlGroup;
     };
-    scene.add(createStands(-13.5));
-    scene.add(createStands(13.5));
-
-    // Blinking audience camera flashes simulation
-    const flashes = [];
-    const flashGeom = new THREE.SphereGeometry(0.06, 8, 8);
-    const flashMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.0 });
-
-    for (let i = 0; i < 35; i++) {
-      const flash = new THREE.Mesh(flashGeom, flashMat.clone());
-      const side = Math.random() < 0.5 ? -1 : 1;
-      const standX = side * (13.5 + Math.random() * 4);
-      const standY = 0.6 + Math.random() * 2.0;
-      const standZ = -14 + Math.random() * 28;
-      flash.position.set(standX, standY, standZ);
-      scene.add(flash);
-      flashes.push(flash);
-    }
+    scene.add(createStadiumBowl());
 
     // 6. Roster stands & player extruded models
     const playersGroup = new THREE.Group();
@@ -300,37 +465,53 @@ export default function TacticVisualizer3D({ players = [] }) {
     const playerMeshes = [];
     const cardDrawers = [];
 
+    // Pre-load card background templates from local assets (no backend request needed)
+    const totwTemplateImg = new Image();
+    totwTemplateImg.src = totwTemplate;
+    totwTemplateImg.onload = () => {
+      cardDrawers.forEach(drawer => drawer());
+    };
+
+    const totsTemplateImg = new Image();
+    totsTemplateImg.src = totsTemplate;
+    totsTemplateImg.onload = () => {
+      cardDrawers.forEach(drawer => drawer());
+    };
+
     players.forEach((p, idx) => {
       const pos = formationPositions[idx] || { x: 0, y: 0.8, z: 0 };
       const playerContainer = new THREE.Group();
-      playerContainer.position.set(pos.x, pos.y, pos.z);
+      playerContainer.position.set(pos.x, 0.01, pos.z);
+      playerContainer.scale.set(1.65, 1.65, 1.65);
       playerContainer.userData = { player: p, index: idx };
       playersGroup.add(playerContainer);
 
-      // Base Torus Neon Ring
-      const ringGeom = new THREE.TorusGeometry(0.7, 0.05, 8, 32);
+      // Base Torus Premium Metallic Ring
+      const ringGeom = new THREE.TorusGeometry(0.65, 0.02, 8, 32);
       const ringMat = new THREE.MeshStandardMaterial({
-        color: 0x06b6d4,
-        emissive: 0x06b6d4,
-        emissiveIntensity: 1.5,
+        color: customColor ? new THREE.Color(customColor) : (activeTab === 'tots' ? 0x00f3ff : 0xd4af37),
+        emissive: customColor ? new THREE.Color(customColor).clone().multiplyScalar(0.2) : (activeTab === 'tots' ? 0x002c38 : 0x382c00),
+        emissiveIntensity: 1.0,
         roughness: 0.2,
-        metalness: 0.8
+        metalness: 0.8,
+        fog: false // Keep metallic ring emissive bright at distance
       });
       const ring = new THREE.Mesh(ringGeom, ringMat);
       ring.rotation.x = -Math.PI / 2;
-      ring.position.y = -0.75;
       playerContainer.add(ring);
       playerContainer.userData.ring = ring;
+      ring.position.y = 0.01;
 
-      // Glow Stand Pedestal
-      const pedestalGeom = new THREE.CylinderGeometry(0.5, 0.6, 0.1, 16);
+      // Chalk White Marker Disc
+      const pedestalGeom = new THREE.CylinderGeometry(0.55, 0.6, 0.08, 16);
       const pedestalMat = new THREE.MeshStandardMaterial({
-        color: 0x111827,
-        roughness: 0.4,
-        metalness: 0.9,
+        color: 0xffffff,
+        roughness: 0.9,
+        metalness: 0.1,
+        fog: false // Keep chalk ring clear from fog
       });
       const pedestal = new THREE.Mesh(pedestalGeom, pedestalMat);
-      pedestal.position.y = -0.7;
+      pedestal.position.y = 0.0;
       pedestal.receiveShadow = true;
       pedestal.castShadow = true;
       playerContainer.add(pedestal);
@@ -344,93 +525,94 @@ export default function TacticVisualizer3D({ players = [] }) {
       canvasObj.height = 680;
       const ctx = canvasObj.getContext('2d');
       const texture = new THREE.CanvasTexture(canvasObj);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      texture.flipY = false;
+      texture.premultiplyAlpha = false;
       // Map shape coordinates [0, w] and [0, h] to [0, 1] texture coordinates
-      texture.repeat.set(1 / w, 1 / h);
+      // Since flipY is false, we invert the repeat.y and set offset.y to 1 to render upright
+      texture.repeat.set(1 / w, -1 / h);
+      texture.offset.set(0, 1);
 
       let cachedImg = null;
 
-      const drawCard = (img = null) => {
-        if (img) cachedImg = img;
-        const currentImg = img || cachedImg;
+      let loadedPlayerImg = null;
+      let loadedFlagImg = null;
+      let loadedBadgeImg = null;
 
+      const drawCard = () => {
         // Clear canvas
         ctx.clearRect(0, 0, 512, 680);
 
-        // Elegant Black and Dark Charcoal backdrop representing eSports TOTW
-        const grad = ctx.createLinearGradient(0, 0, 0, 680);
-        grad.addColorStop(0, '#0c0a09'); // Dark charcoal top
-        grad.addColorStop(0.5, '#1c1917'); // Stone grey center
-        grad.addColorStop(1, '#0c0a09'); // Dark charcoal bottom
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, 512, 680);
+        const isTOTS = activeTab === 'tots';
+        const activeTemplateImg = isTOTS ? totsTemplateImg : totwTemplateImg;
 
-        // Subtly drawn abstract gold stripes representing TOTW card art
-        ctx.strokeStyle = 'rgba(245, 158, 11, 0.15)';
-        ctx.lineWidth = 4;
-        for (let i = 0; i < 5; i++) {
-          ctx.beginPath();
-          ctx.moveTo(-50, 100 + i * 80);
-          ctx.lineTo(562, 250 + i * 80);
-          ctx.stroke();
+        // Draw Card Background Template from pre-loaded Image
+        if (activeTemplateImg.complete && activeTemplateImg.naturalWidth !== 0) {
+          ctx.drawImage(activeTemplateImg, 0, 0, 512, 680);
+        } else {
+          // Fallback gradient while loading
+          const grad = ctx.createLinearGradient(0, 0, 0, 680);
+          if (isTOTS) {
+            grad.addColorStop(0, '#0c183a');
+            grad.addColorStop(1, '#01030e');
+          } else {
+            grad.addColorStop(0, '#0c0c0c');
+            grad.addColorStop(1, '#080808');
+          }
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, 512, 680);
         }
 
-        // Draw Gold Shield Outline following the EXACT FUT Card shape
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 14;
-        ctx.beginPath();
-        ctx.moveTo(82, 44); // Top-left
-        ctx.lineTo(256, 10); // Top-center peak
-        ctx.lineTo(430, 44); // Top-right
-        ctx.lineTo(502, 110); // Upper-right shoulder
-        ctx.lineTo(502, 558); // Lower-right slope
-        ctx.lineTo(256, 670); // Bottom-center point
-        ctx.lineTo(10, 558); // Lower-left slope
-        ctx.lineTo(10, 110); // Upper-left shoulder
-        ctx.closePath();
-        ctx.stroke();
-
-        // ---------------- Left Identity Column ----------------
-        // Rating (Valoración) - Large heavy gold font like Image 2 TOTW
-        ctx.fillStyle = '#f59e0b';
+        // ---------------- Left Identity Column (Lowered) ----------------
+        // Jersey Number (Camiseta) instead of Rating
+        const displayDorsal = p.dorsal || (p.contrato_activo?.dorsal) || (p.id % 99) || 10;
+        ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 90px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(p.rating || 85, 95, 160);
+        ctx.fillText(displayDorsal, 120, 205);
 
-        // Position (Posición) - White condensed font below rating
-        ctx.fillStyle = '#ffffff';
+        // Position
+        ctx.fillStyle = isTOTS ? '#67e8f9' : '#d97706';
         ctx.font = '900 32px sans-serif';
-        ctx.fillText(p.pos || p.position || 'MC', 95, 215);
+        ctx.fillText(translatePosition(p.posReal || p.pos || p.position || 'MC'), 120, 255);
 
-        // Country Flag - Circular gold eSports badge representing nationality/badge
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 3;
-        ctx.fillStyle = '#1e293b';
-        ctx.beginPath();
-        ctx.arc(95, 270, 24, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = '#f59e0b';
-        ctx.font = 'bold 16px sans-serif';
-        ctx.fillText('CL', 95, 276); // Champions League eSports
-
-        // eSports Club Emblem Circle
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.fillStyle = '#0f172a';
-        ctx.beginPath();
-        ctx.arc(95, 335, 20, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '900 12px sans-serif';
-        ctx.fillText('SXS', 95, 339);
-
-        // ---------------- Right Side Cutout Player Avatar ----------------
-        if (currentImg) {
+        // Club badge instead of generic SVG shield
+        if (loadedBadgeImg) {
+          ctx.drawImage(loadedBadgeImg, 76, 278, 88, 88);
+        } else {
           ctx.save();
-          // Clip to shield boundary so image stays inside borders
+          ctx.translate(120, 322);
+          ctx.fillStyle = isTOTS ? '#22d3ee' : '#fbbf24';
+          ctx.beginPath();
+          ctx.moveTo(0, -35);
+          ctx.lineTo(31, -20);
+          ctx.lineTo(31, 19);
+          ctx.lineTo(0, 35);
+          ctx.lineTo(-31, 19);
+          ctx.lineTo(-31, -20);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // ---------------- Right Side Cutout Player Avatar (Slightly Shrunk) ----------------
+        if (loadedPlayerImg) {
+          const portraitCanvas = document.createElement('canvas');
+          portraitCanvas.width = 330;
+          portraitCanvas.height = 330;
+          const pCtx = portraitCanvas.getContext('2d');
+          pCtx.drawImage(loadedPlayerImg, 0, 0, 330, 330);
+
+          pCtx.globalCompositeOperation = 'destination-out';
+          const fadeGrad = pCtx.createLinearGradient(0, 0, 0, 330);
+          fadeGrad.addColorStop(0.65, 'rgba(0,0,0,0)');
+          fadeGrad.addColorStop(1.0, 'rgba(0,0,0,1)');
+          pCtx.fillStyle = fadeGrad;
+          pCtx.fillRect(0, 0, 330, 330);
+          pCtx.globalCompositeOperation = 'source-over';
+
+          ctx.save();
           ctx.beginPath();
           ctx.moveTo(82, 44);
           ctx.lineTo(256, 10);
@@ -442,66 +624,120 @@ export default function TacticVisualizer3D({ players = [] }) {
           ctx.lineTo(10, 110);
           ctx.closePath();
           ctx.clip();
-
-          // Render the high-definition cutout image on the right, overlapping the background
-          ctx.drawImage(currentImg, 140, 80, 360, 360);
+          ctx.drawImage(portraitCanvas, 168, 95, 330, 330);
           ctx.restore();
         } else {
-          // Fallback Silhouette
+          // Silhouette fallback
           ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
           ctx.font = '900 240px sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText(p.name?.charAt(0) || 'P', 320, 320);
         }
 
-        // ---------------- Bottom Identity Block ----------------
-        // Player Name - Bold and highlighted gold name like 'Messi' in Image 2
+        // ---------------- Bottom Identity & Stats Block ----------------
+        // Player Name (Raised & Compacted)
         ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
         ctx.shadowBlur = 10;
-        ctx.fillStyle = '#f59e0b';
+        ctx.fillStyle = '#ffffff';
         ctx.font = '900 42px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(p.name?.substring(0, 14).toUpperCase() || 'PLAYER', 256, 495);
-
-        // Divider
+        ctx.fillText(p.name?.substring(0, 14).toUpperCase() || 'PLAYER', 256, 438);
         ctx.shadowBlur = 0;
-        ctx.strokeStyle = 'rgba(245, 158, 11, 0.25)';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(90, 520);
-        ctx.lineTo(422, 520);
-        ctx.stroke();
 
-        // Posición Ideal Badge in base
-        ctx.fillStyle = '#a3a3a3';
-        ctx.font = 'bold 22px sans-serif';
-        ctx.fillText('POSICIÓN IDEAL', 256, 560);
+        // Stats Values Drawing directly on background - dynamically sized layout
+        const cardStats = getFUTStats(p, isTOTS);
+        const colCount = cardStats.length;
+        cardStats.forEach((s, sIdx) => {
+          // Printable stats width margin: 12% on left/right -> starts at 62, width 390
+          const statX = 62 + (390 / colCount) * sIdx + (390 / (colCount * 2));
+          
+          // Draw Stat Label (PAC, SHO, etc.)
+          ctx.fillStyle = isTOTS ? '#67e8f9' : '#e2e8f0';
+          ctx.font = '900 20px monospace';
+          ctx.fillText(s.label, statX, 482);
+          
+          // Draw Stat Value (99)
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 36px sans-serif';
+          ctx.fillText(s.val, statX, 515);
+        });
 
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '900 28px sans-serif';
-        ctx.fillText(p.pos || p.position || 'MC', 256, 600);
+        // Bottom Logos: Flag, League logo, Club badge (Raised & Compacted)
+        // Country Flag (X: 165, Y: 574, W: 36, H: 22)
+        if (loadedFlagImg) {
+          ctx.drawImage(loadedFlagImg, 165, 574, 36, 22);
+        } else {
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(165, 574, 36, 22);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 10px sans-serif';
+          ctx.fillText('CL', 183, 589);
+        }
+
+        // League Icon (Center: X: 256, Y: 593)
+        ctx.fillStyle = isTOTS ? '#22d3ee' : '#fbbf24';
+        ctx.font = '22px sans-serif';
+        ctx.fillText('⚽', 256, 593);
+
+        // Club Crest (X: 310, Y: 572, W: 26, H: 26)
+        if (loadedBadgeImg) {
+          ctx.drawImage(loadedBadgeImg, 310, 572, 26, 26);
+        } else {
+          ctx.strokeStyle = isTOTS ? '#00f3ff' : '#f59e0b';
+          ctx.lineWidth = 2;
+          ctx.fillStyle = '#020617';
+          ctx.beginPath();
+          ctx.arc(323, 585, 12, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '900 8px sans-serif';
+          ctx.fillText('SXS', 323, 588);
+        }
 
         texture.needsUpdate = true;
       };
 
       // Register drawer callback
       cardDrawers[idx] = () => {
-        drawCard(null);
+        drawCard();
       };
 
-      drawCard(null);
+      drawCard();
 
       if (p.foto) {
         const imgObj = new Image();
         imgObj.crossOrigin = "anonymous";
         imgObj.onload = () => {
-          drawCard(imgObj);
+          loadedPlayerImg = imgObj;
+          drawCard();
         };
         imgObj.onerror = () => {
           console.warn("Failed to load player photo under CORS:", imgObj.src);
-          drawCard(null);
+          drawCard();
         };
         imgObj.src = getImageUrl(p.foto);
+      }
+
+      const resolvedFlagUrl = p.countryFlag || (p.nacionalidad ? getFlagUrl(p.nacionalidad) : null);
+      if (resolvedFlagUrl) {
+        const flagObj = new Image();
+        flagObj.crossOrigin = "anonymous";
+        flagObj.onload = () => {
+          loadedFlagImg = flagObj;
+          drawCard();
+        };
+        flagObj.src = getImageUrl(resolvedFlagUrl);
+      }
+
+      if (p.clubBadge) {
+        const badgeObj = new Image();
+        badgeObj.crossOrigin = "anonymous";
+        badgeObj.onload = () => {
+          loadedBadgeImg = badgeObj;
+          drawCard();
+        };
+        badgeObj.src = getImageUrl(p.clubBadge);
       }
 
       // 2. Create FUT 3D Card shape using ExtrudeGeometry for shield cutout matching Image 2 TOTW
@@ -528,24 +764,36 @@ export default function TacticVisualizer3D({ players = [] }) {
       const cardGeom = new THREE.ExtrudeGeometry(cardShape, extrudeSettings);
       cardGeom.center(); // Perfect automatic centering at (0, 0, 0)
 
-      const sideMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.1 });
-      const frontMat = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.1, metalness: 0.2 });
+      const sideMat = new THREE.MeshStandardMaterial({ 
+        color: customColor ? new THREE.Color(customColor) : (activeTab === 'tots' ? 0x00d8f6 : 0xd4af37), 
+        metalness: 0.9, 
+        roughness: 0.15,
+        transparent: true,
+        opacity: 1.0,
+        fog: false // Disable fog so side colors stay original independent of distance
+      });
+      const frontMat = new THREE.MeshBasicMaterial({ 
+        map: texture, 
+        transparent: true,
+        alphaTest: 0.05,
+        fog: false // Disable fog so card front stays bright and original independent of distance
+      });
       
       const body = new THREE.Mesh(cardGeom, [frontMat, sideMat]);
       body.castShadow = true;
-      body.position.y = 0.15;
+      body.position.y = 1.50;
       playerContainer.add(body);
       playerContainer.userData.body = body;
 
       playerMeshes.push(playerContainer);
     });
 
-    // 7. Tactical Chemistry Connection Lines
+    // 7. Tactical Chemistry Connection Lines (Chalk line format)
     const linesMat = new THREE.LineBasicMaterial({
-      color: 0x06b6d4,
+      color: 0xffffff,
       transparent: true,
       opacity: 0.0, // Fade in via GSAP
-      linewidth: 2
+      linewidth: 1.5
     });
 
     const chemicalLinesGroup = new THREE.Group();
@@ -593,10 +841,7 @@ export default function TacticVisualizer3D({ players = [] }) {
             if (prevObj) {
               if (prevObj.userData.ring) {
                 gsap.to(prevObj.userData.ring.scale, { x: 1, y: 1, z: 1, duration: 0.2 });
-                gsap.to(prevObj.userData.ring.material, { emissiveIntensity: 1.5, duration: 0.2 });
-              }
-              if (prevObj.userData.body) {
-                gsap.to(prevObj.userData.body.position, { y: -0.1, duration: 0.3, ease: "power2.out" });
+                gsap.to(prevObj.userData.ring.material, { emissiveIntensity: 1.0, duration: 0.2 });
               }
             }
           }
@@ -606,11 +851,8 @@ export default function TacticVisualizer3D({ players = [] }) {
 
           // Pulse Hover Ring
           if (obj.userData.ring) {
-            gsap.to(obj.userData.ring.scale, { x: 1.25, y: 1.25, z: 1.25, duration: 0.2 });
-            gsap.to(obj.userData.ring.material, { emissiveIntensity: 3.0, duration: 0.2 });
-          }
-          if (obj.userData.body) {
-            gsap.to(obj.userData.body.position, { y: 0.1, duration: 0.3, ease: "power2.out" });
+            gsap.to(obj.userData.ring.scale, { x: 1.2, y: 1.2, z: 1.2, duration: 0.2 });
+            gsap.to(obj.userData.ring.material, { emissiveIntensity: 2.0, duration: 0.2 });
           }
         }
       } else {
@@ -620,10 +862,7 @@ export default function TacticVisualizer3D({ players = [] }) {
           if (prevObj) {
             if (prevObj.userData.ring) {
               gsap.to(prevObj.userData.ring.scale, { x: 1, y: 1, z: 1, duration: 0.2 });
-              gsap.to(prevObj.userData.ring.material, { emissiveIntensity: 1.5, duration: 0.2 });
-            }
-            if (prevObj.userData.body) {
-              gsap.to(prevObj.userData.body.position, { y: -0.1, duration: 0.3, ease: "power2.out" });
+              gsap.to(prevObj.userData.ring.material, { emissiveIntensity: 1.0, duration: 0.2 });
             }
           }
 
@@ -703,19 +942,24 @@ export default function TacticVisualizer3D({ players = [] }) {
       // Levitating idle animation on player stands
       playerMeshes.forEach((mesh, idx) => {
         const offset = idx * 0.5;
-        mesh.position.y = 0.8 + Math.sin(time * 2.2 + offset) * 0.08;
+        mesh.position.y = 0.01;
+        
+        const isHovered = (activeHoveredIdx === idx);
+        let targetY = 1.50;
+        if (isHovered) {
+          targetY = 1.80;
+        }
+        
         if (mesh.userData.body) {
+          const currentY = mesh.userData.body.position.y - Math.sin(time * 2.2 + offset) * 0.1;
+          const newBaseY = THREE.MathUtils.lerp(currentY || 1.50, targetY, 0.15);
+          
+          mesh.userData.body.position.y = newBaseY + Math.sin(time * 2.2 + offset) * 0.1;
           mesh.userData.body.rotation.y = Math.sin(time * 1.2 + offset) * 0.25;
         }
       });
 
-      // Randomly blink camera LED flashes
-      flashes.forEach(f => {
-        if (Math.random() < 0.015) {
-          f.material.opacity = 1.0;
-          gsap.to(f.material, { opacity: 0.0, duration: 0.25 });
-        }
-      });
+
 
       renderer.render(scene, camera);
     };
@@ -741,23 +985,27 @@ export default function TacticVisualizer3D({ players = [] }) {
       renderer.dispose();
       scene.clear();
     };
-  }, [players]);
+  }, [players, activeTab, customColor]);
 
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.includes('default-user.png')) {
       return '/images/users/default-user.png';
     }
+    const apiBaseUrl = api.defaults.baseURL || 'http://localhost:8000/api';
+    const backendBaseUrl = apiBaseUrl.replace(/\/api$/, '') || 'http://localhost:8000';
     let relativePath = path;
     if (path.startsWith('http')) {
       if (path.startsWith('http://localhost:8000') || path.startsWith('http://127.0.0.1:8000')) {
         relativePath = path.replace(/^http:\/\/(localhost|127\.0\.0\.1):8000/, '');
+      } else if (path.startsWith(backendBaseUrl)) {
+        relativePath = path.substring(backendBaseUrl.length);
       } else {
         return path;
       }
     }
     const separator = relativePath.startsWith('/') ? '' : '/';
-    return `http://localhost:8000/api/media?path=${encodeURIComponent(separator + relativePath)}`;
+    return `${apiBaseUrl}/media?path=${encodeURIComponent(separator + relativePath)}`;
   };
 
   // Helper to resolve detailed, high-fidelity stats for the eSports live telemetry modal using real backend fields
@@ -765,7 +1013,11 @@ export default function TacticVisualizer3D({ players = [] }) {
     const pos = position.toUpperCase();
     const stats = player.stats || {};
 
-    if (['GK', 'PO', 'ARQ'].includes(pos)) {
+    const isGK = ['GK', 'PO', 'ARQ', 'POR'].includes(pos);
+    const isDEF = ['DFC', 'LI', 'LD', 'DFI', 'DFD', 'DF', 'DFC1', 'DFC2', 'CB', 'LB', 'RB', 'DEFENDER'].includes(pos);
+    const isMID = ['MC', 'MCD', 'MCO', 'MVs', 'MC1', 'MC2', 'VOL', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'MIDFIELDER'].includes(pos);
+
+    if (isGK) {
       const atajadas = player.total_atajadas || stats.atajadas || 0;
       const recibidos = player.total_goles_recibidos || stats.goles_recibidos || 0;
       const efectividad = atajadas ? Math.round((atajadas / (atajadas + recibidos)) * 100) : Math.round(75 + (idx % 10));
@@ -778,8 +1030,8 @@ export default function TacticVisualizer3D({ players = [] }) {
       ];
     }
 
-    if (['DFC', 'LI', 'LD', 'DFI', 'DFD', 'DF', 'DFC1', 'DFC2'].includes(pos)) {
-      const entradas = player.total_entradas || stats.entradas || 0;
+    if (isDEF) {
+      const entradas = player.total_entradas || stats.entradas_exitosas || stats.entradas || 0;
       const exito = player.avg_exito_entradas || stats.tasa_exito_entradas || 0;
 
       return [
@@ -790,7 +1042,7 @@ export default function TacticVisualizer3D({ players = [] }) {
       ];
     }
 
-    if (['MC', 'MCD', 'MCO', 'MVs', 'MC1', 'MC2'].includes(pos)) {
+    if (isMID) {
       const precisionPases = player.avg_precision_pases || stats.precision_pases || 0;
       const asistencias = player.total_asistencias || stats.asistencias || 0;
 
@@ -802,7 +1054,7 @@ export default function TacticVisualizer3D({ players = [] }) {
       ];
     }
 
-    // Delantero (DC, ST, EI, ED, DEL, DEL1, DEL2)
+    // Delantero (DC, ST, EI, ED, DEL, DEL1, DEL2, wingers)
     const goles = player.total_goles || stats.goles || 0;
     const precisionTiro = player.avg_precision_tiro || stats.precision_tiro || 0;
     const asistencias = player.total_asistencias || stats.asistencias || 0;
@@ -823,7 +1075,7 @@ export default function TacticVisualizer3D({ players = [] }) {
   return (
     <div 
       ref={containerRef} 
-      className="relative w-full h-[650px] border border-border/60 bg-gradient-to-b from-slate-950 via-slate-900/90 to-slate-950 rounded-3xl overflow-hidden shadow-2xl p-0 backdrop-blur-md cursor-grab active:cursor-grabbing"
+      className="relative w-full h-[650px] border border-border/60 bg-gradient-to-b from-[#020612] via-[#040b18] to-[#020612] rounded-3xl overflow-hidden shadow-2xl p-0 backdrop-blur-md cursor-grab active:cursor-grabbing"
     >
       {/* 3D Canvas rendering grass field and elements */}
       <canvas ref={canvasRef} className="w-full h-full block z-0" />
@@ -851,7 +1103,7 @@ export default function TacticVisualizer3D({ players = [] }) {
               <PlayerCard 
                 player={{
                   ...selectedPlayer,
-                  theme: selectedPlayer.rating >= 90 ? 'champions-league' : 'totw'
+                  theme: activeTab === 'tots' ? 'champions-league' : 'totw'
                 }} 
                 variant="dynamic" 
                 className="w-56" 

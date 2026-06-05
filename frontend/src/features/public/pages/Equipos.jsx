@@ -201,7 +201,7 @@ export default function Equipos() {
             </h1>
 
             <p className="text-xs md:text-sm text-muted-foreground font-sans max-w-xl leading-relaxed tracking-wide font-light z-10 mt-2">
-              Conoce todas las organizaciones, clubes Pro Clubs de élite y plantillas oficiales que disputan los campeonatos de RaconPro.
+              Conoce todas las organizaciones, clubes Pro Clubs de élite y plantillas oficiales que disputan los campeonatos de Torneos Pro FC.
             </p>
           </div>
 
@@ -452,7 +452,7 @@ export default function Equipos() {
                       {/* Description + stats */}
                       <div className="px-5 pt-4 pb-5 flex-1 flex flex-col justify-between gap-3">
                         <p className="text-[11px] text-muted-foreground leading-relaxed font-sans line-clamp-2">
-                          {eq.descripcion || 'Escuadra competitiva e-sports oficial inscrita en los circuitos de RaconPro.'}
+                          {eq.descripcion || 'Escuadra competitiva e-sports oficial inscrita en los circuitos de Torneos Pro FC.'}
                         </p>
 
                         {/* Tactical Telemetry Panel */}

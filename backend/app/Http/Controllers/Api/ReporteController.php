@@ -391,6 +391,15 @@ class ReporteController extends Controller
         $partido->goles_visitante = (int) $match['clubs'][$clubVisitanteId]['goals'];
         $partido->save();
 
+        // Invalidar caché de competencia y equipos involucrados
+        \Illuminate\Support\Facades\Cache::forget('competencia_show_' . $partido->competencia_id);
+        if ($partido->equipo_local_id) {
+            \Illuminate\Support\Facades\Cache::forget('equipo_show_' . $partido->equipo_local_id);
+        }
+        if ($partido->equipo_visitante_id) {
+            \Illuminate\Support\Facades\Cache::forget('equipo_show_' . $partido->equipo_visitante_id);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Partido EA reportado y procesado exitosamente.',

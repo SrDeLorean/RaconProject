@@ -364,7 +364,7 @@ export default function Infografia() {
               </div>
 
               <p className="text-[11px] text-muted-foreground leading-relaxed font-sans font-light">
-                Análisis arbitrales dinámicos sincronizados directamente con las bases de datos de RaconPro.
+                Análisis arbitrales dinámicos sincronizados directamente con las bases de datos de Torneos Pro FC.
               </p>
 
               <button 

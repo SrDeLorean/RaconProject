@@ -46,7 +46,7 @@ class DatabaseSeeder extends Seeder
         // 1. Administrador General
         User::create([
             'name' => 'Administrador General',
-            'email' => 'admin@racon.com',
+            'email' => 'admin@torneosprofc.com',
             'password' => Hash::make('password123'),
             'role' => 'administrador',
             'status' => 'activo',
@@ -79,7 +79,7 @@ class DatabaseSeeder extends Seeder
             
             $organizador = User::create([
                 'name' => "Organizador - " . $orgName,
-                'email' => "organizador" . ($i + 1) . "@racon.com",
+                'email' => "organizador" . ($i + 1) . "@torneosprofc.com",
                 'password' => Hash::make('password123'),
                 'role' => 'organizador',
                 'status' => 'activo',
@@ -136,7 +136,7 @@ class DatabaseSeeder extends Seeder
         for ($i = 1; $i <= 24; $i++) {
             $capitan = User::create([
                 'name' => "Capitán Equipo $i",
-                'email' => "capitan$i@racon.com",
+                'email' => "capitan$i@torneosprofc.com",
                 'password' => Hash::make('password123'),
                 'role' => 'jugador',
                 'status' => 'activo',
@@ -163,7 +163,7 @@ class DatabaseSeeder extends Seeder
                 'nombre' => $nombresEquipos[$i] . ' Esports',
                 'slug' => Str::slug($nombresEquipos[$i] . ' Esports'),
                 'abreviatura' => strtoupper(substr($nombresEquipos[$i], 0, 3)),
-                'descripcion' => "Escuadra táctica profesional compitiendo en el máximo circuito de RaconPro.",
+                'descripcion' => "Escuadra táctica profesional compitiendo en el máximo circuito de Torneos Pro FC.",
                 'plataforma' => $plataformasEquipos[$i % 3],
                 'logo' => $teamLogos[$i % 4],
                 'banner' => $orgBanners[$i % 4],
@@ -215,7 +215,7 @@ class DatabaseSeeder extends Seeder
 
                 $jugador = User::create([
                     'name' => $nombreCompleto,
-                    'email' => "jugador_eq{$i}_j{$j}@racon.com",
+                    'email' => "jugador_eq{$i}_j{$j}@torneosprofc.com",
                     'password' => Hash::make('password123'),
                     'role' => 'jugador',
                     'status' => 'activo',

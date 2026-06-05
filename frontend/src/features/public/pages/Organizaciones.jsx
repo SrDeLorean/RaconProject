@@ -81,7 +81,7 @@ export default function Organizaciones() {
         { nombre: 'Copa AMC Elite', logo: '🏆' },
         { nombre: 'Primera División', logo: '⚡' },
         { nombre: 'Segunda División', logo: '⚔️' },
-        { nombre: 'Confederación RaconPro', logo: '🛡️' },
+        { nombre: 'Confederación Torneos Pro FC', logo: '🛡️' },
         { nombre: 'Playoffs de Ascenso', logo: '🔥' }
       ];
     }
@@ -473,7 +473,7 @@ export default function Organizaciones() {
             <div className="space-y-3 relative z-20">
               <h2 className="text-2xl font-display font-black tracking-wide text-foreground uppercase">Sin Organizaciones Registradas</h2>
               <p className="text-xs text-muted-foreground max-w-sm">
-                Actualmente no se registran confederaciones competitivas públicas en la base de datos de RaconPro.
+                Actualmente no se registran confederaciones competitivas públicas en la base de datos de Torneos Pro FC.
               </p>
             </div>
           </div>

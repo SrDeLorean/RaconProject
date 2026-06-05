@@ -67,7 +67,7 @@ class RealDataSeeder extends Seeder
 
                         // Asegurar email único
                         if (empty($email) || DB::table('users')->where('email', $email)->exists()) {
-                            $email = "user_{$id}_" . Str::random(4) . "@racon.com";
+                            $email = "user_{$id}_" . Str::random(4) . "@torneosprofc.com";
                         }
 
                         // Asegurar gamertag único (usamos id_ea si está disponible, o el nombre)
@@ -264,7 +264,7 @@ class RealDataSeeder extends Seeder
                             } else {
                                 // Crear un capitán ficticio
                                 $capName = "Capitán " . $nombre;
-                                $capEmail = "capitan_real_" . $id . "@racon.com";
+                                $capEmail = "capitan_real_" . $id . "@torneosprofc.com";
                                 $newCap = User::create([
                                     'name' => $capName,
                                     'email' => $capEmail,
@@ -284,7 +284,7 @@ class RealDataSeeder extends Seeder
                             'nombre' => $nombre,
                             'slug' => $slug,
                             'abreviatura' => substr($abreviatura, 0, 10),
-                            'descripcion' => $descripcion ?: "Escuadra oficial compitiendo en el circuito de RaconPro.",
+                            'descripcion' => $descripcion ?: "Escuadra oficial compitiendo en el circuito de Torneos Pro FC.",
                             'logo' => $logo,
                             'banner' => 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&h=400&fit=crop',
                             'plataforma' => 'crossplay',

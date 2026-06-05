@@ -623,7 +623,7 @@ export default function DashboardAdmin() {
         {/* COLUMNA DERECHA: Resumen de Circuito */}
         <div className="flex flex-col gap-4">
           <h2 className="text-lg font-black text-foreground tracking-wide">
-            Ecosistema RaconPro
+            Ecosistema Torneos Pro FC
           </h2>
           <Card variant="glass" className="p-5 text-xs space-y-4">
             <div className="space-y-2 leading-relaxed text-muted-foreground text-left">

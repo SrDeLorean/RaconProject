@@ -5,6 +5,7 @@ import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
 import bgLogin from '@/assets/images/bg-login.jpg';
+import logoImg from '@/assets/images/logo.png';
 import api from '@/api/axios';
 
 // Iconos SVG para una apariencia premium sin dependencias externas
@@ -217,8 +218,8 @@ export default function Login() {
         <div className="absolute inset-0 bg-primary/10 mix-blend-overlay"></div>
         
         <div className="relative z-10 flex flex-col justify-end p-12 h-full max-w-2xl text-white">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-destructive flex items-center justify-center text-primary-foreground font-display font-black text-3xl mb-6 shadow-[0_0_20px_hsla(var(--primary),0.5)]">
-            R
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-[0_0_20px_hsla(var(--primary),0.5)]">
+            <img src={logoImg} alt="Torneos Pro FC" className="w-10 h-10 object-contain" />
           </div>
           <h1 className="text-5xl font-display font-extrabold uppercase tracking-tight mb-4 leading-none text-white">
             Bienvenido de <br/>
@@ -227,7 +228,7 @@ export default function Login() {
             </span>
           </h1>
           <p className="text-base text-gray-300 font-medium max-w-lg leading-relaxed">
-            Accede al Centro de Mando de RaconPro. Verifica resultados, organiza nuevas jornadas y sigue escalando en el ranking mundial de FC26.
+            Accede al Centro de Mando de Torneos Pro FC. Verifica resultados, organiza nuevas jornadas y sigue escalando en el ranking mundial de FC26.
           </p>
         </div>
       </div>
@@ -366,7 +367,7 @@ export default function Login() {
                     required 
                     disabled={isRecovering} 
                     icon={<MailIcon />} 
-                    placeholder="ejemplo@racon.com"
+                    placeholder="ejemplo@torneosprofc.com"
                   />
 
                   <Button 

@@ -148,7 +148,7 @@ export default function Traspasos() {
             </h1>
 
             <p className="animate-fade-in-up text-xs md:text-sm text-muted-foreground font-sans max-w-xl leading-relaxed tracking-wide font-light z-10 mt-2" style={{ animationDelay: '0.2s' }}>
-              Revisa en tiempo real las altas, bajas y movimientos estratégicos de las plantillas autorizados por el comité técnico de RaconPro.
+              Revisa en tiempo real las altas, bajas y movimientos estratégicos de las plantillas autorizados por el comité técnico de Torneos Pro FC.
             </p>
           </div>
 
@@ -404,7 +404,7 @@ export default function Traspasos() {
                         </span>
                       </div>
                     ) : (
-                      <span>🏆 RACONPRO</span>
+                      <span>🏆 TORNEOS PRO FC</span>
                     )}
 
                     <span className="tracking-wide text-muted-foreground/80">

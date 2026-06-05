@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Avatar from '@/components/ui/Avatar'; // <-- NUEVO: Importamos el Avatar
+import logoImg from '@/assets/images/logo.png';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -53,7 +54,7 @@ export default function DashboardLayout({ menuItems = [], profile }) {
   // Unificamos datos del usuario (Prioridad: Estado Global de Zustand > Props > Default)
   const displayName = user?.name || profile?.name || 'Administrador';
   const displayRole = user?.role || user?.rol || profile?.role || profile?.rol || 'Super Admin';
-  const displayEmail = user?.email || profile?.email || 'admin@racon.com';
+  const displayEmail = user?.email || profile?.email || 'admin@torneosprofc.com';
   const displayAvatar = user?.profile_photo_url || profile?.avatar;
 
   const getRolePrefix = () => {
@@ -79,14 +80,15 @@ export default function DashboardLayout({ menuItems = [], profile }) {
         <div className="h-20 flex items-center justify-center border-b border-border/50 shrink-0">
           {isSidebarOpen ? (
             <Link to="/admin" className="flex items-center gap-2">
-              <h1 className="text-display font-black text-3xl tracking-widest mt-2 uppercase">
-                <span className="text-primary">Racon</span>
-                <span className="text-foreground">Pro</span>
+              <img src={logoImg} alt="Torneos Pro FC" className="h-10 object-contain" />
+              <h1 className="text-display font-black text-xl tracking-widest mt-1 uppercase">
+                <span className="text-primary">Torneos Pro</span>
+                <span className="text-foreground"> FC</span>
               </h1>
             </Link>
           ) : (
-            <Link to="/admin" className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-destructive flex items-center justify-center text-primary-foreground font-display font-black text-xl shadow-[0_0_15px_hsla(var(--primary),0.4)]">
-              R
+            <Link to="/admin" className="w-10 h-10 flex items-center justify-center">
+              <img src={logoImg} alt="Torneos Pro FC" className="w-9 h-9 object-contain" />
             </Link>
           )}
         </div>
@@ -135,7 +137,7 @@ export default function DashboardLayout({ menuItems = [], profile }) {
 
         {/* Pequeño indicador inferior en el Sidebar */}
         <div className={`p-4 border-t border-border/50 shrink-0 text-center text-xs font-semibold text-muted-foreground opacity-60 transition-opacity ${!isSidebarOpen && 'lg:hidden'}`}>
-          v2.0.0 — RaconPro
+          v2.0.0 — Torneos Pro FC
         </div>
       </aside>
 

@@ -119,7 +119,7 @@ export default function Contacto() {
               </p>
 
               <a 
-                href="https://discord.gg/raconpro" 
+                href="https://discord.gg/torneosprofc" 
                 target="_blank" 
                 rel="noreferrer" 
                 className="w-full text-center py-4 text-xs font-condensed tracking-widest uppercase rounded-lg text-primary-foreground font-black cursor-pointer btn-glossy block"
@@ -149,11 +149,11 @@ export default function Contacto() {
               <div className="space-y-3 text-xs">
                 <div className="p-3 border border-border/30 rounded-xl bg-muted/10">
                   <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block">Correo de Alianzas</span>
-                  <span className="text-foreground font-mono font-bold">contacto@raconpro.com</span>
+                  <span className="text-foreground font-mono font-bold">contacto@torneosprofc.com</span>
                 </div>
                 <div className="p-3 border border-border/30 rounded-xl bg-muted/10">
                   <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block">Discord Oficial</span>
-                  <span className="text-primary font-bold">discord.gg/raconpro</span>
+                  <span className="text-primary font-bold">discord.gg/torneosprofc</span>
                 </div>
               </div>
             </div>
@@ -217,7 +217,7 @@ export default function Contacto() {
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="Ej: seba@racon.com" 
+                    placeholder="Ej: seba@torneosprofc.com" 
                     className={`input-premium py-3 text-sm font-semibold font-mono ${formErrors.email ? '!border-destructive' : ''}`}
                   />
                   {formErrors.email && (

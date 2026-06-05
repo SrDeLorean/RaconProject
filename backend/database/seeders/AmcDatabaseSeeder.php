@@ -52,7 +52,7 @@ class AmcDatabaseSeeder extends Seeder
         // 2. Crear la Organización "Comunidad AMC" y el Administrador
         $admin = User::create([
             'name' => 'Administrador General',
-            'email' => 'admin@racon.com',
+            'email' => 'admin@torneosprofc.com',
             'password' => Hash::make('password123'),
             'role' => 'administrador',
             'status' => 'activo',
@@ -189,7 +189,7 @@ class AmcDatabaseSeeder extends Seeder
 
                         // Asegurar email único
                         if (empty($email) || DB::table('users')->where('email', $email)->exists()) {
-                            $email = "user_{$id}_" . Str::random(4) . "@racon.com";
+                            $email = "user_{$id}_" . Str::random(4) . "@torneosprofc.com";
                         }
 
                         // Asegurar gamertag único
@@ -252,7 +252,7 @@ class AmcDatabaseSeeder extends Seeder
                                 $originalUser = DB::table('users')->where('id', $id_usuario)->first();
                                 $clonedUserId = DB::table('users')->insertGetId([
                                     'name' => $originalUser->name . ' (Co-Cap)',
-                                    'email' => 'cap_' . $id . '_' . Str::random(4) . '@racon.com',
+                                    'email' => 'cap_' . $id . '_' . Str::random(4) . '@torneosprofc.com',
                                     'password' => Hash::make('password123'),
                                     'role' => 'jugador',
                                     'status' => 'activo',
@@ -268,7 +268,7 @@ class AmcDatabaseSeeder extends Seeder
                             // Crear un capitán ficticio si el ID no existe en users para que el equipo no falle en unique key
                             $clonedUserId = DB::table('users')->insertGetId([
                                 'name' => 'Capitán ' . $nombre,
-                                'email' => 'cap_' . $id . '_' . Str::random(4) . '@racon.com',
+                                'email' => 'cap_' . $id . '_' . Str::random(4) . '@torneosprofc.com',
                                 'password' => Hash::make('password123'),
                                 'role' => 'jugador',
                                 'status' => 'activo',

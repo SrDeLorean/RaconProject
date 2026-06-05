@@ -15,7 +15,7 @@ export default function AdminLayout() {
   // Datos simulados del perfil (luego puedes conectarlo a Zustand)
   const adminProfile = {
     name: 'Super Admin',
-    email: 'admin@racon.com',
+    email: 'admin@torneosprofc.com',
     initial: 'S'
   };
 

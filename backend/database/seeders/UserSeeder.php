@@ -16,7 +16,7 @@ class UserSeeder extends Seeder
         // 1. Super Admin
         User::create([
             'name'             => 'Super Admin',
-            'email'            => 'admin@racon.com',
+            'email'            => 'admin@torneosprofc.com',
             'password'         => Hash::make('password123'),
             'role'             => 'administrador',
             'status'           => 'activo',
@@ -28,7 +28,7 @@ class UserSeeder extends Seeder
         // 2. Organizador
         User::create([
             'name'             => 'Organizador Master',
-            'email'            => 'organizador@racon.com',
+            'email'            => 'organizador@torneosprofc.com',
             'password'         => Hash::make('password123'),
             'role'             => 'organizador',
             'status'           => 'activo',
@@ -39,7 +39,7 @@ class UserSeeder extends Seeder
         // 3. Jugador con datos completos
         User::create([
             'name'             => 'Carlos Silva',
-            'email'            => 'capitan@racon.com',
+            'email'            => 'capitan@torneosprofc.com',
             'password'         => Hash::make('password123'),
             'role'             => 'jugador',
             'status'           => 'activo',
@@ -56,7 +56,7 @@ class UserSeeder extends Seeder
         // 4. Jugador Pro
         User::create([
             'name'             => 'Jugador Pro',
-            'email'            => 'jugador@racon.com',
+            'email'            => 'jugador@torneosprofc.com',
             'password'         => Hash::make('password123'),
             'role'             => 'jugador',
             'status'           => 'activo',
@@ -73,7 +73,7 @@ class UserSeeder extends Seeder
         // 5. Jugador Suspendido (Para probar que el filtro de estados funcione)
         User::create([
             'name'             => 'Jugador Tramposo',
-            'email'            => 'tramposo@racon.com',
+            'email'            => 'tramposo@torneosprofc.com',
             'password'         => Hash::make('password123'),
             'role'             => 'jugador',
             'status'           => 'suspendido',

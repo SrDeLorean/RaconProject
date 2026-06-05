@@ -92,8 +92,48 @@ class PartidoController extends Controller
         }
 
         // Limit results if loading all upcoming or finished to prevent huge payload (maximum 100)
-        if (!$request->filled('fecha') && ($request->status === 'finished' || $request->status === 'upcoming')) {
+        if (!$request->has('page') && !$request->boolean('paginate') && !$request->filled('fecha') && ($request->status === 'finished' || $request->status === 'upcoming')) {
             $query->limit(100);
+        }
+
+        if ($request->boolean('paginate_by_time') || $request->get('paginate') === 'time') {
+            $uniqueHoursQuery = (clone $query)->select('hora')
+                ->whereNotNull('hora')
+                ->where('hora', '!=', '')
+                ->groupBy('hora')
+                ->orderBy('hora');
+
+            $uniqueHours = $uniqueHoursQuery->pluck('hora')->toArray();
+            $totalHours = count($uniqueHours);
+            
+            $perPage = (int)$request->get('per_page', 1);
+            $page = (int)$request->get('page', 1);
+            
+            $offset = ($page - 1) * $perPage;
+            $selectedHours = array_slice($uniqueHours, $offset, $perPage);
+            
+            if (!empty($selectedHours)) {
+                $query->whereIn('hora', $selectedHours);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+            
+            $partidos = $query->orderBy('fecha')->orderBy('hora')->get();
+            
+            return response()->json([
+                'data' => $partidos,
+                'current_page' => $page,
+                'per_page' => $perPage,
+                'total' => $totalHours,
+                'last_page' => (int)ceil($totalHours / $perPage),
+                'selected_hours' => $selectedHours,
+                'all_hours' => $uniqueHours,
+            ]);
+        }
+
+        if ($request->has('page') || $request->boolean('paginate')) {
+            $perPage = $request->get('per_page', 10);
+            return response()->json($query->orderBy('fecha')->orderBy('hora')->paginate($perPage));
         }
 
         return response()->json($query->orderBy('fecha')->orderBy('hora')->get());
@@ -234,6 +274,15 @@ class PartidoController extends Controller
             'hora',
             'stats'
         ]));
+
+        // Invalidar caché de competencia y equipos involucrados
+        \Illuminate\Support\Facades\Cache::forget('competencia_show_' . $partido->competencia_id);
+        if ($partido->equipo_local_id) {
+            \Illuminate\Support\Facades\Cache::forget('equipo_show_' . $partido->equipo_local_id);
+        }
+        if ($partido->equipo_visitante_id) {
+            \Illuminate\Support\Facades\Cache::forget('equipo_show_' . $partido->equipo_visitante_id);
+        }
 
         return response()->json([
             'message' => 'Partido actualizado con éxito.',

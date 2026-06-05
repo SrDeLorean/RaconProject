@@ -90,92 +90,20 @@ export default function DashboardOrganizador() {
         const compArray = responseComp.data.data ? responseComp.data.data : (Array.isArray(responseComp.data) ? responseComp.data : []);
         setMisCompetencias(compArray);
 
-        // Fetch de jugadores para realizar la auditoria
+        // Fetch de auditoría resumida (solo los primeros registros para alertas)
         try {
-          const responsePlayers = await api.get('/usuarios', { params: { role: 'jugador', per_page: 1000 } });
-          const allPlayers = responsePlayers.data?.data || responsePlayers.data || [];
-          
-          const missing = [];
-          allPlayers.forEach(p => {
-            const missingEa = !p.id_ea || p.id_ea.trim() === '';
-            const missingGt = !p.gamertag || p.gamertag.trim() === '';
-            if (missingEa || missingGt) {
-              missing.push({ ...p, missingEa, missingGt });
-            }
-          });
-
-          const playersWithGt = allPlayers.filter(p => p.gamertag && p.gamertag.trim() !== '');
-          const visited = new Set();
-          const similarGroups = [];
-
-          const getLevenshteinDistance = (a, b) => {
-            const matrix = [];
-            for (let i = 0; i <= b.length; i++) matrix[i] = [i];
-            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
-            for (let i = 1; i <= b.length; i++) {
-              for (let j = 1; j <= a.length; j++) {
-                if (b.charAt(i - 1) === a.charAt(j - 1)) {
-                  matrix[i][j] = matrix[i - 1][j - 1];
-                } else {
-                  matrix[i][j] = Math.min(
-                    matrix[i - 1][j - 1] + 1,
-                    matrix[i][j - 1] + 1,
-                    matrix[i - 1][j] + 1
-                  );
-                }
-              }
-            }
-            return matrix[b.length][a.length];
-          };
-
-          const isSimilar = (gt1, gt2) => {
-            if (!gt1 || !gt2) return false;
-            const clean = (str) => {
-              return str
-                .toLowerCase()
-                .replace(/[\s\._\-]/g, '')
-                .replace(/0/g, 'o')
-                .replace(/1/g, 'i')
-                .replace(/3/g, 'e')
-                .replace(/4/g, 'a')
-                .replace(/5/g, 's')
-                .replace(/7/g, 't')
-                .replace(/8/g, 'b');
-            };
-            const c1 = clean(gt1);
-            const c2 = clean(gt2);
-            if (c1 === c2) return true;
-            
-            const dist = getLevenshteinDistance(c1, c2);
-            return dist <= 2 && Math.min(c1.length, c2.length) >= 4;
-          };
-
-          for (let i = 0; i < playersWithGt.length; i++) {
-            const p1 = playersWithGt[i];
-            if (visited.has(p1.id)) continue;
-
-            const currentGroup = [p1];
-            for (let j = i + 1; j < playersWithGt.length; j++) {
-              const p2 = playersWithGt[j];
-              if (visited.has(p2.id)) continue;
-
-              if (isSimilar(p1.gamertag, p2.gamertag)) {
-                currentGroup.push(p2);
-              }
-            }
-
-            if (currentGroup.length > 1) {
-              currentGroup.forEach(p => visited.add(p.id));
-              similarGroups.push(currentGroup);
-            }
-          }
-
+          const [resMissing, resSimilar] = await Promise.all([
+            api.get('/usuarios/auditoria', { params: { type: 'missing', per_page: 4, page: 1 } }),
+            api.get('/usuarios/auditoria', { params: { type: 'similar', per_page: 2, page: 1 } })
+          ]);
           setPlayersAudit({
-            missingData: missing,
-            similarGroups: similarGroups
+            missingData: resMissing.data?.data || [],
+            similarGroups: resSimilar.data?.data || [],
+            missingCount: resMissing.data?.total || 0,
+            similarCount: resSimilar.data?.total || 0
           });
         } catch (errPl) {
-          console.error("Error al auditar jugadores en dashboard principal:", errPl);
+          console.error("Error al obtener auditoría de jugadores:", errPl);
         }
 
       } catch (error) {
@@ -190,12 +118,16 @@ export default function DashboardOrganizador() {
   // Cálculos de alertas generales
   const perfilUsuarioCount = stats?.audits?.perfil?.usuario?.length || 0;
   const perfilOrgCount = stats?.audits?.perfil?.organizaciones?.reduce((acc, o) => acc + (o.campos_faltantes?.length || 0), 0) || 0;
+  
+  const playersMissingCount = playersAudit?.missingCount ?? playersAudit?.missingData?.length ?? 0;
+  const playersSimilarCount = playersAudit?.similarCount ?? playersAudit?.similarGroups?.length ?? 0;
+
   const totalAlertasResumen = 
     (stats?.audits?.partidos?.length || 0) + 
     (stats?.audits?.equipos?.length || 0) + 
     (stats?.audits?.traspasos?.length || 0) + 
     (stats?.audits?.competencias?.length || 0) + 
-    (playersAudit.missingData.length + playersAudit.similarGroups.length) +
+    (playersMissingCount + playersSimilarCount) +
     (perfilUsuarioCount + perfilOrgCount);
 
   const activeSeasonsWarns = stats?.audits?.temporadas?.filter(t => !t.activa || (t.fecha_fin && new Date(t.fecha_fin) < new Date())).length || 0;
@@ -203,7 +135,7 @@ export default function DashboardOrganizador() {
   const tabsConfig = [
     { id: 'resumen', label: 'Resumen', count: totalAlertasResumen, type: 'error' },
     { id: 'equipos', label: 'Plantillas & Caps', count: stats?.audits?.equipos?.length || 0, type: 'error' },
-    { id: 'jugadores', label: 'Auditoría Jugadores', count: (playersAudit.missingData.length + playersAudit.similarGroups.length), type: 'error' },
+    { id: 'jugadores', label: 'Auditoría Jugadores', count: (playersMissingCount + playersSimilarCount), type: 'error' },
     { id: 'traspasos', label: 'Traspasos', count: stats?.audits?.traspasos?.length || 0, type: 'warning' },
     { id: 'partidos', label: 'Falta Reporte', count: stats?.audits?.partidos?.length || 0, type: 'error' },
     { id: 'temporadas', label: 'Temporadas', count: activeSeasonsWarns, type: 'warning' },
@@ -218,7 +150,7 @@ export default function DashboardOrganizador() {
           RESUMEN <span className="text-glow-primary bg-clip-text bg-gradient-to-r from-primary to-destructive text-transparent">DE LIGAS</span>
         </h1>
         <p className="text-sm text-muted-foreground">
-          Hola, {user?.name}. Aquí tienes el control de tus circuitos, competencias y pases activos en RaconPro.
+          Hola, {user?.name}. Aquí tienes el control de tus circuitos, competencias y pases activos en Torneos Pro FC.
         </p>
       </div>
 
@@ -364,7 +296,7 @@ export default function DashboardOrganizador() {
               }>
                 {activeTab === 'resumen' && <ResumenTab stats={stats} navigate={navigate} misCompetencias={misCompetencias} playersAudit={playersAudit} />}
                 {activeTab === 'equipos' && <EquiposTab stats={stats} />}
-                {activeTab === 'jugadores' && <JugadoresTab playersAudit={playersAudit} />}
+                {activeTab === 'jugadores' && <JugadoresTab />}
                 {activeTab === 'traspasos' && <TraspasosTab stats={stats} navigate={navigate} />}
                 {activeTab === 'partidos' && <ReportesTab stats={stats} navigate={navigate} />}
                 {activeTab === 'temporadas' && <TemporadasTab stats={stats} />}

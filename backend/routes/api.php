@@ -91,6 +91,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('users', UserController::class)->except(['index', 'show']);
     Route::apiResource('usuarios', UserController::class)->except(['index', 'show']);
     Route::post('/usuarios/disponibles', [UserController::class, 'disponibles']);
+    Route::get('/usuarios/auditoria', [UserController::class, 'auditoriaGamerTAGs']);
 
     Route::apiResource('competencias', CompetenciaController::class)->except(['index', 'show']);
     Route::apiResource('equipo-jugador', EquipoJugadorController::class);

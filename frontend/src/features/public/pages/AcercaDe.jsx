@@ -1,6 +1,7 @@
 import React from 'react';
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/shared/Card';
+import devImg from '@/assets/images/desarrollador.jpeg';
 
 export default function AcercaDe() {
   return (
@@ -17,7 +18,7 @@ export default function AcercaDe() {
         {/* Palabras de fondo brush estilo editorial */}
         <div className="absolute inset-0 pointer-events-none select-none overflow-hidden z-0">
           <span className="absolute top-10 left-10 text-[9rem] md:text-[14rem] font-display font-black uppercase text-foreground/[0.015] dark:text-foreground/[0.025] blur-[2px] float-brush-1">
-            RACON PRO
+            TORNEOS PRO FC
           </span>
           <span className="absolute bottom-10 right-20 text-[9rem] md:text-[14rem] font-display font-black uppercase text-foreground/[0.015] dark:text-foreground/[0.025] blur-[3px] float-brush-2">
             NOSOTROS
@@ -52,7 +53,7 @@ export default function AcercaDe() {
             </h1>
 
             <p className="animate-fade-in-up text-xs md:text-sm text-muted-foreground font-sans max-w-xl leading-relaxed tracking-wide font-light z-10 mt-2" style={{ animationDelay: '0.2s' }}>
-              Racon Pro es la plataforma federativa y tecnológica de referencia para el circuito de Clubes Virtuales eSports. Diseñamos, administramos y transmitimos competiciones oficiales con telemetría avanzada y estadísticas en tiempo real.
+              Torneos Pro FC es la plataforma federativa y tecnológica de referencia para el circuito de Clubes Virtuales eSports. Diseñamos, administramos y transmitimos competiciones oficiales con telemetría avanzada y estadísticas en tiempo real.
             </p>
           </div>
 
@@ -61,7 +62,7 @@ export default function AcercaDe() {
             <div className="border border-border/40 bg-white/90 dark:bg-card/85 backdrop-blur-md rounded-2xl p-6 w-full space-y-4 shadow-xl">
               
               <div className="flex justify-between items-center border-b border-border/30 pb-3">
-                <span className="text-[9px] sm:text-[10px] font-condensed tracking-widest text-muted-foreground uppercase">TELEMETRÍA R-PRO</span>
+                <span className="text-[9px] sm:text-[10px] font-condensed tracking-widest text-muted-foreground uppercase">TELEMETRÍA TP-FC</span>
                 <span className="text-[9px] sm:text-[10px] font-mono text-primary font-bold">ABOUT US</span>
               </div>
 
@@ -81,7 +82,7 @@ export default function AcercaDe() {
               </p>
 
               <a 
-                href="https://discord.gg/raconpro" 
+                href="https://discord.gg/torneosprofc" 
                 target="_blank" 
                 rel="noreferrer" 
                 className="w-full text-center py-4 text-xs font-condensed tracking-widest uppercase rounded-lg text-primary-foreground font-black cursor-pointer btn-glossy block"
@@ -143,10 +144,10 @@ export default function AcercaDe() {
               
               <div className="space-y-4 text-xs md:text-sm text-muted-foreground leading-relaxed font-light">
                 <p>
-                  Racon Pro nació de la necesidad de profesionalizar el formato de **Clubes Virtuales** (Pro Clubs) en Latinoamérica y España. Lo que comenzó como un sistema simple de registro de marcadores se convirtió rápidamente en un ecosistema robusto de torneos, fichajes y visualización en tiempo real.
+                  Torneos Pro FC nació de la necesidad de profesionalizar el formato de **Clubes Virtuales** (Pro Clubs) en Latinoamérica. Lo que comenzó como un sistema simple de registro de marcadores se convirtió rápidamente en un ecosistema robusto de torneos, fichajes y visualización en tiempo real.
                 </p>
                 <p>
-                  Gracias al apoyo de comunidades destacadas como **Comunidad AMC**, **Espacio Gamer** y organizadores independientes, hemos unificado a miles de deportistas electrónicos bajo una plataforma común de alto rendimiento.
+                  Gracias al apoyo de la comunidad destacada como **Comunidad AMC**, hemos unificado a miles de deportistas electrónicos bajo una plataforma común de alto rendimiento.
                 </p>
                 <p>
                   Hoy en día, proporcionamos a los organizadores paneles avanzados de auditoría, gestión de temporadas y control administrativo. A los jugadores, les ofrecemos un perfil profesional dinámico con dorsal oficial, historial de traspasos y clasificaciones de rendimiento individuales (TOTW y TOTS).
@@ -172,6 +173,80 @@ export default function AcercaDe() {
             </div>
           </div>
 
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 3. EQUIPO DE DESARROLLO (Premium Card)                                    */}
+        {/* ========================================================================= */}
+        <div className="border border-border/50 dark:border-white/[0.06] bg-white/60 dark:bg-card/75 backdrop-blur-md rounded-2xl p-8 space-y-6 shadow-lg relative overflow-hidden animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-destructive/5 rounded-full blur-3xl pointer-events-none"></div>
+          
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-border/40 pb-4 gap-4">
+            <div>
+              <span className="text-xs font-condensed font-black text-primary tracking-[0.25em] uppercase block">
+                💻 INGENIERÍA & ARQUITECTURA
+              </span>
+              <h3 className="text-2xl md:text-3xl font-display font-black uppercase text-foreground mt-1">
+                Equipo de Desarrollo
+              </h3>
+            </div>
+            <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-1.5 shrink-0">
+              <span className="text-[10px] font-condensed tracking-widest font-black text-primary uppercase">
+                👨‍💻 Programador a Cargo
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            {/* Avatar / Badge Visual del Programador */}
+            <div className="lg:col-span-4 flex justify-center">
+              <div className="relative w-44 h-44 rounded-full border-2 border-primary/45 bg-gradient-to-tr from-primary/10 via-card to-background flex items-center justify-center overflow-hidden shadow-2xl group transition-all duration-300 hover:border-primary/80">
+                {/* Glow ring */}
+                <div className="absolute inset-0 border border-dashed border-primary/30 rounded-full animate-[spin_20s_linear_infinite]"></div>
+                {/* Developer Image */}
+                <img src={devImg} alt="Sebastián Ibarra Herrera" className="w-full h-full object-cover relative z-10 transition-transform duration-500 group-hover:scale-110" />
+              </div>
+            </div>
+
+            {/* Detalles Profesionales */}
+            <div className="lg:col-span-8 space-y-4 text-left">
+              <div>
+                <h4 className="text-xl font-display font-black text-foreground uppercase tracking-wide">
+                  Sebastián Ibarra Herrera
+                </h4>
+                <p className="text-xs text-primary font-mono font-bold mt-1">
+                  Ingeniero Civil en Computación | Desarrollador Full Stack
+                </p>
+                <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                  Curico, Chile
+                </p>
+              </div>
+
+              <p className="text-xs md:text-sm text-muted-foreground leading-relaxed font-light font-sans">
+                Responsable del diseño, desarrollo y arquitectura del ecosistema completo de **Torneos Pro FC**. Especializado en la creación de plataformas dinámicas de alto rendimiento con optimización de datos para la gestión automatizada de torneos, control de plantillas en tiempo real y telemetría avanzada de jugadores de e-sports.
+              </p>
+
+              {/* Tecnologías */}
+              <div className="flex flex-wrap gap-1.5 pt-2">
+                {['Node.js', 'React', 'Vue.js', 'Python', 'Laravel', 'Django', 'NestJS', 'PostgreSQL', 'MySQL'].map((tech) => (
+                  <span key={tech} className="text-[9px] font-mono font-bold bg-card/60 dark:bg-card/25 border border-border/40 text-foreground px-2 py-0.5 rounded-md">
+                    {tech}
+                  </span>
+                ))}
+              </div>
+
+              {/* Redes y Contacto */}
+              <div className="flex flex-wrap gap-4 pt-3 border-t border-border/30 text-xs">
+                <a href="mailto:sebastian.a.ibarra.h@gmail.com" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors font-bold uppercase">
+                  ✉️ sebastian.a.ibarra.h@gmail.com
+                </a>
+                <a href="https://linkedin.com/in/sebasti%C3%A1n-ibarra-herrera" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors font-bold uppercase">
+                  🔗 LinkedIn
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>

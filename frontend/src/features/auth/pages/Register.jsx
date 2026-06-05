@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
 import Select from '@/components/ui/Select';
 import bgRegister from '@/assets/images/bg-register.jpg';
+import logoImg from '@/assets/images/logo.png';
 
 // Iconos SVG de alta resolución para estética Esports
 const UserIcon = () => (
@@ -153,8 +154,8 @@ export default function Register() {
         <div className="absolute inset-0 bg-primary/5 mix-blend-overlay"></div>
         
         <div className="relative z-10 flex flex-col justify-end p-12 h-full max-w-2xl text-white">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-destructive flex items-center justify-center text-primary-foreground font-display font-black text-3xl mb-6 shadow-[0_0_20px_hsla(var(--primary),0.5)]">
-            R
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary/20 to-destructive/20 border border-primary/30 flex items-center justify-center text-primary-foreground font-display font-black text-3xl mb-6 shadow-[0_0_20px_hsla(var(--primary),0.5)] p-1.5 backdrop-blur-sm">
+            <img src={logoImg} alt="Torneos Pro FC" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-5xl font-display font-extrabold uppercase tracking-tight mb-4 leading-none text-white">
             Comienza tu <br/>
@@ -317,7 +318,7 @@ export default function Register() {
                         value={userData.gamertag} 
                         onChange={handleChange} 
                         disabled={authLoading} 
-                        placeholder="Ej: Racon_Nickname"
+                        placeholder="Ej: TorneosProFC_Nickname"
                         className="!gap-0"
                         icon={<GamepadIcon />}
                       />

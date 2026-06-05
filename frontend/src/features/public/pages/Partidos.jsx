@@ -307,49 +307,42 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
   const partidos = allPartidos;
   const filteredMatches = allPartidos;
 
-  // Get all unique jornadas present in the filtered matches list
-  const uniqueJornadas = useMemo(() => {
+  // Get all unique hours present in the filtered matches list
+  const uniqueHorarios = useMemo(() => {
     const set = new Set();
     let hasEmpty = false;
     filteredMatches.forEach(p => {
-      if (p.jornada && p.jornada.trim() !== '') {
-        set.add(p.jornada.trim());
+      if (p.hora && p.hora.trim() !== '') {
+        const cleanHora = p.hora.substring(0, 5);
+        set.add(cleanHora);
       } else {
         hasEmpty = true;
       }
     });
     const list = Array.from(set);
-    
-    // Sort them numerically if they contain numbers, e.g. "Jornada 1", "Jornada 10"
-    list.sort((a, b) => {
-      const numA = parseInt(a.replace(/\D/g, ''), 10);
-      const numB = parseInt(b.replace(/\D/g, ''), 10);
-      if (!isNaN(numA) && !isNaN(numB)) {
-        return numA - numB;
-      }
-      return a.localeCompare(b);
-    });
+    list.sort((a, b) => a.localeCompare(b));
 
     if (hasEmpty) {
-      list.push('Otros');
+      list.push('Por definir');
     }
     return list;
   }, [filteredMatches]);
 
-  const totalPages = uniqueJornadas.length;
-  const activeJornada = uniqueJornadas[currentPage - 1] || null;
+  const totalPages = uniqueHorarios.length;
+  const activeHorario = uniqueHorarios[currentPage - 1] || null;
 
   const paginatedMatches = useMemo(() => {
-    if (uniqueJornadas.length === 0) return filteredMatches;
-    if (!activeJornada) return filteredMatches;
+    if (uniqueHorarios.length === 0) return filteredMatches;
+    if (!activeHorario) return filteredMatches;
     
     return filteredMatches.filter(p => {
-      if (activeJornada === 'Otros') {
-        return !p.jornada || p.jornada.trim() === '';
+      if (activeHorario === 'Por definir') {
+        return !p.hora || p.hora.trim() === '';
       }
-      return p.jornada === activeJornada;
+      const cleanHora = p.hora ? p.hora.substring(0, 5) : '';
+      return cleanHora === activeHorario;
     });
-  }, [filteredMatches, activeJornada, uniqueJornadas]);
+  }, [filteredMatches, activeHorario, uniqueHorarios]);
 
   // Auto scroll to keep selected date centered in viewport horizontally
   useEffect(() => {
@@ -421,7 +414,7 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
       ...orgGroup,
       competencias: Object.values(orgGroup.competencias)
     }));
-  }, [filteredMatches]);
+  }, [paginatedMatches]);
 
   const activeFiltersCount = [((forOrganizer || forPlayer) ? null : orgFiltro), compFiltro, searchText.trim()].filter(Boolean).length;
 
@@ -1048,14 +1041,14 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
               ◀ Anterior
             </button>
 
-            {/* Desktop Jornada List */}
+            {/* Desktop Horarios List */}
             <div className="hidden sm:flex items-center gap-1.5 overflow-x-auto max-w-[500px] py-1 px-2 custom-scrollbar">
-              {uniqueJornadas.map((jornadaName, idx) => {
+              {uniqueHorarios.map((horaName, idx) => {
                 const pageNum = idx + 1;
                 const isActive = currentPage === pageNum;
                 return (
                   <button
-                    key={jornadaName}
+                    key={horaName}
                     onClick={() => {
                       setCurrentPage(pageNum);
                       window.scrollTo({ top: 350, behavior: 'smooth' });
@@ -1066,15 +1059,15 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
                         : 'bg-white/60 dark:bg-card/50 hover:bg-primary/10 text-muted-foreground border-border/30 dark:border-white/[0.06] hover:border-primary/30 hover:text-foreground'
                     }`}
                   >
-                    {jornadaName}
+                    ⏰ {horaName}
                   </button>
                 );
               })}
             </div>
 
-            {/* Mobile Jornada Label */}
+            {/* Mobile Horario Label */}
             <span className="flex sm:hidden text-xs font-condensed font-black text-primary uppercase tracking-widest px-4 truncate max-w-[160px]">
-              {activeJornada}
+              ⏰ {activeHorario}
             </span>
 
             <button

@@ -1,9 +1,79 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
+import api from '@/api/axios';
+import EsportsHUD from '@/features/organizador/components/EsportsHUD';
 
 export default function ResumenTab({ stats, navigate, misCompetencias = [], playersAudit }) {
+  const [activeCompId, setActiveCompId] = useState(misCompetencias[0]?.id || null);
+  const [partidosHistorial, setPartidosHistorial] = useState([]);
+  const [partidosPage, setPartidosPage] = useState(1);
+  const [partidosHasMore, setPartidosHasMore] = useState(false);
+  const [loadingPartidos, setLoadingPartidos] = useState(false);
+
+  const fetchPartidosHistorial = useCallback(async (page, replace = false) => {
+    if (!activeCompId) return;
+    setLoadingPartidos(true);
+    try {
+      const res = await api.get('/partidos', {
+        params: {
+          competencia_id: activeCompId,
+          paginate_by_time: 1,
+          per_page: 1,
+          page: page
+        }
+      });
+      const paginatedData = res.data;
+      const list = paginatedData.data || [];
+      if (replace) {
+        setPartidosHistorial(list);
+      } else {
+        setPartidosHistorial(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const filteredNew = list.filter(p => !existingIds.has(p.id));
+          return [...prev, ...filteredNew];
+        });
+      }
+      setPartidosHasMore(page < paginatedData.last_page);
+    } catch (err) {
+      console.error("Error fetching historical matches:", err);
+    } finally {
+      setLoadingPartidos(false);
+    }
+  }, [activeCompId]);
+
+  useEffect(() => {
+    if (activeCompId) {
+      setPartidosPage(1);
+      fetchPartidosHistorial(1, true);
+    }
+  }, [activeCompId, fetchPartidosHistorial]);
+
+  const loadMorePartidos = () => {
+    const nextPage = partidosPage + 1;
+    setPartidosPage(nextPage);
+    fetchPartidosHistorial(nextPage, false);
+  };
+
+  const partidosGroupedByHour = useMemo(() => {
+    const groups = {};
+    partidosHistorial.forEach(p => {
+      const dateStr = p.fecha || 'TBD';
+      const timeStr = p.hora ? p.hora.substring(0, 5) : 'POR DEFINIR';
+      const key = `${dateStr} ${timeStr}`;
+      if (!groups[key]) {
+        groups[key] = {
+          fecha: dateStr,
+          hora: timeStr,
+          partidos: []
+        };
+      }
+      groups[key].partidos.push(p);
+    });
+    return Object.keys(groups).sort().map(key => groups[key]);
+  }, [partidosHistorial]);
+
   const audits = stats?.audits || {};
   const perfilUsuarioCount = audits.perfil?.usuario?.length || 0;
   const perfilOrgCount = audits.perfil?.organizaciones?.reduce((acc, o) => acc + (o.campos_faltantes?.length || 0), 0) || 0;
@@ -229,82 +299,199 @@ export default function ResumenTab({ stats, navigate, misCompetencias = [], play
         </div>
       )}
 
-      {/* Sección de Detalle: Divisiones Recientes y Consola Rápida */}
+      {/* Sección de Detalle: Telemetría HUD, Divisiones y Consola Rápida */}
       <div className="border-t border-border/10 pt-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Listado de Ligas en curso */}
-        <div className="lg:col-span-2 space-y-4">
-          <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
-            🏆 Divisiones Recientes
-          </h3>
+        {/* LADO IZQUIERDO: Esports HUD y Historial de Partidos Paginado */}
+        <div className="lg:col-span-2 space-y-8">
           
-          {misCompetencias.length === 0 ? (
-            <div className="p-8 border border-dashed border-border/60 bg-muted/10 rounded-2xl text-center text-xs text-muted-foreground">
-              Aún no has registrado competencias en tus organizaciones. ¡Comienza creando una nueva!
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3">
-              {misCompetencias.map((comp) => {
-                const variant = comp.estado === 'en_curso' ? 'success' : comp.estado === 'inscripciones' ? 'brand' : comp.estado === 'finalizada' ? 'error' : 'neutral';
-                return (
-                  <div key={comp.id} className="flex justify-between items-center p-4 bg-card/45 border border-border/50 rounded-xl hover:border-primary/30 transition-all shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 rounded-full border border-border/50" style={{ backgroundColor: comp.color_tema || '#ef4444' }} />
-                      <div className="flex flex-col">
-                        <span className="font-bold text-foreground text-sm uppercase">{comp.nombre}</span>
-                        <span className="text-[10px] text-muted-foreground uppercase font-mono">{comp.formato} • {comp.plataforma}</span>
+          {/* Selector de División y HUD */}
+          <div className="space-y-4">
+            {misCompetencias.length > 1 && (
+              <div className="flex items-center justify-between gap-3 bg-card/15 border border-border/30 rounded-2xl p-3">
+                <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest">Enlace de División:</span>
+                <select
+                  value={activeCompId || ''}
+                  onChange={(e) => setActiveCompId(Number(e.target.value))}
+                  className="bg-background border border-border/40 text-xs font-bold text-foreground px-3 py-1.5 rounded-xl outline-none focus:border-primary/50 transition-colors"
+                >
+                  {misCompetencias.map(comp => (
+                    <option key={comp.id} value={comp.id}>
+                      {comp.nombre.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <EsportsHUD competenciaId={activeCompId} />
+          </div>
+
+          {/* Historial de Partidos Paginados */}
+          {activeCompId && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+                <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Historial del Torneo (Recientes)
+              </h3>
+
+              {partidosHistorial.length === 0 ? (
+                <div className="p-8 border border-dashed border-border/40 bg-card/25 rounded-2xl text-center text-xs text-muted-foreground">
+                  No hay partidos registrados para esta competencia.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {partidosGroupedByHour.map((group) => (
+                    <div key={`${group.fecha}-${group.hora}`} className="space-y-2">
+                      <div className="flex items-center gap-3 pt-2">
+                        <span className="text-[10px] font-mono font-bold tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/35 px-2.5 py-0.5 rounded-lg flex items-center gap-1.5 uppercase shadow-[0_0_10px_rgba(16,185,129,0.1)]">
+                          <svg className="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                          </svg>
+                          {group.fecha} a las {group.hora}
+                        </span>
+                        <div className="flex-1 h-[1px] bg-gradient-to-r from-emerald-500/25 via-emerald-500/10 to-transparent"></div>
+                      </div>
+                      <div className="space-y-2.5">
+                        {group.partidos.map((p) => {
+                          const isFinished = p.goles_local !== null && p.goles_visitante !== null;
+                          return (
+                            <div
+                              key={p.id}
+                              className="p-4 bg-card/30 border border-border/40 hover:border-emerald-500/30 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-all duration-300 shadow-sm hover:shadow-[0_0_15px_rgba(16,185,129,0.03)]"
+                            >
+                              <div className="flex-1 min-w-0 flex items-center gap-3">
+                                {/* Score / VS Display */}
+                                <div className="bg-background border border-border/40 px-3 py-1.5 rounded-xl font-bold font-mono text-xs text-center shrink-0 min-w-[100px]">
+                                  <span className="text-foreground">{p.local?.abreviatura || 'LOC'}</span>
+                                  <span className="mx-2 text-primary font-black">
+                                    {isFinished ? `${p.goles_local}–${p.goles_visitante}` : 'VS'}
+                                  </span>
+                                  <span className="text-foreground">{p.visitante?.abreviatura || 'VIS'}</span>
+                                </div>
+
+                                <div className="min-w-0">
+                                  <span className="text-xs font-black text-foreground block uppercase truncate">
+                                    {p.local?.nombre || 'TBD'} vs {p.visitante?.nombre || 'TBD'}
+                                  </span>
+                                  <span className="text-[9px] text-muted-foreground font-mono tracking-wider uppercase">
+                                    {p.jornada || 'General'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 text-[9px] font-mono text-muted-foreground self-end sm:self-auto">
+                                <svg className="w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span>{p.fecha || 'TBD'}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Badge variant={variant} className="uppercase text-[9px] tracking-wider font-bold">{comp.estado}</Badge>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-8 text-xs font-bold"
-                        onClick={() => navigate(`/organizador/competencias/${comp.id}`)}
+                  ))}
+
+                  {/* Load More Neon Button */}
+                  {partidosHasMore && (
+                    <div className="flex justify-center pt-2">
+                      <button
+                        onClick={loadMorePartidos}
+                        disabled={loadingPartidos}
+                        className="px-6 py-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 text-[10px] font-mono font-bold tracking-widest uppercase hover:bg-emerald-500 hover:text-slate-950 hover:shadow-[0_0_20px_rgba(16,185,129,0.45)] transition-all duration-300 disabled:opacity-50 cursor-pointer"
                       >
-                        Gestionar
-                      </Button>
+                        {loadingPartidos ? 'CARGANDO...' : 'CARGAR MÁS PARTIDOS'}
+                      </button>
                     </div>
-                  </div>
-                );
-              })}
+                  )}
+                </div>
+              )}
             </div>
           )}
+
         </div>
 
-        {/* Accesos directos y guía */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
-            ⚡ Consola Rápida
-          </h3>
-          <div className="border border-border/50 bg-card p-5 rounded-2xl space-y-4 shadow-xl relative overflow-hidden">
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Como Organizador de torneos, controlas el matchmaking, las inscripciones de equipos y el registro de marcadores oficiales (manual o sincronizado por EA API).
-            </p>
-            <div className="flex flex-col gap-2 pt-2 border-t border-border/30">
-              <Button 
-                className="w-full text-xs font-bold bg-primary text-primary-foreground"
-                onClick={() => navigate('/organizador/competencias')}
-              >
-                🏆 Consola de Divisiones
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full text-xs font-bold"
-                onClick={() => navigate('/organizador/partidos')}
-              >
-                🏟️ Reportar Partidos
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full text-xs font-bold"
-                onClick={() => navigate('/organizador/traspasos')}
-              >
-                🔁 Gestionar Traspasos
-              </Button>
+        {/* LADO DERECHO: Divisiones Recientes y Consola Rápida */}
+        <div className="space-y-8">
+          
+          {/* Ligas/Divisiones en curso */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+              🏆 Divisiones del Organizador
+            </h3>
+            
+            {misCompetencias.length === 0 ? (
+              <div className="p-8 border border-dashed border-border/60 bg-muted/10 rounded-2xl text-center text-xs text-muted-foreground">
+                Aún no has registrado competencias.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3">
+                {misCompetencias.map((comp) => {
+                  const variant = comp.estado === 'en_curso' ? 'success' : comp.estado === 'inscripciones' ? 'brand' : comp.estado === 'finalizada' ? 'error' : 'neutral';
+                  return (
+                    <div key={comp.id} className="flex justify-between items-center p-3.5 bg-card/45 border border-border/50 rounded-2xl hover:border-primary/30 transition-all shadow-sm">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-3.5 h-3.5 rounded-full border border-border/50 shrink-0" style={{ backgroundColor: comp.color_tema || '#ef4444' }} />
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-bold text-foreground text-xs uppercase truncate">{comp.nombre}</span>
+                          <span className="text-[9px] text-muted-foreground uppercase font-mono">{comp.formato} • {comp.plataforma}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant={variant} className="uppercase text-[8px] tracking-wider font-bold">{comp.estado}</Badge>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-7 text-[10px] font-bold"
+                          onClick={() => navigate(`/organizador/competencias/${comp.id}`)}
+                        >
+                          Gestionar
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Consola Rápida */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+              ⚡ Consola Rápida
+            </h3>
+            <div className="border border-border/50 bg-card p-5 rounded-2xl space-y-4 shadow-xl relative overflow-hidden">
+              <p className="text-xs text-muted-foreground leading-relaxed font-sans font-light">
+                Controlas el matchmaking, las inscripciones de equipos y el registro de marcadores oficiales.
+              </p>
+              <div className="flex flex-col gap-2 pt-2 border-t border-border/30">
+                <Button 
+                  className="w-full text-xs font-bold bg-primary text-primary-foreground"
+                  onClick={() => navigate('/organizador/competencias')}
+                >
+                  🏆 Consola de Divisiones
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full text-xs font-bold"
+                  onClick={() => navigate('/organizador/partidos')}
+                >
+                  🏟️ Reportar Partidos
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full text-xs font-bold"
+                  onClick={() => navigate('/organizador/traspasos')}
+                >
+                  🔁 Gestionar Traspasos
+                </Button>
+              </div>
             </div>
           </div>
+
         </div>
 
       </div>

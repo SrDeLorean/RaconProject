@@ -614,9 +614,11 @@ class UserController extends Controller
             'users.id',
             'users.name',
             'users.foto',
+            'users.nacionalidad',
             'users.gamertag',
             'estadisticas_jugadores.posicion',
             'equipos.nombre as equipo_nombre',
+            'equipos.logo as clubBadge',
             DB::raw('AVG(estadisticas_jugadores.valoracion) as promedio_valoracion'),
             DB::raw('SUM(estadisticas_jugadores.goles) as total_goles'),
             DB::raw('SUM(estadisticas_jugadores.asistencias) as total_asistencias'),
@@ -626,9 +628,13 @@ class UserController extends Controller
             DB::raw('AVG(estadisticas_jugadores.precision_tiro) as avg_precision_tiro'),
             DB::raw('SUM(estadisticas_jugadores.atajadas) as total_atajadas'),
             DB::raw('SUM(estadisticas_jugadores.goles_recibidos) as total_goles_recibidos'),
+            DB::raw('SUM(estadisticas_jugadores.tiros) as total_tiros'),
+            DB::raw('SUM(estadisticas_jugadores.pases_completados) as total_pases_completados'),
+            DB::raw('SUM(estadisticas_jugadores.pases_intentados) as total_pases_intentados'),
+            DB::raw('SUM(CASE WHEN estadisticas_jugadores.goles_recibidos = 0 THEN 1 ELSE 0 END) as arcos_imbatidos'),
             DB::raw('SUM(estadisticas_jugadores.tarjetas_rojas) as total_rojas')
         )
-        ->groupBy('users.id', 'users.name', 'users.foto', 'users.gamertag', 'estadisticas_jugadores.posicion', 'equipos.nombre')
+        ->groupBy('users.id', 'users.name', 'users.foto', 'users.nacionalidad', 'users.gamertag', 'estadisticas_jugadores.posicion', 'equipos.nombre', 'equipos.logo')
         ->get();
 
         // Agrupar por grandes posiciones (4-3-3): POR (1), DEF (4), MED (3), DEL (3)
@@ -677,9 +683,9 @@ class UserController extends Controller
 
         // 1. Portero (1)
         if (!empty($porList)) {
-            $selected[] = array_merge((array)$porList[0], ['positionGrid' => 'top-[90%] left-[50%]', 'pos' => 'POR']);
+            $selected[] = array_merge((array)$porList[0], ['positionGrid' => 'top-[90%] left-[50%]', 'pos' => 'POR', 'lineGroup' => 'gk']);
         } else {
-            $selected[] = ['id' => 999, 'name' => 'Portero Ideal', 'foto' => null, 'gamertag' => 'GK', 'pos' => 'POR', 'equipo_nombre' => 'Racon FC', 'promedio_valoracion' => 8.5, 'positionGrid' => 'top-[90%] left-[50%]'];
+            $selected[] = ['id' => 999, 'name' => 'Portero Ideal', 'foto' => null, 'gamertag' => 'GK', 'pos' => 'POR', 'equipo_nombre' => 'Torneos Pro FC', 'promedio_valoracion' => 8.5, 'positionGrid' => 'top-[90%] left-[50%]', 'lineGroup' => 'gk'];
         }
 
         // 2. Defensores (4)
@@ -691,9 +697,11 @@ class UserController extends Controller
         ];
         for ($i = 0; $i < 4; $i++) {
             if (isset($defList[$i])) {
-                $selected[] = array_merge((array)$defList[$i], ['positionGrid' => $defCoords[$i], 'pos' => $defList[$i]->posicion]);
+                $dbPos = strtoupper($defList[$i]->posicion);
+                $finalPos = in_array($dbPos, ['DFC', 'CB', 'LI', 'LB', 'LD', 'RB', 'DFI', 'DFD', 'DF']) ? $dbPos : 'DFC';
+                $selected[] = array_merge((array)$defList[$i], ['positionGrid' => $defCoords[$i], 'pos' => $finalPos, 'lineGroup' => 'def']);
             } else {
-                $selected[] = ['id' => 900 + $i, 'name' => 'Defensa Ideal', 'foto' => null, 'gamertag' => 'DF', 'pos' => 'DFC', 'equipo_nombre' => 'Racon FC', 'promedio_valoracion' => 8.2, 'positionGrid' => $defCoords[$i]];
+                $selected[] = ['id' => 900 + $i, 'name' => 'Defensa Ideal', 'foto' => null, 'gamertag' => 'DF', 'pos' => 'DFC', 'equipo_nombre' => 'Torneos Pro FC', 'promedio_valoracion' => 8.2, 'positionGrid' => $defCoords[$i], 'lineGroup' => 'def'];
             }
         }
 
@@ -705,9 +713,11 @@ class UserController extends Controller
         ];
         for ($i = 0; $i < 3; $i++) {
             if (isset($medList[$i])) {
-                $selected[] = array_merge((array)$medList[$i], ['positionGrid' => $medCoords[$i], 'pos' => $medList[$i]->posicion]);
+                $dbPos = strtoupper($medList[$i]->posicion);
+                $finalPos = in_array($dbPos, ['MC', 'CM', 'MCD', 'CDM', 'MCO', 'CAM', 'MD', 'RM', 'MI', 'LM']) ? $dbPos : 'MC';
+                $selected[] = array_merge((array)$medList[$i], ['positionGrid' => $medCoords[$i], 'pos' => $finalPos, 'lineGroup' => 'mid']);
             } else {
-                $selected[] = ['id' => 800 + $i, 'name' => 'Medio Ideal', 'foto' => null, 'gamertag' => 'MC', 'pos' => 'MC', 'equipo_nombre' => 'Racon FC', 'promedio_valoracion' => 8.4, 'positionGrid' => $medCoords[$i]];
+                $selected[] = ['id' => 800 + $i, 'name' => 'Medio Ideal', 'foto' => null, 'gamertag' => 'MC', 'pos' => 'MC', 'equipo_nombre' => 'Torneos Pro FC', 'promedio_valoracion' => 8.4, 'positionGrid' => $medCoords[$i], 'lineGroup' => 'mid'];
             }
         }
 
@@ -719,9 +729,11 @@ class UserController extends Controller
         ];
         for ($i = 0; $i < 3; $i++) {
             if (isset($delList[$i])) {
-                $selected[] = array_merge((array)$delList[$i], ['positionGrid' => $delCoords[$i], 'pos' => $delList[$i]->posicion]);
+                $dbPos = strtoupper($delList[$i]->posicion);
+                $finalPos = in_array($dbPos, ['DEL', 'DC', 'ST', 'EI', 'LW', 'ED', 'RW', 'CF']) ? $dbPos : 'DC';
+                $selected[] = array_merge((array)$delList[$i], ['positionGrid' => $delCoords[$i], 'pos' => $finalPos, 'lineGroup' => 'del']);
             } else {
-                $selected[] = ['id' => 700 + $i, 'name' => 'Delantero Ideal', 'foto' => null, 'gamertag' => 'DEL', 'pos' => 'DEL', 'equipo_nombre' => 'Racon FC', 'promedio_valoracion' => 8.6, 'positionGrid' => $delCoords[$i]];
+                $selected[] = ['id' => 700 + $i, 'name' => 'Delantero Ideal', 'foto' => null, 'gamertag' => 'DEL', 'pos' => 'DC', 'equipo_nombre' => 'Torneos Pro FC', 'promedio_valoracion' => 8.6, 'positionGrid' => $delCoords[$i], 'lineGroup' => 'del'];
             }
         }
 
@@ -1382,6 +1394,101 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => '¡Mensaje recibido con éxito! Nuestro comité administrativo revisará tu requerimiento y te responderá en un plazo máximo de 24 horas.'
+        ]);
+    }
+
+    public function auditoriaGamerTAGs(Request $request): JsonResponse
+    {
+        $cacheKey = 'gamertag_audit_results';
+        $audit = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(5), function () {
+            $players = User::where('role', 'jugador')->get();
+
+            // Identificar fichas incompletas
+            $missingData = [];
+            foreach ($players as $p) {
+                $missingEa = empty($p->id_ea);
+                $missingGt = empty($p->gamertag);
+                if ($missingEa || $missingGt) {
+                    $missingData[] = [
+                        'id' => $p->id,
+                        'name' => $p->name,
+                        'email' => $p->email,
+                        'missingEa' => $missingEa,
+                        'missingGt' => $missingGt,
+                    ];
+                }
+            }
+
+            // Identificar similitudes Levenshtein
+            $playersWithGt = $players->filter(fn($p) => !empty($p->gamertag))->values();
+            $visited = [];
+            $similarGroups = [];
+
+            $clean = function($str) {
+                $str = strtolower($str);
+                $str = preg_replace('/[\s\._\-]/', '', $str);
+                $str = str_replace(['0', '1', '3', '4', '5', '7', '8'], ['o', 'i', 'e', 'a', 's', 't', 'b'], $str);
+                return $str;
+            };
+
+            $count = count($playersWithGt);
+            for ($i = 0; $i < $count; $i++) {
+                $p1 = $playersWithGt[$i];
+                if (in_array($p1->id, $visited)) continue;
+
+                $currentGroup = [$p1];
+                $c1 = $clean($p1->gamertag);
+
+                for ($j = $i + 1; $j < $count; $j++) {
+                    $p2 = $playersWithGt[$j];
+                    if (in_array($p2->id, $visited)) continue;
+
+                    $c2 = $clean($p2->gamertag);
+                    if ($c1 === $c2) {
+                        $currentGroup[] = $p2;
+                    } else {
+                        $dist = levenshtein($c1, $c2);
+                        if ($dist <= 2 && min(strlen($c1), strlen($c2)) >= 4) {
+                            $currentGroup[] = $p2;
+                        }
+                    }
+                }
+
+                if (count($currentGroup) > 1) {
+                    foreach ($currentGroup as $p) {
+                        $visited[] = $p->id;
+                    }
+                    $similarGroups[] = array_map(fn($p) => [
+                        'id' => $p['id'],
+                        'name' => $p['name'],
+                        'email' => $p['email'],
+                        'gamertag' => $p['gamertag'],
+                    ], $currentGroup);
+                }
+            }
+
+            return [
+                'missingData' => $missingData,
+                'similarGroups' => $similarGroups,
+            ];
+        });
+
+        $type = $request->get('type', 'similar'); // 'missing' o 'similar'
+        $perPage = (int)$request->get('per_page', 5);
+        $page = (int)$request->get('page', 1);
+
+        $items = $type === 'missing' ? $audit['missingData'] : $audit['similarGroups'];
+        $total = count($items);
+
+        $offset = ($page - 1) * $perPage;
+        $paginatedItems = array_slice($items, $offset, $perPage);
+
+        return response()->json([
+            'data' => $paginatedItems,
+            'current_page' => $page,
+            'per_page' => $perPage,
+            'total' => $total,
+            'last_page' => (int)ceil($total / $perPage),
         ]);
     }
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import Spinner from './Spinner';
+import logoImg from '@/assets/images/logo.png';
 
 export default function PageLoader() {
   return (
@@ -23,9 +24,9 @@ export default function PageLoader() {
           {/* Inner tech bracket ring */}
           <div className="absolute w-[70%] h-[70%] rounded-full border border-destructive/30 border-l-destructive border-r-destructive anim-rotate-cw" />
 
-          {/* Central Logo 'R' with primary-destructive gradient and neon drop shadow */}
-          <div className="w-14 h-14 rounded-xl bg-gradient-to-tr from-primary to-destructive flex items-center justify-center text-primary-foreground font-display font-black text-3xl shadow-[0_0_25px_hsla(var(--primary),0.6)] animate-pulse">
-            R
+          {/* Central Logo with primary-destructive gradient and neon drop shadow */}
+          <div className="w-14 h-14 rounded-xl flex items-center justify-center shadow-[0_0_25px_hsla(var(--primary),0.6)] animate-pulse">
+            <img src={logoImg} alt="Torneos Pro FC" className="w-12 h-12 object-contain" />
           </div>
         </div>
 
@@ -34,7 +35,7 @@ export default function PageLoader() {
           <div className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping"></span>
             <p className="text-xs font-bold text-foreground tracking-[0.4em] uppercase shimmer-text">
-              Racon<span className="text-primary">Pro</span>
+              Torneos Pro <span className="text-primary">FC</span>
             </p>
           </div>
           
