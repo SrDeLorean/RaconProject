@@ -19,9 +19,8 @@ export default function Avatar({ src, name = 'Usuario', size = 'md', className =
     return fullName.substring(0, 2).toUpperCase();
   };
 
-  const backendBaseUrl = 'http://localhost:8000';
   const displaySrc = src
-    ? (src.startsWith('http') ? src : `${backendBaseUrl}${src}`)
+    ? (src.startsWith('http') ? src : (typeof window.mediaUrl === 'function' ? window.mediaUrl(src) : `http://localhost:8000${src}`))
     : '';
 
   return (

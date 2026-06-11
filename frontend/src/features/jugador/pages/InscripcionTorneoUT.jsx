@@ -147,7 +147,7 @@ export default function InscripcionTorneoUT() {
   }
 
   const es2vs2 = competencia.tipo === '2vs2';
-  const logoUrl = competencia.logo ? (competencia.logo.startsWith('http') ? competencia.logo : `${api.defaults.baseURL?.replace('/api', '')}/${competencia.logo}`) : null;
+  const logoUrl = competencia.logo ? (competencia.logo.startsWith('http') ? competencia.logo : `${api.defaults.baseURL?.replace(/\/api$/, '')}/${competencia.logo}`) : null;
 
   return (
     <div className="relative min-h-screen bg-background pt-24 pb-16 overflow-hidden flex flex-col items-center justify-center">

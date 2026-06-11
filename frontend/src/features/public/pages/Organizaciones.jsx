@@ -48,7 +48,9 @@ export default function Organizaciones() {
       if (org.logo) {
         const orgLogoUrl = org.logo.startsWith('http') 
           ? org.logo 
-          : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${org.logo}`;
+          : (typeof window.mediaUrl === 'function' 
+              ? window.mediaUrl(org.logo) 
+              : `${api.defaults.baseURL?.replace(/\/api$/, '') }${org.logo}`);
         
         if (!items.some(item => item.logo === orgLogoUrl)) {
           items.push({
@@ -70,7 +72,9 @@ export default function Organizaciones() {
             if (comp.logo) {
               const compLogoUrl = comp.logo.startsWith('http') 
                 ? comp.logo 
-                : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${comp.logo}`;
+                : (typeof window.mediaUrl === 'function' 
+                    ? window.mediaUrl(comp.logo) 
+                    : `${api.defaults.baseURL?.replace(/\/api$/, '') }${comp.logo}`);
               
               if (!items.some(item => item.logo === compLogoUrl)) {
                 items.push({
@@ -88,7 +92,9 @@ export default function Organizaciones() {
             if (comp.logo) {
               const compLogoUrl = comp.logo.startsWith('http') 
                 ? comp.logo 
-                : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${comp.logo}`;
+                : (typeof window.mediaUrl === 'function' 
+                    ? window.mediaUrl(comp.logo) 
+                    : `${api.defaults.baseURL?.replace(/\/api$/, '') }${comp.logo}`);
               
               if (!items.some(item => item.logo === compLogoUrl)) {
                 items.push({
@@ -153,14 +159,14 @@ export default function Organizaciones() {
         id: org.id,
         nombre: org.nombre || 'Confederación eSports',
         descripcion: org.descripcion || 'Esta confederación organiza torneos de alto rendimiento deportivo e integración de clubes profesionales.',
-        logo: org.logo ? (org.logo.startsWith('http') ? org.logo : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${org.logo}`) : '',
+        logo: org.logo ? (org.logo.startsWith('http') ? org.logo : (typeof window.mediaUrl === 'function' ? window.mediaUrl(org.logo) : `${api.defaults.baseURL?.replace(/\/api$/, '') }${org.logo}`)) : '',
         region: org.pais ? org.pais.toUpperCase() : 'GLOBAL',
         clubs: uniqueClubs.size || 0,
         matches: totalMatches || 0,
         players: (uniqueClubs.size * 12) || 0, // Estimado realista de 12 jugadores por club inscrito
         divisions: totalDivisions || 0,
         bannerUrl: org.banner 
-          ? (org.banner.startsWith('http') ? org.banner : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${org.banner}`)
+          ? (org.banner.startsWith('http') ? org.banner : (typeof window.mediaUrl === 'function' ? window.mediaUrl(org.banner) : `${api.defaults.baseURL?.replace(/\/api$/, '') }${org.banner}`))
           : (index % 3 === 0 
             ? 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=600&auto=format&fit=crop'
             : index % 3 === 1 

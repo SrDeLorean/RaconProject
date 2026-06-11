@@ -29,7 +29,10 @@ function classifyMatch(p) {
 const getImageUrl = (path) => {
   if (!path) return null;
   if (path.startsWith('http')) return path;
-  const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+  if (typeof window.mediaUrl === 'function') {
+    return window.mediaUrl(path);
+  }
+  const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') ;
   return `${backendBaseUrl}${path}`;
 };
 
@@ -253,6 +256,14 @@ export default function PartidosUt({ forOrganizer = false, forPlayer = false, fo
 
   // Lazy-load matches from backend based on active date or tab and active filters
   useEffect(() => {
+    if (forPlayer && !profileData) return;
+
+    if (statusTab === 'all' && !activeDate) {
+      setAllPartidos([]);
+      setLoading(false);
+      return;
+    }
+
     const fetchPartidos = async () => {
       setLoading(true);
       try {
@@ -290,8 +301,6 @@ export default function PartidosUt({ forOrganizer = false, forPlayer = false, fo
         setLoading(false);
       }
     };
-
-    if (forPlayer && !profileData) return;
 
     fetchPartidos();
   }, [activeDate, statusTab, orgFiltro, compFiltro, debouncedSearchText, forOrganizer, forPlayer, profileData, forTeam, teamId, targetUserId, refreshTrigger]);

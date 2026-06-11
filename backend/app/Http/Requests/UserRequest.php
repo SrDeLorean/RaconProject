@@ -27,26 +27,26 @@ class UserRequest extends FormRequest
             'status'           => ['sometimes', 'required', 'in:activo,inactivo,suspendido'],
 
             // 🔥 Identidades E-Sports
-            'gamertag'         => ['nullable', 'string', 'max:255', Rule::unique('users', 'gamertag')->ignore($userId)],
-            'id_ea'            => ['nullable', 'string', 'max:255', Rule::unique('users', 'id_ea')->ignore($userId)],
-            'plataforma'       => ['nullable', 'in:ps5,xbox,pc,crossplay'],
+            'gamertag'         => ['sometimes', 'nullable', 'string', 'max:255', Rule::unique('users', 'gamertag')->ignore($userId)],
+            'id_ea'            => ['sometimes', 'nullable', 'string', 'max:255', Rule::unique('users', 'id_ea')->ignore($userId)],
+            'plataforma'       => ['sometimes', 'nullable', 'in:ps5,xbox,pc,crossplay'],
 
             // Campos de perfil (Corregidos los tipos numéricos y fechas)
-            'foto'             => ['nullable', 'string', 'max:255'],
-            'nacionalidad'     => ['nullable', 'string', 'max:255'],
-            'posicion'         => ['nullable', 'string', 'max:255'],
-            'fecha_nacimiento' => ['nullable', 'date'], // Ahora valida que sea una fecha real
-            'altura'           => ['nullable', 'integer', 'min:100', 'max:250'], // Entero (cm)
-            'peso'             => ['nullable', 'integer', 'min:30', 'max:200'],  // Entero (kg)
-            'telefono'         => ['nullable', 'string', 'max:255'],
-            'biografia'        => ['nullable', 'string'],
+            'foto'             => ['sometimes', 'nullable', 'string', 'max:255'],
+            'nacionalidad'     => ['sometimes', 'nullable', 'string', 'max:255'],
+            'posicion'         => ['sometimes', 'nullable', 'string', 'max:255'],
+            'fecha_nacimiento' => ['sometimes', 'nullable', 'date'], // Ahora valida que sea una fecha real
+            'altura'           => ['sometimes', 'nullable', 'integer', 'min:100', 'max:250'], // Entero (cm)
+            'peso'             => ['sometimes', 'nullable', 'integer', 'min:30', 'max:200'],  // Entero (kg)
+            'telefono'         => ['sometimes', 'nullable', 'string', 'max:255'],
+            'biografia'        => ['sometimes', 'nullable', 'string'],
 
             // Redes Sociales
-            'instagram'        => ['nullable', 'string', 'max:255'],
-            'facebook'         => ['nullable', 'string', 'max:255'],
-            'twitch'           => ['nullable', 'string', 'max:255'],
-            'youtube'          => ['nullable', 'string', 'max:255'],
-            'tiktok'           => ['nullable', 'string', 'max:255'],
+            'instagram'        => ['sometimes', 'nullable', 'string', 'max:255'],
+            'facebook'         => ['sometimes', 'nullable', 'string', 'max:255'],
+            'twitch'           => ['sometimes', 'nullable', 'string', 'max:255'],
+            'youtube'          => ['sometimes', 'nullable', 'string', 'max:255'],
+            'tiktok'           => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
     }
 }

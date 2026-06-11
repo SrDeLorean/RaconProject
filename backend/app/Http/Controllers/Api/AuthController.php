@@ -121,7 +121,7 @@ class AuthController extends Controller
             'id_ea' => 'nullable|string|max:255|unique:users',
             'plataforma' => 'nullable|in:ps5,xbox,pc,crossplay'
         ], [
-            'email.unique' => 'Este correo electrónico ya está registrado.',
+            'email.unique' => 'ese correo ya se encuentra registrado en la app',
             'gamertag.unique' => 'Este Gamertag ya está en uso.',
             'id_ea.unique' => 'Este EA ID ya está en uso.',
             'password.confirmed' => 'Las contraseñas no coinciden.',
@@ -183,8 +183,13 @@ class AuthController extends Controller
         $user->verification_token = null;
         $user->save();
 
+        // Generar token de autenticación para inicio de sesión automático
+        $token = $user->createToken('auth_token')->plainTextToken;
+
         return response()->json([
-            'message' => '¡Tu cuenta ha sido activada con éxito! Ya puedes iniciar sesión con tu clave.'
+            'message' => '¡Tu cuenta ha sido activada con éxito!',
+            'user' => $user->load('organizacion'),
+            'token' => $token
         ], 200);
     }
 

@@ -6,6 +6,30 @@ export default function ErrorBoundary() {
   const error = useRouteError();
   const navigate = useNavigate();
 
+  // ⚡ Auto-reload on chunk loading/dynamic import failures
+  React.useEffect(() => {
+    if (error) {
+      const errorMessage = error.message || String(error);
+      const isChunkError = 
+        errorMessage.includes('Failed to fetch dynamically imported module') ||
+        errorMessage.includes('Expected a JavaScript-or-Wasm module script') ||
+        errorMessage.includes('ChunkLoadError') ||
+        errorMessage.includes('Failed to load module script');
+
+      if (isChunkError) {
+        const lastReload = sessionStorage.getItem('last-chunk-reload');
+        const now = Date.now();
+
+        // Avoid infinite reload loops (limit to once every 10 seconds)
+        if (!lastReload || now - parseInt(lastReload) > 10000) {
+          sessionStorage.setItem('last-chunk-reload', now.toString());
+          console.warn("Chunk load error detected in ErrorBoundary. Reloading page...");
+          window.location.reload();
+        }
+      }
+    }
+  }, [error]);
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
       <div className="w-20 h-20 rounded-3xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mb-6 animate-pulse">

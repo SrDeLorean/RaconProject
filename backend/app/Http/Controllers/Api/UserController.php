@@ -558,6 +558,28 @@ class UserController extends Controller
 
         $validated = $request->validated();
 
+        // Conservar únicamente los campos que realmente se enviaron en la petición
+        $validated = array_intersect_key($validated, $request->all());
+
+        // 🔥 Fallbacks preventivos para campos que no admiten NULL en base de datos
+        if (array_key_exists('foto', $validated) && empty($validated['foto'])) {
+            $validated['foto'] = 'images/users/default-user.png';
+        }
+        if (array_key_exists('plataforma', $validated) && empty($validated['plataforma'])) {
+            $validated['plataforma'] = 'crossplay';
+        }
+
+        // Delete old photo file if updated
+        if (array_key_exists('foto', $validated) && $validated['foto'] !== $user->foto) {
+            $oldFoto = $user->foto;
+            if ($oldFoto && str_contains($oldFoto, 'uploads/') && !str_starts_with($oldFoto, 'http')) {
+                $fullPath = public_path(ltrim($oldFoto, '/'));
+                if (file_exists($fullPath) && is_file($fullPath)) {
+                    @unlink($fullPath);
+                }
+            }
+        }
+
         // 🔥 CRÍTICO: Si el frontend manda la contraseña vacía (significa que no quiere cambiarla)
         // La removemos del array para no sobrescribir el password con NULL.
         if (empty($validated['password'])) {

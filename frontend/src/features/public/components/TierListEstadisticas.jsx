@@ -107,7 +107,7 @@ export default function TierListEstadisticas({ stats, getImageUrl }) {
 
                 {/* Grid del Tier */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {list.map(player => {
+                  {list.map((player, idx) => {
                     const dataObj = valueLabelAndFormat(player);
                     
                     // Specific rank styles for top 3
@@ -120,56 +120,79 @@ export default function TierListEstadisticas({ stats, getImageUrl }) {
                     return (
                       <div 
                         key={player.id} 
-                        className={`group border rounded-2xl p-4 flex items-center gap-4 transition-all duration-300 hover:scale-[1.02] bg-background/25 ${
+                        className={`group border rounded-2xl p-4 flex items-center gap-4 transition-all duration-500 hover:-translate-y-1 hover:scale-[1.02] bg-background/40 backdrop-blur-sm relative overflow-hidden animate-fade-in-up ${
                           tierKey === 'S' 
-                            ? 'border-amber-500/20 hover:border-amber-500/40 hover:shadow-[0_0_15px_rgba(245,158,11,0.1)]' 
+                            ? 'border-amber-500/40 hover:border-amber-400 hover:shadow-[0_0_30px_rgba(245,158,11,0.25)] bg-gradient-to-br from-amber-500/10 to-transparent' 
                             : tierKey === 'A' 
-                            ? 'border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]'
-                            : 'border-border/30 hover:border-primary/20'
+                            ? 'border-emerald-500/20 hover:border-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-gradient-to-br from-emerald-500/5 to-transparent'
+                            : 'border-border/30 hover:border-primary/40 hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]'
                         }`}
+                        style={{ animationDelay: `${idx * 100}ms`, animationFillMode: 'both' }}
                       >
+                        {/* Shimmer effect for S tier */}
+                        {tierKey === 'S' && (
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-300/10 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none mix-blend-overlay"></div>
+                        )}
+
                         {/* Rank Badge */}
-                        <div className="flex flex-col items-center justify-center shrink-0 w-8 h-8 rounded-lg bg-card/45 border border-border/20 font-mono">
+                        <div className={`flex flex-col items-center justify-center shrink-0 w-10 h-10 rounded-xl font-mono shadow-inner ${
+                          tierKey === 'S' ? 'bg-gradient-to-br from-amber-400/20 to-amber-600/20 border border-amber-500/50' :
+                          tierKey === 'A' ? 'bg-emerald-500/10 border border-emerald-500/30' :
+                          'bg-card/60 border border-border/30'
+                        }`}>
                           {rankMedal ? (
-                            <span className="text-lg leading-none select-none">{rankMedal}</span>
+                            <span className="text-xl leading-none select-none drop-shadow-md">{rankMedal}</span>
                           ) : (
-                            <span className="text-[10px] font-black text-muted-foreground">#{player.rank}</span>
+                            <span className="text-xs font-black text-muted-foreground">#{player.rank}</span>
                           )}
                         </div>
 
                         {/* Player Photo */}
                         <Link to={`/jugadores/${player.id}`} className="shrink-0 relative">
+                          {tierKey === 'S' && <div className="absolute inset-0 bg-amber-400/20 blur-md rounded-full pointer-events-none group-hover:bg-amber-400/40 transition-colors"></div>}
                           {player.foto ? (
                             <img 
                               src={getImageUrl(player.foto)} 
                               alt="" 
-                              className="w-10 h-10 rounded-full object-cover border border-border/40 bg-card group-hover:border-primary/45 transition-colors" 
+                              className={`w-12 h-12 rounded-full object-cover border-2 bg-card transition-colors relative z-10 ${
+                                tierKey === 'S' ? 'border-amber-400/70 group-hover:border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.3)]' :
+                                tierKey === 'A' ? 'border-emerald-500/40 group-hover:border-emerald-400' :
+                                'border-border/40 group-hover:border-primary/50'
+                              }`} 
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-display font-black text-[11px] text-foreground uppercase group-hover:border-primary/45 transition-colors">
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center font-display font-black text-sm text-foreground uppercase border-2 relative z-10 transition-colors ${
+                                tierKey === 'S' ? 'bg-amber-950/40 border-amber-400/70 group-hover:border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.3)] text-amber-400' :
+                                tierKey === 'A' ? 'bg-emerald-950/30 border-emerald-500/40 group-hover:border-emerald-400 text-emerald-400' :
+                                'bg-primary/10 border-border/40 group-hover:border-primary/50'
+                            }`}>
                               {player.name?.charAt(0)}
                             </div>
                           )}
                         </Link>
 
                         {/* Player Details */}
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1 relative z-10">
                           <Link to={`/jugadores/${player.id}`} className="text-left block">
-                            <strong className="text-xs text-foreground block font-bold truncate group-hover:text-primary transition-colors">
+                            <strong className={`text-sm block font-bold truncate transition-colors ${
+                              tierKey === 'S' ? 'text-amber-50 group-hover:text-amber-300 drop-shadow-[0_0_5px_rgba(245,158,11,0.3)]' :
+                              tierKey === 'A' ? 'text-foreground group-hover:text-emerald-300' :
+                              'text-foreground group-hover:text-primary'
+                            }`}>
                               {player.name}
                             </strong>
-                            <span className="text-[9px] text-muted-foreground font-mono font-bold block truncate">
+                            <span className="text-[10px] text-muted-foreground font-mono font-bold block truncate mt-0.5">
                               {player.equipo_nombre}
                             </span>
                           </Link>
                         </div>
 
                         {/* Score Metric */}
-                        <div className="text-right shrink-0 font-mono">
-                          <span className="text-[8px] font-bold text-muted-foreground uppercase block">{dataObj.label}</span>
-                          <strong className={`text-xs font-black ${
+                        <div className="text-right shrink-0 font-mono relative z-10">
+                          <span className="text-[9px] font-bold text-muted-foreground uppercase block tracking-wider mb-0.5">{dataObj.label}</span>
+                          <strong className={`text-lg font-black drop-shadow-md ${
                             tierKey === 'S' 
-                              ? 'text-amber-400' 
+                              ? 'text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-amber-500' 
                               : tierKey === 'A' 
                               ? 'text-emerald-400' 
                               : 'text-primary'

@@ -561,6 +561,28 @@ class EquipoController extends Controller
             $datos['logo'] = 'default.png';
         }
 
+        // Delete old logo if updated
+        if (array_key_exists('logo', $datos) && $datos['logo'] !== $equipo->logo) {
+            $oldLogo = $equipo->logo;
+            if ($oldLogo && str_contains($oldLogo, 'uploads/') && !str_starts_with($oldLogo, 'http')) {
+                $fullPath = public_path(ltrim($oldLogo, '/'));
+                if (file_exists($fullPath) && is_file($fullPath)) {
+                    @unlink($fullPath);
+                }
+            }
+        }
+        
+        // Delete old banner if updated
+        if (array_key_exists('banner', $datos) && $datos['banner'] !== $equipo->banner) {
+            $oldBanner = $equipo->banner;
+            if ($oldBanner && str_contains($oldBanner, 'uploads/') && !str_starts_with($oldBanner, 'http')) {
+                $fullPath = public_path(ltrim($oldBanner, '/'));
+                if (file_exists($fullPath) && is_file($fullPath)) {
+                    @unlink($fullPath);
+                }
+            }
+        }
+
         $equipo->update($datos);
         Cache::forget('equipo_show_' . $equipo->id);
 

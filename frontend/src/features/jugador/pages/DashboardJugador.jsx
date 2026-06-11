@@ -140,47 +140,48 @@ export default function DashboardJugador() {
           <span className="text-xs uppercase font-bold text-muted-foreground animate-pulse">Sincronizando buzón...</span>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8 items-start">
           
-          {/* Centro de Control y Carrera Deportiva */}
-          <div className="border border-border/40 bg-card/25 rounded-3xl p-6 shadow-xl space-y-6">
-            <div>
-              <h2 className="text-xl font-display font-black text-foreground uppercase tracking-wider flex items-center gap-2">
-                <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+          {/* Sidebar Menú Lateral */}
+          <div className="lg:col-span-1 border border-border/40 bg-card/30 backdrop-blur-md rounded-3xl p-5 shadow-xl sticky top-24 space-y-6 flex flex-col">
+            <div className="hidden lg:block border-b border-border/30 pb-4">
+              <h2 className="text-sm font-display font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+                <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
-                Centro de Control y Carrera Deportiva
+                Navegación
               </h2>
-              <p className="text-xs text-muted-foreground">
-                Supervisa el estado reglamentario, deportivo y tus ofertas activas de clubes.
-              </p>
             </div>
 
-            {/* Selector de pestañas */}
-            <div className="flex flex-wrap gap-2 border-b border-border/20 pb-3">
+            {/* Menú de Navegación */}
+            <div className="flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 scrollbar-hide">
               {tabsConfig.map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`px-4 py-2 text-xs font-bold uppercase rounded-lg transition-all flex items-center gap-2 border ${
+                    className={`flex-shrink-0 w-auto lg:w-full px-4 lg:px-4 py-3 text-xs font-bold uppercase rounded-xl transition-all flex items-center justify-between gap-3 border ${
                       isActive
-                        ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20'
-                        : 'bg-card/65 text-muted-foreground border-border/50 hover:text-foreground hover:border-primary/30'
+                        ? 'bg-primary/10 text-primary border-primary shadow-sm shadow-primary/20'
+                        : 'bg-transparent text-muted-foreground border-transparent hover:bg-card/60 hover:text-foreground'
                     }`}
                   >
-                    {getTabIcon(tab.id, `w-4 h-4 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`)}
-                    <span>{tab.label}</span>
+                    <div className="flex items-center gap-3">
+                      <div className={`p-1.5 rounded-lg ${isActive ? 'bg-primary text-primary-foreground' : 'bg-card/80 border border-border/40'}`}>
+                        {getTabIcon(tab.id, "w-4 h-4")}
+                      </div>
+                      <span className="whitespace-nowrap">{tab.label}</span>
+                    </div>
                     {tab.count > 0 && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                      <span className={`text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-black ml-2 ${
                         isActive 
-                          ? 'bg-primary-foreground text-primary' 
+                          ? 'bg-primary text-primary-foreground shadow-md shadow-primary/40' 
                           : tab.type === 'error'
-                          ? 'bg-destructive/20 text-destructive border border-destructive/30 animate-pulse'
+                          ? 'bg-destructive text-destructive-foreground animate-pulse shadow-md shadow-destructive/40'
                           : tab.type === 'warning'
-                          ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 animate-pulse'
-                          : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                          ? 'bg-amber-500 text-black animate-pulse shadow-md shadow-amber-500/40'
+                          : 'bg-cyan-500 text-cyan-950 shadow-md shadow-cyan-500/40'
                       }`}>
                         {tab.count}
                       </span>
@@ -189,15 +190,17 @@ export default function DashboardJugador() {
                 );
               })}
             </div>
+          </div>
 
-            {/* Contenido de la pestaña activa */}
-            <div className="bg-card/40 border border-border/30 rounded-2xl p-5 min-h-[200px]">
-              <Suspense fallback={
-                <div className="py-12 flex flex-col items-center justify-center gap-2">
-                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider animate-pulse">Cargando módulo deportivo...</span>
-                </div>
-              }>
+          {/* Área de Contenido Principal */}
+          <div className="lg:col-span-3 min-h-[500px]">
+            <Suspense fallback={
+              <div className="py-20 flex flex-col items-center justify-center gap-3 border border-border/20 rounded-3xl bg-card/10">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider animate-pulse">Cargando módulo...</span>
+              </div>
+            }>
+              <div className="animate-fade-in">
                 {activeTab === 'resumen' && (
                   <ResumenJugadorTab 
                     profileData={profileData} 
@@ -221,8 +224,8 @@ export default function DashboardJugador() {
                 {activeTab === 'calendario_ut' && (
                   <CalendarioJugadorUtTab />
                 )}
-              </Suspense>
-            </div>
+              </div>
+            </Suspense>
           </div>
 
         </div>

@@ -3,12 +3,13 @@ import { useParams, Link } from 'react-router-dom';
 import api from '@/api/axios';
 import Badge from '@/components/ui/Badge';
 import Partidos from './Partidos';
+import PlayerCard from '@/components/ui/PlayerCard';
 
 export default function DetalleJugador() {
   const { id } = useParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('stats'); // 'stats' | 'competencias' | 'traspasos' | 'calendario' | 'historia'
+  const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'stats' | 'competencias' | 'traspasos' | 'calendario' | 'historia'
   const [selectedOrg, setSelectedOrg] = useState('todas');
   const [selectedComp, setSelectedComp] = useState('todas');
   const [activeStatSubTab, setActiveStatSubTab] = useState('ataque');
@@ -52,7 +53,46 @@ export default function DetalleJugador() {
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    return `http://localhost:8000${path}`;
+    if (typeof window.mediaUrl === 'function') {
+      return window.mediaUrl(path);
+    }
+    return window.mediaUrl(path);
+  };
+
+  const getAge = (birthdayStr) => {
+    if (!birthdayStr) return '—';
+    const today = new Date();
+    const birthDate = new Date(birthdayStr);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return `${age} años`;
+  };
+
+  const getFlagEmoji = (nationality) => {
+    if (!nationality) return '⚽';
+    const n = nationality.toLowerCase().trim();
+    if (n.includes('chil') || n.includes('chile')) return '🇨🇱';
+    if (n.includes('arg') || n.includes('argentin')) return '🇦🇷';
+    if (n.includes('bra') || n.includes('brasil')) return '🇧🇷';
+    if (n.includes('uru') || n.includes('urugua')) return '🇺🇾';
+    if (n.includes('col') || n.includes('colomb')) return '🇨🇴';
+    if (n.includes('per') || n.includes('peru')) return '🇵🇪';
+    if (n.includes('esp') || n.includes('españ')) return '🇪🇸';
+    if (n.includes('mex') || n.includes('mexic')) return '🇲🇽';
+    if (n.includes('ven') || n.includes('venez')) return '🇻🇪';
+    if (n.includes('ecu') || n.includes('ecuad')) return '🇪🇨';
+    return '⚽';
+  };
+
+  const getPosShort = (pos) => {
+    const pStr = (pos || '').toUpperCase();
+    if (['POR', 'GK', 'PO', 'GOALKEEPER'].includes(pStr)) return 'POR';
+    if (['DFC', 'CB', 'LB', 'RB', 'DF', 'DEF', 'LI', 'LD', 'DD', 'DI', 'DEFENDER'].includes(pStr)) return 'DFC';
+    if (['MC', 'MCO', 'MCD', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'CM', 'MED'].includes(pStr)) return 'MC';
+    return 'DEL';
   };
 
   const getPosStyles = (pos) => {
@@ -157,6 +197,118 @@ export default function DetalleJugador() {
   const { user, contrato_activo, traspasos, estadisticas, competencias = [], historial_torneos = [], comparativas = {}, filtros_disponibles = {} } = data;
   const rawPos = user.posicion || contrato_activo?.posicion_bloque || 'MC';
   const posStyles = getPosStyles(rawPos);
+
+  // FUT Card Calculations
+  const isGK = ['POR', 'GK', 'PO', 'GOALKEEPER'].includes((rawPos || '').toUpperCase());
+  const isDelantero = ['DEL', 'DC', 'ST', 'EI', 'ED', 'LW', 'RW', 'ATA', 'DELANTERO'].includes((rawPos || '').toUpperCase());
+  const isDefensa = ['DFC', 'CB', 'LB', 'RB', 'DF', 'DEF', 'LI', 'LD', 'DD', 'DI', 'DEFENDER'].includes((rawPos || '').toUpperCase());
+  const isMedio = !isGK && !isDelantero && !isDefensa;
+
+  const avgVal = Number(estadisticas?.promedio_valoracion || 0);
+  const ovrRating = avgVal > 0 ? Math.round(avgVal * 10) : 75;
+  const partidos = estadisticas?.partidos_jugados || 0;
+  
+  const heightVal = Number(user.altura) || 175;
+  const weightVal = Number(user.peso) || 75;
+
+  const pac = Math.round(
+    Math.max(40, Math.min(99, 
+      (isDelantero ? 82 : isMedio ? 74 : 67) + 
+      Math.max(-8, Math.min(8, (178 - heightVal) * 0.4)) + 
+      Math.max(-8, Math.min(8, (74 - weightVal) * 0.3))
+    ))
+  );
+
+  const sho = Math.round(
+    Math.max(40, Math.min(99,
+      40 + 
+      (Number(estadisticas?.avg_precision_tiro || 0) * 0.35) + 
+      (partidos > 0 ? (Number(estadisticas?.total_goles || 0) / partidos) * 15 : 0) +
+      (isDelantero ? 12 : isMedio ? 5 : 0)
+    ))
+  );
+
+  const pas = Math.round(
+    Math.max(40, Math.min(99,
+      40 + 
+      (Number(estadisticas?.avg_precision_pases || 0) * 0.4) + 
+      (partidos > 0 ? (Number(estadisticas?.total_asistencias || 0) / partidos) * 20 : 0) +
+      (isMedio ? 10 : isDelantero ? 4 : 2)
+    ))
+  );
+
+  const dri = Math.round(
+    Math.max(40, Math.min(99,
+      (isDelantero ? 80 : isMedio ? 76 : 64) + 
+      (avgVal * 1.5) +
+      Math.max(-5, Math.min(5, (178 - heightVal) * 0.2))
+    ))
+  );
+
+  const def = Math.round(
+    Math.max(40, Math.min(99,
+      (isDefensa ? 78 : isMedio ? 58 : 35) + 
+      (Number(estadisticas?.avg_exito_entradas || 0) * 0.15) + 
+      (partidos > 0 ? (Number(estadisticas?.total_entradas || 0) / partidos) * 2.5 : 0)
+    ))
+  );
+
+  const phy = Math.round(
+    Math.max(40, Math.min(99,
+      50 + 
+      Math.max(-10, Math.min(10, (weightVal - 68) * 0.4)) + 
+      Math.max(-10, Math.min(10, (heightVal - 170) * 0.2)) + 
+      (avgVal * 1.2) - 
+      (Number(estadisticas?.total_rojas || 0) * 3)
+    ))
+  );
+
+  // GK Attributes
+  const div = Math.round(
+    Math.max(40, Math.min(99,
+      60 + 
+      (Number(estadisticas?.total_atajadas_volada || 0) * 0.8) + 
+      (avgVal * 1.5)
+    ))
+  );
+
+  const han = Math.round(
+    Math.max(40, Math.min(99,
+      58 + 
+      (Number(estadisticas?.total_centros_cortados || 0) * 1.2) + 
+      (avgVal * 1.2)
+    ))
+  );
+
+  const kic = Math.round(
+    Math.max(40, Math.min(99,
+      50 + 
+      (Number(estadisticas?.avg_precision_pases || 0) * 0.4)
+    ))
+  );
+
+  const ref = Math.round(
+    Math.max(40, Math.min(99,
+      62 + 
+      (Number(estadisticas?.total_atajadas_reflejos || 0) * 1.0) + 
+      (avgVal * 1.8)
+    ))
+  );
+
+  const spd = Math.round(
+    Math.max(40, Math.min(99,
+      48 + 
+      Math.max(-8, Math.min(8, (182 - heightVal) * 0.5))
+    ))
+  );
+
+  const posStat = Math.round(
+    Math.max(40, Math.min(99,
+      58 + 
+      (Number(estadisticas?.total_atajadas_buena_colocacion || 0) * 0.9) + 
+      (avgVal * 1.4)
+    ))
+  );
 
   const {
     posicion_grupo: posGroup = 'MED',
@@ -487,6 +639,7 @@ export default function DetalleJugador() {
         {/* Selector de Secciones (Tabs) */}
         <div className="flex border border-border/40 p-1 bg-card/20 backdrop-blur-md rounded-2xl max-w-3xl mx-auto shadow-xl overflow-x-auto gap-1 no-scrollbar">
           {[
+            { id: 'resumen', label: '👤 Resumen' },
             { id: 'stats', label: '📊 Rendimiento' },
             { id: 'competencias', label: '🏆 Torneos y Club' },
             { id: 'traspasos', label: '🔄 Traspasos' },
@@ -506,6 +659,175 @@ export default function DetalleJugador() {
             </button>
           ))}
         </div>
+
+        {/* Contenido Condicional por Secciones */}
+        {activeTab === 'resumen' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
+            {/* FUT-style player card */}
+            <div className="lg:col-span-1 flex flex-col items-center space-y-4">
+              <div className="w-full max-w-[290px] mx-auto cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:-translate-y-2 bg-transparent transform">
+                <PlayerCard 
+                  player={{
+                    id: user.id,
+                    rating: ovrRating,
+                    position: rawPos,
+                    pos: rawPos,
+                    name: user.name || 'JUGADOR',
+                    foto: user.foto,
+                    nacionalidad: user.nacionalidad,
+                    clubBadge: contrato_activo?.equipo_logo,
+                    dorsal: contrato_activo?.dorsal,
+                    theme: 'totw',
+                    avg_atajadas: (Number(estadisticas?.total_atajadas || 0) + Number(estadisticas?.total_goles_recibidos || 0) > 0) 
+                      ? Math.round((Number(estadisticas?.total_atajadas || 0) / (Number(estadisticas?.total_atajadas || 0) + Number(estadisticas?.total_goles_recibidos || 0))) * 100)
+                      : 85,
+                    avg_exito_entradas: Math.round(estadisticas?.avg_exito_entradas || 80),
+                    avg_precision_pases: Math.round(estadisticas?.avg_precision_pases || 82),
+                    avg_precision_tiro: Math.round(estadisticas?.avg_precision_tiro || 75),
+                    estadisticas: estadisticas
+                  }} 
+                  variant="dynamic"
+                  disableHover={false} 
+                />
+              </div>
+            </div>
+
+            {/* Right: Personal Dossier, Contract, and stats */}
+            <div className="lg:col-span-2 space-y-6">
+              
+              {/* Dossier Card */}
+              <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-5 space-y-4 shadow-md relative overflow-hidden">
+                <div className={`absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 ${posStyles.bracketColor} rounded-tl-sm pointer-events-none`}></div>
+                <div className={`absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 ${posStyles.bracketColor} rounded-br-sm pointer-events-none`}></div>
+                <h3 className="text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2">
+                  👤 EXPEDIENTE FÍSICO Y PERSONAL
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 font-mono text-xs">
+                  <div className="bg-background/25 border border-border/20 p-3 rounded-xl shadow-inner text-left">
+                    <span className="text-muted-foreground block text-[9px] font-bold uppercase">Edad</span>
+                    <strong className="text-base text-foreground font-extrabold">{getAge(user.fecha_nacimiento)}</strong>
+                  </div>
+                  <div className="bg-background/25 border border-border/20 p-3 rounded-xl shadow-inner text-left">
+                    <span className="text-muted-foreground block text-[9px] font-bold uppercase">Estatura</span>
+                    <strong className="text-base text-foreground font-extrabold">{user.altura ? `${user.altura} cm` : '—'}</strong>
+                  </div>
+                  <div className="bg-background/25 border border-border/20 p-3 rounded-xl shadow-inner text-left">
+                    <span className="text-muted-foreground block text-[9px] font-bold uppercase">Peso</span>
+                    <strong className="text-base text-foreground font-extrabold">{user.peso ? `${user.peso} kg` : '—'}</strong>
+                  </div>
+                  <div className="bg-background/25 border border-border/20 p-3 rounded-xl shadow-inner text-left">
+                    <span className="text-muted-foreground block text-[9px] font-bold uppercase">Nacionalidad</span>
+                    <strong className="text-sm text-foreground font-extrabold uppercase flex items-center gap-1.5 mt-0.5">
+                      <span>{getFlagEmoji(user.nacionalidad)}</span>
+                      <span className="truncate">{user.nacionalidad || 'Chilena'}</span>
+                    </strong>
+                  </div>
+                  <div className="bg-background/25 border border-border/20 p-3 rounded-xl shadow-inner text-left">
+                    <span className="text-muted-foreground block text-[9px] font-bold uppercase">Pie Preferido</span>
+                    <strong className="text-sm text-foreground font-extrabold uppercase mt-0.5">{user.pie_preferido || 'Derecho'}</strong>
+                  </div>
+                  <div className="bg-background/25 border border-border/20 p-3 rounded-xl shadow-inner text-left">
+                    <span className="text-muted-foreground block text-[9px] font-bold uppercase">Plataforma</span>
+                    <strong className="text-sm text-foreground font-extrabold uppercase mt-0.5">{user.plataforma || 'CROSSPLAY'}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contract Card */}
+              <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-5 space-y-4 shadow-md relative overflow-hidden">
+                <div className={`absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 ${posStyles.bracketColor} rounded-tl-sm pointer-events-none`}></div>
+                <div className={`absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 ${posStyles.bracketColor} rounded-br-sm pointer-events-none`}></div>
+                <h3 className="text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2">
+                  🛡️ VINCULACIÓN Y ESTADO CONTRACTUAL
+                </h3>
+                {contrato_activo ? (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-background/25 border border-border/20 p-4 rounded-xl shadow-inner text-left">
+                    <div className="flex items-center gap-3.5">
+                      {contrato_activo.equipo_logo ? (
+                        <img 
+                          src={getImageUrl(contrato_activo.equipo_logo)} 
+                          alt={contrato_activo.equipo_nombre} 
+                          className="w-14 h-14 rounded-xl object-cover border border-border/40 shrink-0 shadow" 
+                        />
+                      ) : (
+                        <div className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center font-display font-black text-primary text-xl uppercase shrink-0">
+                          {contrato_activo.equipo_nombre?.charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <Link to={`/equipos/${contrato_activo.equipo_id}`} className="font-display font-black text-lg text-foreground hover:text-primary uppercase tracking-wide transition-colors block leading-tight">
+                          {contrato_activo.equipo_nombre}
+                        </Link>
+                        <span className="text-[10px] text-muted-foreground block font-bold uppercase mt-1">
+                          🏆 LIGA: {contrato_activo.organizacion_nombre}
+                        </span>
+                        {contrato_activo.dorsal && (
+                          <span className="inline-block bg-primary/10 text-primary border border-primary/20 text-[9px] font-mono font-bold px-2 py-0.5 rounded-md mt-1.5">
+                            Dorsal N°{contrato_activo.dorsal}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-center sm:text-right shrink-0 w-full sm:w-auto">
+                      <div className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-black font-mono px-4 py-2.5 rounded-xl shadow-inner inline-block w-full sm:w-auto">
+                        🛡️ CONTRATO VIGENTE APROBADO
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-background/25 border border-border/20 p-4 rounded-xl shadow-inner text-left">
+                    <div className="flex items-center gap-3">
+                      <div className="w-14 h-14 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 text-2xl shrink-0 shadow animate-pulse">
+                        🤝
+                      </div>
+                      <div>
+                        <strong className="font-display font-black text-lg text-amber-500 uppercase tracking-wide block leading-tight">
+                          Agente Libre
+                        </strong>
+                        <span className="text-[10px] text-muted-foreground block font-bold uppercase mt-0.5">
+                          Disponible para incorporarse a un club
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-center sm:text-right shrink-0 w-full sm:w-auto">
+                      <div className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-black font-mono px-4 py-2.5 rounded-xl animate-pulse shadow-sm inline-block w-full sm:w-auto">
+                        ⚡ DISPONIBLE PARA FICHAJE
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Season Summary Stats */}
+              <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-5 space-y-4 shadow-md relative overflow-hidden">
+                <div className={`absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 ${posStyles.bracketColor} rounded-tl-sm pointer-events-none`}></div>
+                <div className={`absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 ${posStyles.bracketColor} rounded-br-sm pointer-events-none`}></div>
+                <h3 className="text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2">
+                  📊 RESUMEN TÁCTICO DE LA TEMPORADA
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-center">
+                  <div className="bg-background/25 border border-border/20 p-3 rounded-xl shadow-inner">
+                    <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider block">Partidos Jugados</span>
+                    <strong className="text-xl font-black text-foreground block mt-1">{estadisticas.partidos_jugados || 0}</strong>
+                  </div>
+                  <div className="bg-background/25 border border-border/20 p-3 rounded-xl shadow-inner">
+                    <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider block">Valoración OVR</span>
+                    <strong className={`text-xl font-black block mt-1 ${posStyles.accentText}`}>{avgVal ? avgVal.toFixed(2) : '—'}</strong>
+                  </div>
+                  <div className="bg-background/25 border border-border/20 p-3 rounded-xl shadow-inner">
+                    <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider block">Goles Totales</span>
+                    <strong className="text-xl font-black text-emerald-400 block mt-1">{estadisticas.total_goles || 0}</strong>
+                  </div>
+                  <div className="bg-background/25 border border-border/20 p-3 rounded-xl shadow-inner">
+                    <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider block">Asistencias</span>
+                    <strong className="text-xl font-black text-primary block mt-1">{estadisticas.total_asistencias || 0}</strong>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
 
         {/* Contenido Condicional por Secciones */}
         {activeTab === 'stats' && (

@@ -19,7 +19,18 @@ class PartidoUtController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = PartidoUt::with([
+        $query = PartidoUt::select([
+            'id',
+            'competencia_ut_id',
+            'equipo_ut_local_id',
+            'equipo_ut_visitante_id',
+            'jornada',
+            'grupo',
+            'fecha',
+            'hora',
+            'goles_local',
+            'goles_visitante'
+        ])->with([
             'local:id,nombre,logo,club_id_ea,id_capitan,id_companero',
             'local.capitan:id,name,gamertag',
             'local.companero:id,name,gamertag',
@@ -28,6 +39,24 @@ class PartidoUtController extends Controller
             'visitante.companero:id,name,gamertag',
             'competencia.temporada.organizacion:id,nombre,logo',
         ]);
+
+        // Guard limit to prevent memory exhausted / timeout errors if no filters are applied
+        $hasFilters = $request->filled('fecha') ||
+                      $request->filled('status') ||
+                      $request->filled('competencia_ut_id') ||
+                      $request->filled('organizacion_id') ||
+                      $request->filled('equipo_ut_id') ||
+                      $request->filled('jugador_id') ||
+                      $request->filled('search') ||
+                      $request->boolean('for_organizer') ||
+                      $request->has('page') ||
+                      $request->boolean('paginate') ||
+                      $request->boolean('paginate_by_time') ||
+                      $request->get('paginate') === 'time';
+
+        if (!$hasFilters) {
+            $query->limit(500);
+        }
 
         $user = auth('sanctum')->user();
         if ($request->boolean('for_organizer') && $user) {

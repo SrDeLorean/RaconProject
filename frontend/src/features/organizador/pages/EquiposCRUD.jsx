@@ -15,7 +15,7 @@ import EquipoFormDrawer from '../components/EquipoFormDrawer';
 const getImageUrl = (path) => {
   if (!path) return null;
   if (path.startsWith('http')) return path;
-  return `http://localhost:8000${path.startsWith('/') ? path : '/' + path}`;
+  return typeof window.mediaUrl === 'function' ? window.mediaUrl(path) : `http://localhost:8000${path.startsWith('/') ? path : '/' + path}`;
 };
 
 export default function EquiposCRUD() {

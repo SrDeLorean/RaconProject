@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import Card from '@/components/shared/Card';
-import Badge from '@/components/ui/Badge';
 
 const getSubTabIcon = (id, className = "w-4 h-4 mr-2 inline-block") => {
   switch (id) {
@@ -93,6 +92,8 @@ export default function RendimientoJugadorTab({ profileData }) {
       id: 'ataque',
       title: 'Fase Ofensiva y Remates',
       color: 'text-rose-500',
+      activeBg: 'bg-rose-500/10',
+      activeBorder: 'border-rose-500/30',
       barColor: 'bg-gradient-to-r from-rose-600 to-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.45)]',
       items: [
         { label: 'Goles Totales', value: estadisticas.total_goles || 0, max: 20 },
@@ -104,6 +105,8 @@ export default function RendimientoJugadorTab({ profileData }) {
       id: 'pase',
       title: 'Fase Asociativa y Distribución',
       color: 'text-emerald-500',
+      activeBg: 'bg-emerald-500/10',
+      activeBorder: 'border-emerald-500/30',
       barColor: 'bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.45)]',
       items: [
         { label: 'Asistencias', value: estadisticas.total_asistencias || 0, max: 15 },
@@ -116,6 +119,8 @@ export default function RendimientoJugadorTab({ profileData }) {
       id: 'defensa',
       title: 'Fase Defensiva y Prevención',
       color: 'text-blue-500',
+      activeBg: 'bg-blue-500/10',
+      activeBorder: 'border-blue-500/30',
       barColor: 'bg-gradient-to-r from-blue-600 to-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.45)]',
       items: [
         { label: 'Entradas Exitosas', value: estadisticas.total_entradas || 0, max: 80 },
@@ -128,6 +133,8 @@ export default function RendimientoJugadorTab({ profileData }) {
       id: 'porteria',
       title: 'Registro de Arco y Atajadas',
       color: 'text-amber-500',
+      activeBg: 'bg-amber-500/10',
+      activeBorder: 'border-amber-500/30',
       barColor: 'bg-gradient-to-r from-amber-600 to-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.45)]',
       items: [
         { label: 'Atajadas', value: estadisticas.total_atajadas || 0, max: 100 },
@@ -147,6 +154,8 @@ export default function RendimientoJugadorTab({ profileData }) {
       id: 'fisico',
       title: 'Telemetría Física y Latencia',
       color: 'text-purple-500',
+      activeBg: 'bg-purple-500/10',
+      activeBorder: 'border-purple-500/30',
       barColor: 'bg-gradient-to-r from-purple-600 to-fuchsia-400 shadow-[0_0_8px_rgba(168,85,247,0.45)]',
       items: [
         { label: 'Segundos Jugados', value: estadisticas.total_segundos_jugados || 0, max: 15000 },
@@ -161,84 +170,85 @@ export default function RendimientoJugadorTab({ profileData }) {
   const currentSection = statsSections.find(s => s.id === activeStatSubTab);
 
   return (
-    <div className="space-y-6">
-      <div className="border-b border-border/10 pb-3">
-        <div className="flex items-center gap-2">
-          <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
+    <div className="space-y-6 animate-fade-in">
+      <div className="border-b border-border/10 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary/10 rounded-xl border border-primary/20">
+            <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
           <div>
-            <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">Mi Ficha de Telemetría Táctica</h4>
-            <p className="text-xs text-muted-foreground">Estadísticas de juego acumuladas de todas las ligas oficiales.</p>
+            <h4 className="text-lg font-display font-black text-foreground uppercase tracking-wider">Telemetría Táctica</h4>
+            <p className="text-xs text-muted-foreground mt-0.5">Estadísticas de juego acumuladas de todas las ligas oficiales.</p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 text-left">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 text-left items-start">
         
         {/* Lado izquierdo: Selector HUD */}
-        <div className="flex lg:flex-col gap-1.5 overflow-x-auto lg:overflow-x-visible no-scrollbar bg-background/30 p-2 rounded-2xl border border-border/30 h-fit lg:col-span-1">
-          {[
-            { id: 'ataque', label: 'Ataque' },
-            { id: 'pase', label: 'Distribución' },
-            { id: 'defensa', label: 'Defensa' },
-            { id: 'porteria', label: 'Portería' },
-            { id: 'fisico', label: 'Físico / Red' }
-          ].map(tab => {
+        <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible no-scrollbar p-2 h-fit lg:col-span-1">
+          {statsSections.map(tab => {
             const isTabActive = activeStatSubTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveStatSubTab(tab.id)}
-                className={`w-full py-2.5 px-3.5 text-[10px] font-mono tracking-widest uppercase rounded-xl transition-all cursor-pointer whitespace-nowrap text-left border flex items-center ${
+                className={`w-full py-3 px-4 text-xs font-mono tracking-widest uppercase rounded-xl transition-all duration-300 cursor-pointer whitespace-nowrap text-left border flex items-center group ${
                   isTabActive
-                    ? 'bg-primary/10 border-primary/30 text-primary font-black shadow-inner'
-                    : 'text-muted-foreground hover:text-foreground border-transparent hover:bg-card/30'
+                    ? `${tab.activeBg} ${tab.activeBorder} ${tab.color} font-black shadow-inner`
+                    : 'text-muted-foreground border-transparent hover:bg-card/40 hover:text-foreground'
                 }`}
               >
-                {getSubTabIcon(tab.id, `w-3.5 h-3.5 mr-2 ${isTabActive ? 'text-primary' : 'text-muted-foreground'}`)}
-                <span>{tab.label}</span>
+                {getSubTabIcon(tab.id, `w-4 h-4 mr-3 transition-transform duration-300 ${isTabActive ? `${tab.color} scale-110` : 'text-muted-foreground group-hover:scale-110'}`)}
+                <span>{tab.title.split(' ')[1] || tab.title.split(' ')[0]}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Lado derecho: Barras de Progreso */}
-        <div className="lg:col-span-3 border border-border/40 bg-card/25 p-6 rounded-3xl space-y-6">
-          <div className="flex items-center gap-2 border-b border-border/10 pb-3">
-            {getSubTabIcon(currentSection.id, `w-4.5 h-4.5 ${currentSection.color}`)}
-            <span className={`text-[11px] font-mono font-black uppercase tracking-widest block ${currentSection.color}`}>
+        {/* Lado derecho: Barras de Progreso usando Card Premium */}
+        <Card className="lg:col-span-3 space-y-6" hoverLift={false} withGlow={true}>
+          <div className="flex items-center gap-3 border-b border-border/10 pb-4 relative z-10">
+            <div className={`p-2 rounded-lg ${currentSection.activeBg}`}>
+              {getSubTabIcon(currentSection.id, `w-5 h-5 ${currentSection.color} m-0`)}
+            </div>
+            <span className={`text-lg font-display font-black uppercase tracking-widest block ${currentSection.color}`}>
               {currentSection.title}
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
             {currentSection.items.map((item, idx) => {
               const val = item.valForBar !== undefined ? item.valForBar : item.pct !== undefined ? item.pct : Number(item.value);
               const max = item.pct !== undefined ? 100 : item.max || 10;
               const pct = Math.min(100, Math.max(0, (val / max) * 100));
 
               return (
-                <div key={idx} className="space-y-2 text-left font-mono">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-muted-foreground font-bold">{item.label}</span>
-                    <strong className={`font-black ${item.isNegative ? 'text-destructive font-bold' : 'text-foreground'}`}>
+                <div key={idx} className="space-y-3 text-left font-mono">
+                  <div className="flex justify-between items-end text-xs">
+                    <span className="text-muted-foreground font-bold tracking-wider">{item.label}</span>
+                    <strong className={`font-black text-lg leading-none ${item.isNegative ? 'text-destructive drop-shadow-[0_0_8px_rgba(220,38,38,0.5)]' : 'text-foreground'}`}>
                       {item.value}
                     </strong>
                   </div>
                   
                   {/* Barra de progreso */}
-                  <div className="w-full h-2.5 bg-muted/40 rounded-full overflow-hidden border border-border/10">
+                  <div className="w-full h-3 bg-muted/30 rounded-full overflow-hidden border border-border/20 shadow-inner">
                     <div 
-                      className={`h-full rounded-full transition-all duration-700 ease-out ${currentSection.barColor}`}
+                      className={`h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden ${currentSection.barColor}`}
                       style={{ width: `${pct}%` }}
-                    />
+                    >
+                      {/* Efecto de luz recorriendo la barra */}
+                      <div className="absolute top-0 bottom-0 left-0 right-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
+        </Card>
 
       </div>
     </div>

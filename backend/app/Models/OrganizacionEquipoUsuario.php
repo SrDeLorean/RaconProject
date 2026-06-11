@@ -13,6 +13,9 @@ class OrganizacionEquipoUsuario extends Model
     ];
 
     protected $casts = [
+        'organizacion_id' => 'integer',
+        'equipo_id' => 'integer',
+        'user_id' => 'integer',
         'fecha_vinculacion' => 'datetime',
     ];
 

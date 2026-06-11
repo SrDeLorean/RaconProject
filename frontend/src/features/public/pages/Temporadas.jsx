@@ -12,7 +12,10 @@ import Card from '@/components/shared/Card';
 const getImageUrl = (path) => {
   if (!path) return null;
   if (path.startsWith('http')) return path;
-  const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+  if (typeof window.mediaUrl === 'function') {
+    return window.mediaUrl(path);
+  }
+  const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') ;
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   return `${backendBaseUrl}${cleanPath}`;
 };
@@ -259,9 +262,7 @@ export default function Temporadas() {
               id: eq.id,
               nombre: eq.nombre,
               abreviatura: eq.abreviatura,
-              logo: eq.logo 
-                ? (eq.logo.startsWith('http') ? eq.logo : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${eq.logo}`) 
-                : null
+              logo: getImageUrl(eq.logo)
             });
           }
         });
@@ -277,9 +278,7 @@ export default function Temporadas() {
               id: eq.id,
               nombre: eq.nombre,
               abreviatura: eq.abreviatura,
-              logo: eq.logo 
-                ? (eq.logo.startsWith('http') ? eq.logo : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${eq.logo}`) 
-                : null
+              logo: getImageUrl(eq.logo)
             });
           }
         });

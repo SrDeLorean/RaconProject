@@ -74,51 +74,39 @@ export function CardTilt({ children, className = '', disableTilt = false }) {
  * Helper to resolve dynamic, realistic FUT card stats based on overall rating and position.
  */
 export function getFUTStats(player = {}, isTOTS = false) {
-  const position = (player.position || player.pos || 'MC').toUpperCase();
-  const stats = player.stats || {};
+  const position = (player.posReal || player.position || player.pos || 'MC').toUpperCase();
+  const stats = player.stats || player.estadisticas || {};
 
   const isGK = ['GK', 'PO', 'ARQ', 'POR'].includes(position);
   const isDEF = ['DFC', 'LI', 'LD', 'DFI', 'DFD', 'DF', 'DFC1', 'DFC2', 'CB', 'LB', 'RB', 'DEFENDER'].includes(position);
   const isMID = ['MC', 'MCD', 'MCO', 'MVs', 'MC1', 'MC2', 'VOL', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'MIDFIELDER'].includes(position);
 
+  const dorsal = player.dorsal || (player.contrato_activo?.dorsal) || (player.id ? player.id % 99 : 10);
+
   if (isGK) {
-    const atajadas = player.total_atajadas || stats.atajadas || 0;
-    const imbatidos = player.arcos_imbatidos || stats.arcos_imbatidos || 0;
-    const recibidos = player.total_goles_recibidos || stats.goles_recibidos || 0;
+    const exito = Math.round(player.avg_atajadas || stats.porcentaje_atajadas || 85);
     return [
-      { label: 'ATAJ', val: atajadas },
-      { label: 'A. IMB', val: imbatidos },
-      { label: 'REC', val: recibidos }
+      { label: '% EXT', val: `${exito}%` },
+      { label: 'DORSAL', val: dorsal }
     ];
   } else if (isDEF) {
-    const entradas = player.total_entradas || stats.entradas_exitosas || stats.entradas || 0;
-    const exito = Math.round(player.avg_exito_entradas || stats.tasa_exito_entradas || 0);
+    const exito = Math.round(player.avg_exito_entradas || stats.tasa_exito_entradas || 80);
     return [
-      { label: 'ENT', val: entradas },
-      { label: '% EXT', val: `${exito}%` }
+      { label: '% EXT', val: `${exito}%` },
+      { label: 'DORSAL', val: dorsal }
     ];
   } else if (isMID) {
-    const pasesComp = player.total_pases_completados || stats.pases_completados || 0;
-    const pasesInt = player.total_pases_intentados || stats.pases_intentados || 0;
-    const exitoPases = Math.round(player.avg_precision_pases || stats.precision_pases || 0);
-    const entradas = player.total_entradas || stats.entradas_exitosas || stats.entradas || 0;
+    const exito = Math.round(player.avg_precision_pases || stats.precision_pases || 82);
     return [
-      { label: 'PAS C', val: pasesComp },
-      { label: 'PAS I', val: pasesInt },
-      { label: '% EXT', val: `${exitoPases}%` },
-      { label: 'ENT', val: entradas }
+      { label: '% PAS', val: `${exito}%` },
+      { label: 'DORSAL', val: dorsal }
     ];
   } else {
     // Delanteros / Atacantes
-    const tiros = player.total_tiros || stats.tiros || 0;
-    const goles = player.total_goles || stats.goles || 0;
-    const acierto = Math.round(player.avg_precision_tiro || stats.precision_tiro || 0);
-    const asistencias = player.total_asistencias || stats.asistencias || 0;
+    const acierto = Math.round(player.avg_precision_tiro || stats.precision_tiro || 75);
     return [
-      { label: 'TIROS', val: tiros },
-      { label: 'GOLES', val: goles },
       { label: '% ACI', val: `${acierto}%` },
-      { label: 'ASIS', val: asistencias }
+      { label: 'DORSAL', val: dorsal }
     ];
   }
 }
@@ -305,6 +293,9 @@ export default function PlayerCard({
     if (path.startsWith('http')) {
       return path;
     }
+    if (typeof window.mediaUrl === 'function') {
+      return window.mediaUrl(path);
+    }
     const separator = path.startsWith('/') ? '' : '/';
     const apiBaseUrl = api.defaults.baseURL || 'http://localhost:8000/api';
     return `${apiBaseUrl}/media?path=${encodeURIComponent(separator + path)}`;
@@ -369,7 +360,7 @@ export default function PlayerCard({
                 <div className={`w-[19cqi] h-[19cqi] rounded-full border flex items-center justify-center font-display font-black text-[5.8cqi] ${
                   isTOTS ? 'bg-cyan-950/45 border-cyan-500/30 text-cyan-300' : 'bg-amber-950/45 border-amber-500/30 text-amber-400'
                 }`}>
-                  SXS
+                  FC
                 </div>
               )}
             </div>
@@ -452,7 +443,7 @@ export default function PlayerCard({
               <div className={`w-[7cqi] h-[7cqi] rounded-full border flex items-center justify-center font-display font-black text-[2.5cqi] ${
                 isTOTS ? 'bg-cyan-950/45 border-cyan-500/30 text-cyan-300' : 'bg-amber-950/45 border-amber-500/30 text-amber-400'
               }`}>
-                SXS
+                FC
               </div>
             )}
           </div>

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import Card from '@/components/shared/Card';
 import api from '@/api/axios';
 
 export default function ResumenClub({ equipo, roster = [], competencias = [], onTabChange }) {
@@ -31,7 +32,7 @@ export default function ResumenClub({ equipo, roster = [], competencias = [], on
   const getLogoUrl = (logoPath) => {
     if (!logoPath) return null;
     if (logoPath.startsWith('http')) return logoPath;
-    const baseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://127.0.0.1:8000';
+    const baseUrl = api.defaults.baseURL?.replace(/\/api$/, '') || 'http://127.0.0.1:8000';
     return `${baseUrl}${logoPath}`;
   };
 
@@ -63,7 +64,7 @@ export default function ResumenClub({ equipo, roster = [], competencias = [], on
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* PANEL IZQUIERDO/CENTRAL: PRÓXIMO ENCUENTRO REAL */}
-        <div className="border border-border/40 bg-card/25 rounded-3xl p-6 flex flex-col justify-between shadow-xl relative overflow-hidden lg:col-span-2 space-y-4">
+        <Card className="lg:col-span-2 flex flex-col justify-between space-y-4 overflow-hidden relative" padding="p-6" withGlow={true}>
           <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
           
           <div className="space-y-3">
@@ -148,10 +149,10 @@ export default function ResumenClub({ equipo, roster = [], competencias = [], on
           >
             📋 Ver Calendario y Reportes
           </Button>
-        </div>
+        </Card>
 
         {/* AUDITORÍA Y ALERTAS OPERATIVAS */}
-        <div className="border border-border/40 bg-card/25 rounded-3xl p-6 flex flex-col justify-between shadow-xl space-y-4">
+        <Card className="flex flex-col justify-between space-y-4" padding="p-6" withGlow={true}>
           <div className="space-y-4">
             <h3 className="text-xs font-black text-foreground uppercase tracking-widest border-b border-border/20 pb-2">Auditoría del Club</h3>
             
@@ -198,7 +199,7 @@ export default function ResumenClub({ equipo, roster = [], competencias = [], on
           >
             {esPlantillaValida ? '🏆 Buscar Torneos' : '👥 Fichar Jugadores'}
           </Button>
-        </div>
+        </Card>
 
       </div>
 
@@ -206,7 +207,7 @@ export default function ResumenClub({ equipo, roster = [], competencias = [], on
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* TARJETA DE ESTADÍSTICAS REALES */}
-        <div className="border border-border/40 bg-card/25 rounded-3xl p-6 shadow-xl lg:col-span-2 space-y-5">
+        <Card className="lg:col-span-2 space-y-5" padding="p-6" withGlow={true}>
           <div className="flex justify-between items-center border-b border-border/20 pb-2">
             <h3 className="text-xs font-black text-foreground uppercase tracking-widest">Estadísticas de la Temporada</h3>
             <span className="text-[10px] text-muted-foreground font-bold">Datos Acumulados</span>
@@ -261,10 +262,10 @@ export default function ResumenClub({ equipo, roster = [], competencias = [], on
               </span>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* IDENTIDAD / FICHA TÉCNICA DEL CLUB */}
-        <div className="border border-border/40 bg-card/25 rounded-3xl p-6 shadow-xl space-y-4 flex flex-col justify-between">
+        <Card className="space-y-4 flex flex-col justify-between" padding="p-6" withGlow={true}>
           <div className="space-y-3">
             <h3 className="text-xs font-black text-foreground uppercase tracking-widest border-b border-border/20 pb-2">
               Identidad del Club
@@ -335,12 +336,12 @@ export default function ResumenClub({ equipo, roster = [], competencias = [], on
               <span className="text-[10px] text-muted-foreground/40 font-bold">🎮 Twitch: N/D</span>
             )}
           </div>
-        </div>
+        </Card>
 
       </div>
 
       {/* Grilla Inferior: Distribución de Tácticas / Posiciones */}
-      <div className="border border-border/40 bg-card/25 rounded-3xl p-6 shadow-xl space-y-4">
+      <Card className="space-y-4" padding="p-6" withGlow={true}>
         <div>
           <h3 className="text-xs font-black text-foreground uppercase tracking-widest">Distribución de Posiciones en el Roster</h3>
           <p className="text-[11px] text-muted-foreground">Estructura táctica y balance de la plantilla activa.</p>
@@ -384,7 +385,7 @@ export default function ResumenClub({ equipo, roster = [], competencias = [], on
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
     </div>
   );

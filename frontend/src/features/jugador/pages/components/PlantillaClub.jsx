@@ -3,6 +3,7 @@ import DataTable from '@/components/ui/DataTable';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
+import Card from '@/components/shared/Card';
 
 export default function PlantillaClub({ 
   roster, 
@@ -218,7 +219,7 @@ export default function PlantillaClub({
         </div>
 
         {/* PANEL LATERAL DE CONTRATACIONES */}
-        <div className="border border-border/50 bg-card/30 backdrop-blur-2xl p-5 rounded-xl space-y-4 shadow-xl relative overflow-hidden">
+        <Card className="space-y-4 relative overflow-hidden h-fit max-h-screen" padding="p-5" withGlow={true}>
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-foreground uppercase tracking-wide flex items-center gap-2">
@@ -282,11 +283,11 @@ export default function PlantillaClub({
               </span>
             ) : null}
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* TERCERA TABLA: LOG/HISTORIAL DE TRANSACCIONES */}
-      <div className="border border-border/50 bg-card/20 rounded-2xl p-5 shadow-lg space-y-4">
+      <Card className="space-y-4" padding="p-5" withGlow={true}>
         <div className="flex items-center justify-between border-b border-border/30 pb-3">
           <h3 className="text-sm font-bold text-foreground uppercase tracking-wide flex items-center gap-2">
             <span>📜</span> Log de Transacciones e Historial de Fichajes
@@ -302,7 +303,7 @@ export default function PlantillaClub({
           showPagination={true}
           searchPlaceholder="Filtrar historial de auditoría..."
         />
-      </div>
+      </Card>
 
       {/* MODAL CONFIGURACIÓN FICHA TÁCTICA */}
       {editingPlayer && (

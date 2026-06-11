@@ -84,7 +84,7 @@ export default function MisEquiposInscritos() {
                   <div className="flex items-center gap-2">
                     {contrato.organizacion?.logo ? (
                       <img 
-                        src={contrato.organizacion.logo.startsWith('http') ? contrato.organizacion.logo : `http://localhost:8000${contrato.organizacion.logo}`} 
+                        src={contrato.organizacion.logo.startsWith('http') ? contrato.organizacion.logo : (typeof window.mediaUrl === 'function' ? window.mediaUrl(contrato.organizacion.logo) : `http://localhost:8000${contrato.organizacion.logo}`)} 
                         alt={contrato.organizacion.nombre} 
                         className="w-5 h-5 rounded object-cover border border-border/40"
                       />

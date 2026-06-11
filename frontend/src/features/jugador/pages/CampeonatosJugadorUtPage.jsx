@@ -98,7 +98,7 @@ export default function CampeonatosJugadorUtPage() {
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+    const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') || 'http://localhost:8000';
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
     return `${backendBaseUrl}${cleanPath}`;
   };
@@ -1092,7 +1092,7 @@ function PlayoffLlave({ matches }) {
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+    const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') || 'http://localhost:8000';
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
     return `${backendBaseUrl}${cleanPath}`;
   };

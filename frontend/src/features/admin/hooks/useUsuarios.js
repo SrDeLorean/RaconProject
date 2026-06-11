@@ -20,7 +20,7 @@ export const useUsuarios = () => {
     name: '', email: '', password: '', role: '', status: 'activo',
     gamertag: '', id_ea: '', plataforma: 'crossplay',
     nacionalidad: '', posicion: '', fecha_nacimiento: '',
-    altura: '', peso: '', telefono: ''
+    altura: '', peso: '', telefono: '', foto: ''
   };
   const [formData, setFormData] = useState(defaultForm);
   
@@ -131,7 +131,8 @@ export const useUsuarios = () => {
           fecha_nacimiento: usuario.fecha_nacimiento ? usuario.fecha_nacimiento.substring(0, 10) : '',
           altura: usuario.altura || '',
           peso: usuario.peso || '',
-          telefono: usuario.telefono || ''
+          telefono: usuario.telefono || '',
+          foto: usuario.foto || ''
         }
       : defaultForm
     );

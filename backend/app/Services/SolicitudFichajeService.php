@@ -159,7 +159,7 @@ class SolicitudFichajeService
             throw new Exception('Solicitud no encontrada.', 404);
         }
 
-        if ($solicitud->user_id !== $authUserId) {
+        if ((int)$solicitud->user_id !== (int)$authUserId) {
             throw new Exception('No tienes permiso sobre esta solicitud.', 403);
         }
 
@@ -188,7 +188,7 @@ class SolicitudFichajeService
         }
 
         // Si ya posee club en esta organización, el traspaso DEBE ser autorizado por el administrador
-        if ($yaTieneClubEnOrg && $yaTieneClubEnOrg->equipo_id !== $solicitud->equipo_id) {
+        if ($yaTieneClubEnOrg && (int)$yaTieneClubEnOrg->equipo_id !== (int)$solicitud->equipo_id) {
             $this->repository->update($id, ['estado' => 'pendiente_admin']);
             return ['message' => 'Oferta aceptada. Al tener un club activo en esta organización, el traspaso queda pendiente de aprobación administrativa.'];
         }
@@ -245,7 +245,7 @@ class SolicitudFichajeService
         $user = auth()->user();
         if ($user && ($user->role === 'organizador' || $user->role === 'organizer')) {
             $org = \App\Models\Organizacion::where('owner_id', $user->id)->first();
-            if (!$org || $solicitud->organizacion_id !== $org->id) {
+            if (!$org || (int)$solicitud->organizacion_id !== (int)$org->id) {
                 throw new Exception('Acceso denegado. No tienes permisos para gestionar esta solicitud.', 403);
             }
         }

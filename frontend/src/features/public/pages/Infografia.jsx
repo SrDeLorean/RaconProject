@@ -121,7 +121,10 @@ export default function Infografia() {
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    return `http://localhost:8000${path}`;
+    if (typeof window.mediaUrl === 'function') {
+      return window.mediaUrl(path);
+    }
+    return window.mediaUrl(path);
   };
 
   // ─── MAPEO DINÁMICO DE PODIO A PARTIR DE LOS DATOS DE LA BASE DE DATOS (INFOGRAFÍA) ───
@@ -292,9 +295,10 @@ export default function Infografia() {
 
   return (
     <div className="relative min-h-screen bg-background pb-16 overflow-hidden selection:bg-primary selection:text-primary-foreground">
-      {/* Resplandores ambientales e-sports */}
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[350px] md:w-[600px] h-[350px] md:h-[600px] bg-primary/8 blur-[130px] rounded-full pointer-events-none z-10"></div>
-      <div className="absolute bottom-1/3 right-1/4 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-primary/5 blur-[120px] rounded-full pointer-events-none z-10"></div>
+      {/* Resplandores ambientales e-sports premium */}
+      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[400px] md:w-[800px] h-[400px] md:h-[800px] bg-primary/10 blur-[150px] rounded-full pointer-events-none z-10 mix-blend-screen animate-pulse-slow"></div>
+      <div className="absolute bottom-1/3 right-1/4 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-destructive/10 blur-[130px] rounded-full pointer-events-none z-10 mix-blend-screen animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(ellipse_at_center,rgba(var(--primary-rgb),0.05)_0%,transparent_70%)] pointer-events-none z-0"></div>
 
       {/* ========================================================================= */}
       {/* 1. HERO CENTRAL (Cinemático y Táctico)                                    */}
@@ -331,9 +335,10 @@ export default function Infografia() {
               🔥 Analíticas & Data Arbitral
             </Badge>
 
-            <h1 className="text-4xl sm:text-8xl md:text-9xl font-display font-black text-foreground uppercase tracking-[0.01em] leading-[0.82] drop-shadow-2xl z-10 mt-2 select-none">
+            <h1 className="text-4xl sm:text-8xl md:text-9xl font-display font-black text-foreground uppercase tracking-[0.01em] leading-[0.82] drop-shadow-2xl z-10 mt-2 select-none relative group">
+              <span className="absolute -inset-4 bg-primary/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></span>
               INFOGRAFÍA DE <br />
-              <span className="text-primary tracking-tight font-black shimmer-text">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary/80 to-foreground tracking-tight font-black shimmer-text text-glow-primary inline-block">
                 LA LIGA.
               </span>
             </h1>
@@ -565,11 +570,13 @@ export default function Infografia() {
                     </div>
                     
                     {/* Pedestal Column */}
-                    <div className="w-full h-28 bg-gradient-to-t from-card/25 to-info/10 border border-info/20 rounded-t-2xl relative flex flex-col items-center justify-center gap-1 shadow-lg group-hover:border-info/40 transition-all duration-300 p-4">
-                      <span className="text-2xl font-display font-black text-info leading-none">#2</span>
-                      <span className="text-[10px] font-mono text-muted-foreground font-bold mt-1">{podiumData[1]?.metric}</span>
-                      <span className="text-[8px] bg-info/15 text-info px-2 py-0.5 rounded font-mono uppercase font-black tracking-wider mt-1.5">
-                        Plata
+                    <div className="w-full h-32 bg-gradient-to-t from-background via-card to-info/15 border-t-2 border-l border-r border-info/40 rounded-t-3xl relative flex flex-col items-center justify-start pt-6 gap-1 shadow-[0_-10px_30px_rgba(59,130,246,0.15)] group-hover:shadow-[0_-10px_40px_rgba(59,130,246,0.3)] group-hover:border-info/70 transition-all duration-500 overflow-hidden">
+                      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-info to-transparent"></div>
+                      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,rgba(59,130,246,0.05)_100%)] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      <span className="text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-info to-info/50 leading-none drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">#2</span>
+                      <span className="text-[10px] font-mono text-foreground font-bold mt-1 z-10">{podiumData[1]?.metric}</span>
+                      <span className="text-[8px] bg-info/20 text-info px-3 py-1 rounded-full font-mono uppercase font-black tracking-wider mt-2 border border-info/30 shadow-[0_0_10px_rgba(59,130,246,0.3)] z-10">
+                        PLATA
                       </span>
                     </div>
                   </div>
@@ -603,14 +610,16 @@ export default function Infografia() {
                     </div>
                     
                     {/* Pedestal Column */}
-                    <div className="w-full h-40 bg-gradient-to-t from-card/25 to-warning/15 border-2 border-warning/30 rounded-t-2xl relative flex flex-col items-center justify-center gap-1 shadow-2xl group-hover:border-warning/50 transition-all duration-300 p-4">
-                      <div className="absolute -top-3 bg-warning text-background font-mono font-black text-[8px] px-3 py-0.5 rounded-full uppercase tracking-wider border border-warning shadow-md">
-                        CAMPEÓN
+                    <div className="w-full h-48 bg-gradient-to-t from-background via-card to-warning/20 border-t-2 border-l border-r border-warning/50 rounded-t-[2.5rem] relative flex flex-col items-center justify-start pt-8 gap-1 shadow-[0_-15px_40px_rgba(245,158,11,0.25)] group-hover:shadow-[0_-15px_60px_rgba(245,158,11,0.4)] group-hover:border-warning/80 transition-all duration-500 overflow-hidden">
+                      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-warning to-transparent opacity-80"></div>
+                      <div className="absolute top-0 inset-x-0 h-32 bg-warning/10 blur-xl pointer-events-none"></div>
+                      <div className="absolute -top-4 bg-gradient-to-r from-warning to-yellow-300 text-yellow-950 font-mono font-black text-[9px] px-4 py-1 rounded-full uppercase tracking-widest border border-warning/50 shadow-[0_0_15px_rgba(245,158,11,0.6)] z-20 animate-bounce-slow">
+                        👑 CAMPEÓN
                       </div>
-                      <span className="text-4xl font-display font-black text-warning leading-none">#1</span>
-                      <span className="text-xs font-mono text-foreground font-black mt-1">{podiumData[0]?.metric}</span>
+                      <span className="text-5xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-warning to-warning/40 leading-none drop-shadow-[0_0_15px_rgba(245,158,11,0.8)] z-10 mt-2">#1</span>
+                      <span className="text-xs font-mono text-foreground font-black mt-2 z-10">{podiumData[0]?.metric}</span>
                       {podiumData[0]?.statVal && (
-                        <span className="text-[9px] text-emerald-400 font-mono font-bold">
+                        <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 mt-1 z-10">
                           {podiumData[0].statLabel}: {podiumData[0].statVal}
                         </span>
                       )}
@@ -645,11 +654,12 @@ export default function Infografia() {
                     </div>
                     
                     {/* Pedestal Column */}
-                    <div className="w-full h-20 bg-gradient-to-t from-card/25 to-primary/10 border border-primary/20 rounded-t-2xl relative flex flex-col items-center justify-center gap-1 shadow-lg group-hover:border-primary/40 transition-all duration-300 p-4">
-                      <span className="text-xl font-display font-black text-primary leading-none">#3</span>
-                      <span className="text-[10px] font-mono text-muted-foreground font-bold mt-1">{podiumData[2]?.metric}</span>
-                      <span className="text-[8px] bg-primary/15 text-primary px-2 py-0.5 rounded font-mono uppercase font-black tracking-wider mt-1.5">
-                        Bronce
+                    <div className="w-full h-24 bg-gradient-to-t from-background via-card to-primary/15 border-t-2 border-l border-r border-primary/40 rounded-t-3xl relative flex flex-col items-center justify-start pt-5 gap-1 shadow-[0_-10px_30px_rgba(var(--primary-rgb),0.15)] group-hover:shadow-[0_-10px_40px_rgba(var(--primary-rgb),0.3)] group-hover:border-primary/70 transition-all duration-500 overflow-hidden">
+                      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent"></div>
+                      <span className="text-2xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-primary to-primary/50 leading-none drop-shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]">#3</span>
+                      <span className="text-[10px] font-mono text-foreground font-bold mt-1 z-10">{podiumData[2]?.metric}</span>
+                      <span className="text-[8px] bg-primary/20 text-primary px-3 py-1 rounded-full font-mono uppercase font-black tracking-wider mt-2 border border-primary/30 shadow-[0_0_10px_rgba(var(--primary-rgb),0.3)] z-10">
+                        BRONCE
                       </span>
                     </div>
                   </div>
@@ -744,9 +754,11 @@ export default function Infografia() {
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                           {/* Ficha Visual del Club (Izquierda - FUT Shield Card) */}
                           <div className="lg:col-span-4 w-full flex justify-center">
-                            <div className="relative w-64 h-[23rem] bg-gradient-to-b from-primary/35 via-card to-background border-2 border-primary rounded-[2.5rem] p-5 shadow-2xl overflow-hidden hover:scale-[1.04] transition-all duration-300 flex flex-col justify-between group">
-                              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(232,0,29,0.15),transparent)] pointer-events-none"></div>
-                              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl pointer-events-none"></div>
+                            <div className={`relative w-64 h-[24rem] bg-gradient-to-b from-primary/35 via-card to-background border-2 border-primary rounded-[2.5rem] p-5 shadow-[0_20px_50px_rgba(var(--primary-rgb),0.25)] overflow-hidden hover:scale-[1.04] hover:-translate-y-2 transition-all duration-500 flex flex-col justify-between group`}>
+                              <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay pointer-events-none"></div>
+                              <div className="absolute -inset-[100%] bg-[conic-gradient(from_90deg_at_50%_50%,#00000000_50%,rgba(var(--primary-rgb),0.3)_100%)] animate-rotate-cw pointer-events-none mix-blend-color-dodge opacity-50 group-hover:opacity-100 transition-opacity duration-500"></div>
+                              <div className="absolute inset-0 border-[3px] border-primary/30 rounded-[2.5rem] pointer-events-none mix-blend-overlay z-20"></div>
+                              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(232,0,29,0.15),transparent)] pointer-events-none z-0"></div>
                               
                               <div className="flex justify-between items-start font-mono text-xs z-10">
                                 <div className="flex flex-col items-center">
@@ -878,7 +890,8 @@ export default function Infografia() {
                         )}
                         <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                           {filteredEqGoleadores.map((e, idx) => (
-                            <Link key={e.id} to={`/equipos/${e.id}`} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/30 hover:scale-[1.01] transition-all duration-300 cursor-pointer">
+                            <Link key={e.id} to={`/equipos/${e.id}`} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/60 hover:bg-primary/5 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.15)] transition-all duration-300 cursor-pointer relative overflow-hidden">
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
                               <div className="flex items-center gap-3">
                                 <span className="font-mono font-black text-primary text-sm">#{idx + 1}</span>
                                 {e.logo ? (
@@ -930,7 +943,8 @@ export default function Infografia() {
                         )}
                         <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                           {filteredEqPases.map((e, idx) => (
-                            <Link key={e.id} to={`/equipos/${e.id}`} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/30 hover:scale-[1.01] transition-all duration-300 cursor-pointer">
+                            <Link key={e.id} to={`/equipos/${e.id}`} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/60 hover:bg-primary/5 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.15)] transition-all duration-300 cursor-pointer relative overflow-hidden">
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
                               <div className="flex items-center gap-3">
                                 <span className="font-mono font-black text-primary text-sm">#{idx + 1}</span>
                                 {e.logo ? (
@@ -982,7 +996,8 @@ export default function Infografia() {
                         )}
                         <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                           {filteredEqDefensa.map((e, idx) => (
-                            <Link key={e.id} to={`/equipos/${e.id}`} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/30 hover:scale-[1.01] transition-all duration-300 cursor-pointer">
+                            <Link key={e.id} to={`/equipos/${e.id}`} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/60 hover:bg-primary/5 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.15)] transition-all duration-300 cursor-pointer relative overflow-hidden">
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
                               <div className="flex items-center gap-3">
                                 <span className="font-mono font-black text-primary text-sm">#{idx + 1}</span>
                                 {e.logo ? (
@@ -1348,12 +1363,15 @@ export default function Infografia() {
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                           {/* FUT Shield Card (Left) */}
                           <div className="lg:col-span-4 w-full flex justify-center">
-                            <div className={`relative w-64 h-[23rem] bg-gradient-to-b ${config.color} border-2 rounded-[2.5rem] p-5 shadow-2xl overflow-hidden hover:scale-[1.04] transition-all duration-300 flex flex-col justify-between group`}>
+                            <div className={`relative w-64 h-[24rem] bg-gradient-to-b ${config.color} border-2 rounded-[2.5rem] p-5 shadow-[0_20px_50px_rgba(245,158,11,0.25)] overflow-hidden hover:scale-[1.04] hover:-translate-y-2 transition-all duration-500 flex flex-col justify-between group`}>
+                              {/* Holographic overlay */}
+                              <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay pointer-events-none"></div>
+                              <div className="absolute -inset-[100%] bg-[conic-gradient(from_90deg_at_50%_50%,#00000000_50%,rgba(245,158,11,0.3)_100%)] animate-rotate-cw pointer-events-none mix-blend-color-dodge opacity-50 group-hover:opacity-100 transition-opacity duration-500"></div>
+                              <div className="absolute inset-0 border-[3px] border-amber-300/30 rounded-[2.5rem] pointer-events-none mix-blend-overlay z-20"></div>
                               <div 
-                                className="absolute inset-0 pointer-events-none"
-                                style={{ backgroundImage: `radial-gradient(ellipse at top, ${config.glow}, transparent)` }}
+                                className="absolute inset-0 pointer-events-none z-0"
+                                style={{ backgroundImage: `radial-gradient(circle at 50% 0%, ${config.glow}, transparent 70%)` }}
                               ></div>
-                              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
                               
                               <div className="flex justify-between items-start font-mono text-xs z-10">
                                 <div className="flex flex-col items-center">
@@ -1457,7 +1475,8 @@ export default function Infografia() {
                         )}
                         <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                           {filteredGoleadores.map((s, idx) => (
-                            <Link key={s.id} to={`/jugadores/${s.id}`} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/30 hover:scale-[1.01] transition-all cursor-pointer">
+                            <Link key={s.id} to={`/jugadores/${s.id}`} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/60 hover:bg-primary/5 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.15)] transition-all cursor-pointer relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
                               <div className="flex items-center gap-3">
                                 <span className="font-mono font-black text-primary text-sm">#{idx + 1}</span>
                                 {s.foto ? (
@@ -1508,7 +1527,8 @@ export default function Infografia() {
                         )}
                         <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                           {filteredAsistentes.map((a, idx) => (
-                            <Link key={a.id} to={`/jugadores/${a.id}`} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/30 hover:scale-[1.01] transition-all cursor-pointer">
+                            <Link key={a.id} to={`/jugadores/${a.id}`} className="flex items-center justify-between p-3 border border-border/40 rounded-xl bg-card/35 group hover:border-primary/60 hover:bg-primary/5 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.15)] transition-all cursor-pointer relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
                               <div className="flex items-center gap-3">
                                 <span className="font-mono font-black text-primary text-sm">#{idx + 1}</span>
                                 {a.foto ? (
@@ -1569,7 +1589,8 @@ export default function Infografia() {
                           )}
                           <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                             {filteredDelanteros.map((p, idx) => (
-                              <Link key={p.id} to={`/jugadores/${p.id}`} className="flex items-center justify-between gap-2 p-2.5 border border-border/40 rounded-xl bg-card/25 hover:border-primary/20 hover:scale-[1.01] transition-all cursor-pointer">
+                              <Link key={p.id} to={`/jugadores/${p.id}`} className="flex items-center justify-between gap-2 p-2.5 border border-border/40 rounded-xl bg-card/25 group hover:border-primary/60 hover:bg-primary/5 hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.15)] transition-all cursor-pointer relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
                                 <div className="flex items-center gap-3 min-w-0">
                                   <span className="font-mono font-black text-xs text-primary">#{idx + 1}</span>
                                   <div className="shrink-0">
@@ -1631,7 +1652,8 @@ export default function Infografia() {
                           )}
                           <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                             {filteredMedios.map((p, idx) => (
-                              <Link key={p.id} to={`/jugadores/${p.id}`} className="flex items-center justify-between gap-2 p-2.5 border border-border/40 rounded-xl bg-card/25 hover:border-primary/20 hover:scale-[1.01] transition-all cursor-pointer">
+                              <Link key={p.id} to={`/jugadores/${p.id}`} className="flex items-center justify-between gap-2 p-2.5 border border-border/40 rounded-xl bg-card/25 group hover:border-primary/60 hover:bg-primary/5 hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.15)] transition-all cursor-pointer relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
                                 <div className="flex items-center gap-3 min-w-0">
                                   <span className="font-mono font-black text-xs text-primary">#{idx + 1}</span>
                                   <div className="shrink-0">
@@ -1693,7 +1715,8 @@ export default function Infografia() {
                           )}
                           <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                             {filteredDefensas.map((p, idx) => (
-                              <Link key={p.id} to={`/jugadores/${p.id}`} className="flex items-center justify-between gap-2 p-2.5 border border-border/40 rounded-xl bg-card/25 hover:border-primary/20 hover:scale-[1.01] transition-all cursor-pointer">
+                              <Link key={p.id} to={`/jugadores/${p.id}`} className="flex items-center justify-between gap-2 p-2.5 border border-border/40 rounded-xl bg-card/25 group hover:border-primary/60 hover:bg-primary/5 hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.15)] transition-all cursor-pointer relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
                                 <div className="flex items-center gap-3 min-w-0">
                                   <span className="font-mono font-black text-xs text-primary">#{idx + 1}</span>
                                   <div className="shrink-0">
@@ -1755,7 +1778,8 @@ export default function Infografia() {
                           )}
                           <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar">
                             {filteredPorteros.map((p, idx) => (
-                              <Link key={p.id} to={`/jugadores/${p.id}`} className="flex items-center justify-between gap-2 p-2.5 border border-border/40 rounded-xl bg-card/25 hover:border-primary/20 hover:scale-[1.01] transition-all cursor-pointer">
+                              <Link key={p.id} to={`/jugadores/${p.id}`} className="flex items-center justify-between gap-2 p-2.5 border border-border/40 rounded-xl bg-card/25 group hover:border-primary/60 hover:bg-primary/5 hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.15)] transition-all cursor-pointer relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
                                 <div className="flex items-center gap-3 min-w-0">
                                   <span className="font-mono font-black text-xs text-primary">#{idx + 1}</span>
                                   <div className="shrink-0">

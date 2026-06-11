@@ -158,7 +158,7 @@ function StandingsTable({ standings, noResultsMsg }) {
                   <div className="flex items-center gap-2.5">
                     {s.logo ? (
                       <img 
-                        src={s.logo.startsWith('http') ? s.logo : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${s.logo}`} 
+                        src={s.logo.startsWith('http') ? s.logo : (typeof window.mediaUrl === 'function' ? window.mediaUrl(s.logo) : `${api.defaults.baseURL?.replace(/\/api$/, '') }${s.logo}`)} 
                         alt={s.nombre} 
                         className="w-8 h-8 rounded-lg object-cover border border-border/50 shadow-inner bg-card shrink-0"
                       />
@@ -644,9 +644,13 @@ function CompetenciaSection({ competencia, navigate }) {
   const fmtLabel = isPlayoff ? 'Playoffs' : isCopa ? 'Copa' : 'Liga';
 
   // Construct full logo URL
-  const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+  const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') ;
   const logoUrl = competencia.logo 
-    ? (competencia.logo.startsWith('http') ? competencia.logo : `${backendBaseUrl}${competencia.logo}`) 
+    ? (competencia.logo.startsWith('http') 
+        ? competencia.logo 
+        : (typeof window.mediaUrl === 'function' 
+            ? window.mediaUrl(competencia.logo) 
+            : `${backendBaseUrl}${competencia.logo}`)) 
     : '';
 
   return (
@@ -892,9 +896,13 @@ export default function Clasificacion() {
                     <FilterChip label="Todas" active={orgFiltro === null}
                       onClick={() => { setOrgFiltro(null); setCompFiltro(null); }} />
                     {organizaciones.map(org => {
-                      const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+                      const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') ;
                       const logoUrl = org.logo 
-                        ? (org.logo.startsWith('http') ? org.logo : `${backendBaseUrl}${org.logo}`) 
+                        ? (org.logo.startsWith('http') 
+                            ? org.logo 
+                            : (typeof window.mediaUrl === 'function' 
+                                ? window.mediaUrl(org.logo) 
+                                : `${backendBaseUrl}${org.logo}`)) 
                         : '';
                       return (
                         <FilterChip key={org.id} label={
@@ -923,9 +931,13 @@ export default function Clasificacion() {
                       const fmt     = (c.formato || 'liga').toLowerCase();
                       const fmtIcon = fmt === 'copa' ? '🥇' : fmt.includes('playoff') ? '🏆' : '🏟️';
                       
-                      const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+                      const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') ;
                       const logoUrl = c.logo 
-                        ? (c.logo.startsWith('http') ? c.logo : `${backendBaseUrl}${c.logo}`) 
+                        ? (c.logo.startsWith('http') 
+                            ? c.logo 
+                            : (typeof window.mediaUrl === 'function' 
+                                ? window.mediaUrl(c.logo) 
+                                : `${backendBaseUrl}${c.logo}`)) 
                         : '';
                       
                       return (

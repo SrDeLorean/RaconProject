@@ -15,6 +15,14 @@ class SolicitudFichaje extends Model
         'organizacion_id', 'temporada_id', 'equipo_id', 'equipo_origen_id', 'user_id', 'estado', 'dorsal', 'posicion', 'comprobante_pago', 'observaciones_admin'
     ];
 
+    protected $casts = [
+        'organizacion_id' => 'integer',
+        'temporada_id' => 'integer',
+        'equipo_id' => 'integer',
+        'equipo_origen_id' => 'integer',
+        'user_id' => 'integer',
+    ];
+
     public function organizacion()
     {
         return $this->belongsTo(Organizacion::class);

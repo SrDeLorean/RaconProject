@@ -54,7 +54,20 @@ export const useAuthStore = create(
           });
           return { success: true, email: response.data.email, message: response.data.message };
         } catch (error) {
-          const mensajeError = error.response?.data?.message || 'Error al crear la cuenta. Inténtalo de nuevo.';
+          let mensajeError = 'Error al crear la cuenta. Inténtalo de nuevo.';
+          if (error.response?.data) {
+            if (error.response.data.errors) {
+              const validationErrors = error.response.data.errors;
+              const firstKey = Object.keys(validationErrors)[0];
+              if (firstKey && Array.isArray(validationErrors[firstKey]) && validationErrors[firstKey].length > 0) {
+                mensajeError = validationErrors[firstKey][0];
+              } else {
+                mensajeError = error.response.data.message || mensajeError;
+              }
+            } else {
+              mensajeError = error.response.data.message || mensajeError;
+            }
+          }
           set({ authError: mensajeError, authLoading: false });
           return { success: false, error: mensajeError };
         }

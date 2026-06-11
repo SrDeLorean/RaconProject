@@ -335,7 +335,7 @@ export default function Usuarios() {
                                   <div className="absolute inset-0 border border-white/5 pointer-events-none rounded-lg"></div>
                                   {usuario.foto ? (
                                     <img 
-                                      src={usuario.foto.startsWith('http') ? usuario.foto : `http://localhost:8000${usuario.foto}`} 
+                                      src={usuario.foto.startsWith('http') ? usuario.foto : (typeof window.mediaUrl === 'function' ? window.mediaUrl(usuario.foto) : window.mediaUrl(usuario.foto))} 
                                       alt={usuario.name} 
                                       className="w-full h-full object-cover"
                                       onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; e.target.parentElement.innerHTML = `<div class="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-base shadow-inner uppercase">${usuario.name?.charAt(0)}</div>`; }}

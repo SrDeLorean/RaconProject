@@ -28,7 +28,7 @@ export default function OrganizacionesCRUD() {
       render: (row) => (
         <div className="flex items-center gap-3">
           {row.logo ? (
-            <img src={row.logo.startsWith('http') ? row.logo : `http://localhost:8000${row.logo}`} alt={row.nombre} className="w-10 h-10 rounded-xl object-cover border border-border/50" />
+            <img src={typeof window.mediaUrl === 'function' ? window.mediaUrl(row.logo) : `http://localhost:8000${row.logo}`} alt={row.nombre} className="w-10 h-10 rounded-xl object-cover border border-border/50" />
           ) : (
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary/10 to-destructive/10 border border-primary/20 flex items-center justify-center text-primary font-display font-black text-lg shrink-0 shadow-sm">
               {row.nombre ? row.nombre.charAt(0).toUpperCase() : 'O'}

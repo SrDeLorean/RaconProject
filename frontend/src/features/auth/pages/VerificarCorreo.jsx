@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '@/api/axios';
+import { useAuthStore } from '@/store/useAuthStore';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
@@ -24,6 +25,7 @@ export default function VerificarCorreo() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const tokenFromUrl = searchParams.get('token');
+  const emailFromUrl = searchParams.get('email') || '';
 
   const [tokenInput, setTokenInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,7 +33,7 @@ export default function VerificarCorreo() {
   const [message, setMessage] = useState('');
 
   // Reenvío de token
-  const [emailInput, setEmailInput] = useState('');
+  const [emailInput, setEmailInput] = useState(emailFromUrl);
   const [showResendForm, setShowResendForm] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMessage, setResendMessage] = useState('');
@@ -51,10 +53,30 @@ export default function VerificarCorreo() {
       const response = await api.post('/verify-email', { token });
       setStatus('success');
       setMessage(response.data.message || '¡Tu cuenta ha sido activada con éxito!');
-      // Redirigir al login después de unos segundos
+      
+      // Guardar sesión e iniciar sesión automáticamente
+      if (response.data.user && response.data.token) {
+        useAuthStore.setState({
+          user: response.data.user,
+          token: response.data.token,
+          isAuthenticated: true
+        });
+      }
+
       setTimeout(() => {
-        navigate('/login');
-      }, 3500);
+        if (response.data.user) {
+          const role = response.data.user.role || 'jugador';
+          if (role === 'administrador' || role === 'admin') {
+            navigate('/admin');
+          } else if (role === 'organizador') {
+            navigate('/organizador');
+          } else {
+            navigate('/jugador');
+          }
+        } else {
+          navigate('/login');
+        }
+      }, 2500);
     } catch (error) {
       setStatus('error');
       setMessage(error.response?.data?.message || 'El enlace de activación es inválido o ha expirado.');
@@ -74,9 +96,30 @@ export default function VerificarCorreo() {
       const response = await api.post('/verify-email', { token: tokenInput.trim() });
       setStatus('success');
       setMessage(response.data.message || '¡Tu cuenta ha sido activada con éxito!');
+      
+      // Guardar sesión e iniciar sesión automáticamente
+      if (response.data.user && response.data.token) {
+        useAuthStore.setState({
+          user: response.data.user,
+          token: response.data.token,
+          isAuthenticated: true
+        });
+      }
+
       setTimeout(() => {
-        navigate('/login');
-      }, 3000);
+        if (response.data.user) {
+          const role = response.data.user.role || 'jugador';
+          if (role === 'administrador' || role === 'admin') {
+            navigate('/admin');
+          } else if (role === 'organizador') {
+            navigate('/organizador');
+          } else {
+            navigate('/jugador');
+          }
+        } else {
+          navigate('/login');
+        }
+      }, 2500);
     } catch (error) {
       setStatus('error');
       setMessage(error.response?.data?.message || 'Código de activación incorrecto o expirado.');

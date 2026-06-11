@@ -49,7 +49,10 @@ export default function Equipos() {
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    return `http://localhost:8000${path}`;
+    if (typeof window.mediaUrl === 'function') {
+      return window.mediaUrl(path);
+    }
+    return window.mediaUrl(path);
   };
 
   const getPlatDetails = (plat) => {

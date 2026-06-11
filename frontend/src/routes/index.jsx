@@ -45,6 +45,7 @@ const Usuarios = lazy(() => import('@/features/public/pages/Usuarios'));
 const JugadoresUt = lazy(() => import('@/features/public/pages/JugadoresUt'));
 const InfografiaUt = lazy(() => import('@/features/public/pages/InfografiaUt'));
 const DatosUt = lazy(() => import('@/features/public/pages/DatosUt'));
+const Terms = lazy(() => import('@/features/public/pages/Terms'));
 
 
 import PageLoader from '@/components/ui/PageLoader';
@@ -88,6 +89,7 @@ export const router = createBrowserRouter([
       { path: '/datos-ut', element: <DatosUt /> },
       { path: '/contacto', element: <Contacto /> },
       { path: '/acerca-de', element: <AcercaDe /> },
+      { path: '/terminos', element: <Terms /> },
     ],
   },
   

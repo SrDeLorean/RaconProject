@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
-import bgLogin from '@/assets/images/bg-login.jpg';
+// Import bgLogin was removed
 import logoImg from '@/assets/images/logo.png';
 import api from '@/api/axios';
 
@@ -207,47 +207,56 @@ export default function Login() {
     }
   };
   return (
-    <div className="flex min-h-screen bg-background text-foreground font-sans overflow-hidden transition-colors duration-300">
+    <div className="relative flex min-h-screen bg-background text-foreground font-sans overflow-x-hidden transition-colors duration-300 items-center justify-center">
       
-      {/* Panel Izquierdo: Setup Gamer (Siempre Oscuro para estilo e-sports premium) */}
-      <div 
-        className="hidden lg:flex lg:w-1/2 relative bg-cover bg-center bg-[#07070a]" 
-        style={{ backgroundImage: `url(${bgLogin})` }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-t from-[#07070a] via-[#07070a]/80 to-[#07070a]/20"></div>
-        <div className="absolute inset-0 bg-primary/10 mix-blend-overlay"></div>
+      {/* Background Video Cinematográfico Full Screen */}
+      <div className="fixed inset-0 z-0 bg-[#07070a] overflow-hidden pointer-events-none">
+        <iframe 
+          className="w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh] absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-30 mix-blend-screen grayscale-[30%] pointer-events-none"
+          src="https://www.youtube.com/embed/XhP3Xh4LMA8?autoplay=1&mute=1&controls=0&loop=1&playlist=XhP3Xh4LMA8" 
+          title="EA FC Trailer" 
+          frameBorder="0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowFullScreen>
+        </iframe>
+        {/* Overlays para garantizar legibilidad */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/30 z-0"></div>
+        <div className="absolute inset-0 bg-primary/5 mix-blend-overlay z-0"></div>
         
-        <div className="relative z-10 flex flex-col justify-end p-12 h-full max-w-2xl text-white">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-[0_0_20px_hsla(var(--primary),0.5)]">
-            <img src={logoImg} alt="Torneos Pro FC" className="w-10 h-10 object-contain" />
+        {/* Glow ambient de fondo para acentuar el diseño de Esports */}
+        <div className="absolute top-1/4 right-1/4 w-[300px] sm:w-[450px] h-[300px] sm:h-[450px] bg-primary/20 rounded-full blur-[120px] pointer-events-none z-0"></div>
+        <div className="absolute bottom-1/4 left-1/4 w-[250px] sm:w-[350px] h-[250px] sm:h-[350px] bg-destructive/10 rounded-full blur-[100px] pointer-events-none z-0"></div>
+      </div>
+
+      {/* Main Container */}
+      <div className="relative z-10 w-full max-w-[1200px] mx-auto flex flex-col lg:flex-row items-center justify-center sm:justify-between px-4 sm:px-8 py-12 lg:py-0 min-h-screen gap-8 lg:gap-16">
+        
+        {/* Texto de Bienvenida (Oculto en móviles pequeños para dar prioridad al login) */}
+        <div className="hidden md:flex flex-col justify-center lg:w-1/2 text-center lg:text-left animate-fade-in-up mt-10 lg:mt-0">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-[0_0_30px_hsla(var(--primary),0.5)] mx-auto lg:mx-0 bg-card/40 backdrop-blur-md border border-primary/30">
+            <img src={logoImg} alt="Torneos Pro FC" className="w-12 h-12 object-contain" />
           </div>
-          <h1 className="text-5xl font-display font-extrabold uppercase tracking-tight mb-4 leading-none text-white">
-            Bienvenido de <br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-destructive">
+          <h1 className="text-4xl lg:text-6xl font-display font-extrabold uppercase tracking-tight mb-4 leading-none text-foreground drop-shadow-2xl">
+            Bienvenido de <br className="hidden lg:block"/>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-destructive drop-shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)]">
               Vuelta a la Arena
             </span>
           </h1>
-          <p className="text-base text-gray-300 font-medium max-w-lg leading-relaxed">
+          <p className="text-base lg:text-lg text-muted-foreground font-medium max-w-lg leading-relaxed drop-shadow-md mx-auto lg:mx-0 backdrop-blur-sm bg-card/20 p-4 rounded-xl border border-border/30">
             Accede al Centro de Mando de Torneos Pro FC. Verifica resultados, organiza nuevas jornadas y sigue escalando en el ranking mundial de FC26.
           </p>
         </div>
-      </div>
 
-      {/* Panel Derecho: Formulario Dinámico */}
-      <div className="w-full lg:w-1/2 flex items-start lg:items-center justify-center pt-24 pb-12 lg:py-8 px-4 sm:px-8 lg:px-12 relative overflow-y-auto h-screen custom-scrollbar">
-        {/* Glow ambient de fondo para acentuar el diseño de Esports */}
-        <div className="absolute top-1/4 right-1/4 w-[300px] sm:w-[450px] h-[300px] sm:h-[450px] bg-primary/10 rounded-full blur-[100px] sm:blur-[130px] pointer-events-none z-0"></div>
-        <div className="absolute bottom-1/4 left-1/4 w-[250px] sm:w-[350px] h-[250px] sm:h-[350px] bg-destructive/5 rounded-full blur-[80px] sm:blur-[110px] pointer-events-none z-0"></div>
-
-        <div className="w-full max-w-md relative z-10 my-auto">
+        {/* Panel Formulario Dinámico */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center max-w-md mx-auto relative mt-10 lg:mt-0 z-20">
           
           {/* Card HUD Contenedora con Glassmorphism y Brackets */}
-          <div className="relative bg-card/60 dark:bg-card/25 backdrop-blur-md border border-border/60 dark:border-border/30 rounded-2xl p-6 sm:p-8 shadow-xl dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] border-t-primary/20 border-l-primary/20 transition-all duration-300">
+          <div className="w-full relative bg-card/80 backdrop-blur-xl border border-border/60 rounded-2xl p-6 sm:p-8 shadow-[0_15px_50px_0_rgba(0,0,0,0.5)] border-t-primary/40 border-l-primary/40 transition-all duration-300">
             {/* Brackets tácticos cibernéticos */}
-            <div className="absolute top-0 left-0 w-3.5 h-3.5 border-t-2 border-l-2 border-primary/40 dark:border-primary/50 rounded-tl-md pointer-events-none"></div>
-            <div className="absolute top-0 right-0 w-3.5 h-3.5 border-t-2 border-r-2 border-primary/40 dark:border-primary/50 rounded-tr-md pointer-events-none"></div>
-            <div className="absolute bottom-0 left-0 w-3.5 h-3.5 border-b-2 border-l-2 border-primary/40 dark:border-primary/50 rounded-bl-md pointer-events-none"></div>
-            <div className="absolute bottom-0 right-0 w-3.5 h-3.5 border-b-2 border-r-2 border-primary/40 dark:border-primary/50 rounded-br-md pointer-events-none"></div>
+            <div className="absolute top-0 left-0 w-3.5 h-3.5 border-t-2 border-l-2 border-primary/50 rounded-tl-md pointer-events-none"></div>
+            <div className="absolute top-0 right-0 w-3.5 h-3.5 border-t-2 border-r-2 border-primary/50 rounded-tr-md pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 w-3.5 h-3.5 border-b-2 border-l-2 border-primary/50 rounded-bl-md pointer-events-none"></div>
+            <div className="absolute bottom-0 right-0 w-3.5 h-3.5 border-b-2 border-r-2 border-primary/50 rounded-br-md pointer-events-none"></div>
 
             {/* ========================================================================= */}
             {/* VISTA 1: INICIAR SESIÓN                                                   */}

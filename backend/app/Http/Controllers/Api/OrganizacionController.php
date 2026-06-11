@@ -87,7 +87,31 @@ class OrganizacionController extends Controller
      */
     public function update(OrganizacionRequest $request, Organizacion $organizacion): JsonResponse
     {
-        $organizacion->update($request->validated());
+        $validated = $request->validated();
+        
+        // Delete old logo if updated
+        if (array_key_exists('logo', $validated) && $validated['logo'] !== $organizacion->logo) {
+            $oldLogo = $organizacion->logo;
+            if ($oldLogo && str_contains($oldLogo, 'uploads/') && !str_starts_with($oldLogo, 'http')) {
+                $fullPath = public_path(ltrim($oldLogo, '/'));
+                if (file_exists($fullPath) && is_file($fullPath)) {
+                    @unlink($fullPath);
+                }
+            }
+        }
+        
+        // Delete old banner if updated
+        if (array_key_exists('banner', $validated) && $validated['banner'] !== $organizacion->banner) {
+            $oldBanner = $organizacion->banner;
+            if ($oldBanner && str_contains($oldBanner, 'uploads/') && !str_starts_with($oldBanner, 'http')) {
+                $fullPath = public_path(ltrim($oldBanner, '/'));
+                if (file_exists($fullPath) && is_file($fullPath)) {
+                    @unlink($fullPath);
+                }
+            }
+        }
+
+        $organizacion->update($validated);
 
         return response()->json(new OrganizacionResource($organizacion));
     }

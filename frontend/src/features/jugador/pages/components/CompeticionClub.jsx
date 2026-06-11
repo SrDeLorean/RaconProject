@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import Card from '@/components/shared/Card';
 
 export default function CompeticionClub({ competencias = [], onInscribir }) {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ export default function CompeticionClub({ competencias = [], onInscribir }) {
             {inscritas.map((comp) => {
               const badgeVariant = comp.estado_inscripcion === 'pendiente' ? 'warning' : 'success';
               return (
-                <div key={comp.id} className="p-5 border border-border/40 bg-card/25 rounded-2xl flex flex-col justify-between gap-4 shadow-md hover:border-primary/20 transition-all">
+                <Card key={comp.id} className="flex flex-col justify-between gap-4" padding="p-5" withGlow={true} hoverLift={true}>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Badge variant={badgeVariant} className="uppercase text-[8px] font-black tracking-widest px-2 py-0.5">
@@ -66,7 +67,7 @@ export default function CompeticionClub({ competencias = [], onInscribir }) {
                       Ver Ficha de Liga
                     </Button>
                   </div>
-                </div>
+                </Card>
               );
             })}
           </div>
@@ -100,7 +101,7 @@ export default function CompeticionClub({ competencias = [], onInscribir }) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {disponibles.map((comp) => (
-              <div key={comp.id} className="p-5 border border-border/40 bg-card/25 rounded-2xl flex flex-col justify-between gap-4 shadow-md hover:border-primary/20 transition-all">
+              <Card key={comp.id} className="flex flex-col justify-between gap-4" padding="p-5" withGlow={true} hoverLift={true}>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Badge variant="brand" className="uppercase text-[8px] font-black tracking-widest px-2 py-0.5">Inscripciones Abiertas</Badge>
@@ -135,7 +136,7 @@ export default function CompeticionClub({ competencias = [], onInscribir }) {
                     {yaInscrito ? 'Ocupado' : 'Inscribir'}
                   </Button>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}

@@ -17,11 +17,39 @@ class PartidoController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Partido::with([
+        $query = Partido::select([
+            'id',
+            'competencia_id',
+            'equipo_local_id',
+            'equipo_visitante_id',
+            'jornada',
+            'grupo',
+            'fecha',
+            'hora',
+            'goles_local',
+            'goles_visitante'
+        ])->with([
             'local:id,nombre,logo,abreviatura,club_id_ea',
             'visitante:id,nombre,logo,abreviatura,club_id_ea',
             'competencia.temporada.organizacion:id,nombre,logo',
         ]);
+
+        // Guard limit to prevent memory exhausted / timeout errors if no filters are applied
+        $hasFilters = $request->filled('fecha') ||
+                      $request->filled('status') ||
+                      $request->filled('competencia_id') ||
+                      $request->filled('organizacion_id') ||
+                      $request->filled('equipo_id') ||
+                      $request->filled('search') ||
+                      $request->boolean('for_organizer') ||
+                      $request->has('page') ||
+                      $request->boolean('paginate') ||
+                      $request->boolean('paginate_by_time') ||
+                      $request->get('paginate') === 'time';
+
+        if (!$hasFilters) {
+            $query->limit(500);
+        }
 
         $user = auth('sanctum')->user();
         if ($request->boolean('for_organizer') && $user) {

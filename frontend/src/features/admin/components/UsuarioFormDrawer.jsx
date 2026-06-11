@@ -3,6 +3,7 @@ import Drawer from '@/components/ui/Drawer';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import ImageUploader from '@/components/ui/ImageUploader';
 
 export default function UsuarioFormDrawer({ 
   isOpen, 
@@ -42,6 +43,15 @@ export default function UsuarioFormDrawer({
       }
     >
       <form className="flex flex-col gap-5 pt-2" onSubmit={(e) => e.preventDefault()}>
+        <div className="mb-2">
+          <ImageUploader 
+            label="Foto de Perfil / Avatar" 
+            value={formData.foto || ''} 
+            onChange={(url) => setFormData({ ...formData, foto: url })}
+            folder="usuarios"
+          />
+        </div>
+
         <Input 
           label="Nombre Completo / Organización *" 
           placeholder="Ej. Clan Alpha o Juan Pérez" 

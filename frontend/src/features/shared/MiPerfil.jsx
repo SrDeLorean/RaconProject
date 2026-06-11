@@ -136,7 +136,7 @@ export default function MiPerfil() {
       
       const cleanPrefix = (url) => {
         if (!url) return '';
-        const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+        const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') || 'http://localhost:8000';
         let cleaned = url;
         if (cleaned.startsWith(backendBaseUrl)) {
           cleaned = cleaned.substring(backendBaseUrl.length);
@@ -354,7 +354,7 @@ export default function MiPerfil() {
             <div className="w-full h-full bg-card rounded-xl flex items-center justify-center text-4xl md:text-5xl font-display font-black text-foreground overflow-hidden">
               {formData.foto ? (
                 <img 
-                  src={formData.foto.startsWith('http') ? formData.foto : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${formData.foto}`} 
+                  src={formData.foto.startsWith('http') ? formData.foto : `${api.defaults.baseURL?.replace(/\/api$/, '') || 'http://localhost:8000'}${formData.foto}`} 
                   alt="Avatar" 
                   className="w-full h-full object-cover"
                 />
@@ -587,16 +587,10 @@ export default function MiPerfil() {
                     Estadísticas & Ficha de Jugador
                   </h3>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div>
                       <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-technical text-muted-foreground">GamerTAG (EA Nickname)</span>
-                        <div className="group relative cursor-pointer text-primary hover:text-destructive transition-colors text-xs font-bold bg-primary/10 w-4.5 h-4.5 rounded-full flex items-center justify-center">
-                          ℹ️
-                          <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 text-[10px] leading-relaxed bg-card border border-border text-foreground rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50">
-                            Tu GamerTAG registrado. Si necesitas modificarlo, por favor contacta con la administración de la liga.
-                          </span>
-                        </div>
+                        <span className="text-technical text-muted-foreground font-bold uppercase tracking-wider">GamerTAG (EA Nickname)</span>
                       </div>
                       <Input 
                         value={formData.gamertag} 
@@ -605,7 +599,22 @@ export default function MiPerfil() {
                         className="!gap-0 opacity-70 font-semibold"
                       />
                       <p className="text-[10px] text-muted-foreground mt-1 italic pl-1">
-                        * No modificable. Contacta a soporte para actualizaciones.
+                        * No modificable.
+                      </p>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-technical text-muted-foreground font-bold uppercase tracking-wider">EA ID / IDEA</span>
+                      </div>
+                      <Input 
+                        value={formData.id_ea} 
+                        disabled
+                        icon={<span>🎮</span>}
+                        className="!gap-0 opacity-70 font-semibold"
+                      />
+                      <p className="text-[10px] text-muted-foreground mt-1 italic pl-1">
+                        * No modificable.
                       </p>
                     </div>
                     

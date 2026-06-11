@@ -2,10 +2,11 @@ import React from 'react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import ImageUploader from '@/components/ui/ImageUploader';
+import Card from '@/components/shared/Card';
 
 export default function OficinaClub({ formData, setFormData, formErrors, isSaving, onSave }) {
   return (
-    <div className="max-w-2xl border border-border/50 bg-background rounded-xl p-6 shadow-sm">
+    <Card className="max-w-2xl" padding="p-6" withGlow={true}>
       <h3 className="text-sm font-bold text-foreground uppercase tracking-wide border-b border-border/40 pb-3 mb-5">
         Identidad e Información del Club
       </h3>
@@ -80,11 +81,11 @@ export default function OficinaClub({ formData, setFormData, formErrors, isSavin
         </div>
 
         <div className="flex justify-end pt-2">
-          <Button type="submit" isLoading={isSaving} className="bg-primary text-primary-foreground font-bold px-6 text-xs h-10 shadow-sm">
+          <Button type="submit" isLoading={isSaving} className="bg-primary text-primary-foreground font-bold px-6 text-xs h-10 shadow-[0_0_15px_hsla(var(--primary),0.3)]">
             Actualizar Perfil Corporativo
           </Button>
         </div>
       </form>
-    </div>
+    </Card>
   );
 }

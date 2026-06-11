@@ -112,8 +112,8 @@ export default function DashboardLayout({ menuItems = [], profile }) {
                   flex items-center rounded-xl font-bold transition-all duration-300 group relative
                   ${isSidebarOpen ? 'gap-4 px-4 py-3 mx-4' : 'justify-center p-3.5 mb-2 mx-3'}
                   ${isActive 
-                    ? 'bg-primary/10 text-primary border-primary' 
-                    : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground hover:translate-x-1'
+                    ? 'bg-gradient-to-r from-primary/20 to-transparent text-primary border-primary shadow-[inset_0_0_20px_hsla(var(--primary),0.1)]' 
+                    : 'text-muted-foreground hover:bg-white/5 hover:text-foreground hover:translate-x-1 border-transparent'
                   }
                   ${isSidebarOpen && isActive ? 'border-l-4' : ''}
                 `}
@@ -163,7 +163,7 @@ export default function DashboardLayout({ menuItems = [], profile }) {
         {/* ========================================================================= */}
         {/* TOPBAR (HEADER SUPERIOR)                                                  */}
         {/* ========================================================================= */}
-        <header className="h-20 bg-background/60 backdrop-blur-xl border-b border-border/50 sticky top-0 z-30 px-6 flex items-center justify-between shrink-0">
+        <header className="h-20 bg-card/40 backdrop-blur-3xl border-b border-white/5 sticky top-0 z-30 px-6 flex items-center justify-between shrink-0 shadow-[0_8px_30px_rgb(0,0,0,0.05)]">
           
           {/* LADO IZQUIERDO: Hamburguesa + Título */}
           <div className="flex items-center gap-4">
@@ -244,7 +244,7 @@ export default function DashboardLayout({ menuItems = [], profile }) {
 
               {/* DROPDOWN MENU */}
               {isUserDropdownOpen && (
-                <div className="absolute right-0 mt-3 w-56 bg-card border border-border/50 shadow-lg rounded-xl py-2 animate-fade-in z-50">
+                <div className="absolute right-0 mt-3 w-56 bg-card/80 backdrop-blur-2xl border border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-2xl py-2 animate-slide-down z-50">
                   <div className="px-4 py-3 border-b border-border/50 xs:hidden mb-2">
                     <p className="text-sm font-bold text-foreground truncate">{displayName}</p>
                     <p className="text-xs text-muted-foreground truncate">{displayEmail}</p>

@@ -7,6 +7,7 @@ import Badge from '@/components/ui/Badge';
 import Alert from '@/components/shared/Alert';
 import DataTable from '@/components/ui/DataTable';
 import CrudHeader from '@/components/shared/CrudHeader';
+import Card from '@/components/shared/Card';
 import api from '@/api/axios';
 import Modal from '@/components/ui/Modal';
 
@@ -305,7 +306,7 @@ export default function PartidosReportesClub({ equipo, roster }) {
     {
       header: 'Partido / Encuentro',
       render: (row) => {
-        const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+        const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') || 'http://localhost:8000';
         return (
           <div className="flex items-center gap-2">
             {row.local?.logo ? (
@@ -440,7 +441,7 @@ export default function PartidosReportesClub({ equipo, roster }) {
       />
 
       {/* SECCIÓN DE FILTROS ADICIONALES (TEMPORADA Y COMPETENCIA) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border border-border/50 bg-card/25 backdrop-blur-md p-4 rounded-xl shadow-sm">
+      <Card padding="p-5" className="grid grid-cols-1 sm:grid-cols-2 gap-6" withGlow={true}>
         <div className="space-y-1.5">
           <label className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block">📅 Filtrar por Temporada</label>
           <select
@@ -450,7 +451,7 @@ export default function PartidosReportesClub({ equipo, roster }) {
               setSelectedCompetencia('todos'); // Resetear competencia
               setCurrentPage(1);
             }}
-            className="w-full h-10 px-3 text-xs bg-muted/30 border border-border/60 rounded-lg text-foreground focus:ring-1 focus:ring-primary focus:outline-none cursor-pointer font-bold"
+            className="w-full h-10 px-3 text-xs bg-background border border-border/60 rounded-lg text-foreground focus:ring-1 focus:ring-primary focus:outline-none cursor-pointer font-bold"
           >
             <option value="todos">Todas las Temporadas</option>
             {temporadasDisponibles.map(t => (
@@ -467,7 +468,7 @@ export default function PartidosReportesClub({ equipo, roster }) {
               setSelectedCompetencia(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full h-10 px-3 text-xs bg-muted/30 border border-border/60 rounded-lg text-foreground focus:ring-1 focus:ring-primary focus:outline-none cursor-pointer font-bold"
+            className="w-full h-10 px-3 text-xs bg-background border border-border/60 rounded-lg text-foreground focus:ring-1 focus:ring-primary focus:outline-none cursor-pointer font-bold"
           >
             <option value="todos">Todas las Competencias</option>
             {competenciasFiltradas.map(c => (
@@ -475,7 +476,7 @@ export default function PartidosReportesClub({ equipo, roster }) {
             ))}
           </select>
         </div>
-      </div>
+      </Card>
 
       <div className="relative">
         <DataTable 

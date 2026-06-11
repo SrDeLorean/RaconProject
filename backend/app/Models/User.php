@@ -116,4 +116,14 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\Plantilla::class, 'id', 'id_usuario');
     }
 
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function historial_fichajes()
+    {
+        return $this->hasMany(\App\Models\SolicitudFichaje::class, 'user_id')
+                    ->whereIn('estado', ['aprobado', 'rechazado'])
+                    ->orderBy('updated_at', 'desc');
+    }
+
 }

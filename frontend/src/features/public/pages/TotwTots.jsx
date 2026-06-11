@@ -241,7 +241,7 @@ export default function TotwTots() {
         ctx.stroke();
         ctx.fillStyle = '#ffffff';
         ctx.font = '900 8px sans-serif';
-        ctx.fillText('SXS', 323, 588);
+        ctx.fillText('FC', 323, 588);
       }
 
       // 9. Export PNG
@@ -400,8 +400,11 @@ export default function TotwTots() {
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
+    if (typeof window.mediaUrl === 'function') {
+      return window.mediaUrl(path);
+    }
     const baseApi = api.defaults.baseURL || 'http://localhost:8000/api';
-    const backendBaseUrl = baseApi.replace(/\/api$/, '') || 'http://localhost:8000';
+    const backendBaseUrl = baseApi.replace(/\/api$/, '') ;
     return `${backendBaseUrl}${path}`;
   };
 
@@ -528,7 +531,7 @@ export default function TotwTots() {
               }`}></div>
 
               <div className="flex justify-between items-center border-b border-white/10 pb-2">
-                <span className="text-[9px] font-mono tracking-widest text-muted-foreground uppercase">TELEMETRÍA SXS</span>
+                <span className="text-[9px] font-mono tracking-widest text-muted-foreground uppercase">TELEMETRÍA PRO</span>
                 <span className={`text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
                   isTOTS ? 'bg-cyan-500/10 text-cyan-400' : 'bg-amber-500/10 text-amber-400'
                 }`}>
@@ -733,7 +736,8 @@ export default function TotwTots() {
                             onClick={() => {
                               setSelectedGalleryPlayer(p);
                             }}
-                            className={`cursor-pointer transition-all duration-300 hover:scale-[1.02] bg-transparent transform w-full max-w-[150px] sm:max-w-[195px] mx-auto${translationClass}`}
+                            className={`cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:-translate-y-2 bg-transparent transform w-full max-w-[150px] sm:max-w-[195px] mx-auto${translationClass} animate-fade-in`}
+                            style={{ animationFillMode: 'both', animationDelay: `${idx * 80}ms` }}
                           >
                             <PlayerCard 
                               player={{

@@ -575,9 +575,13 @@ function CompetenciaSection({ competencia, navigate }) {
   const fmtIcon  = isPlayoff ? '🏆' : isCopa ? '🥇' : '🏟️';
   const fmtLabel = isPlayoff ? 'Playoffs' : isCopa ? 'Copa' : 'Liga';
 
-  const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+  const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') ;
   const logoUrl = competencia.logo 
-    ? (competencia.logo.startsWith('http') ? competencia.logo : `${backendBaseUrl}${competencia.logo}`) 
+    ? (competencia.logo.startsWith('http') 
+        ? competencia.logo 
+        : (typeof window.mediaUrl === 'function' 
+            ? window.mediaUrl(competencia.logo) 
+            : `${backendBaseUrl}${competencia.logo}`)) 
     : '';
 
   return (
@@ -797,9 +801,13 @@ export default function ClasificacionUt() {
                     <FilterChip label="Todas" active={orgFiltro === null}
                       onClick={() => { setOrgFiltro(null); setCompFiltro(null); }} />
                     {organizaciones.map(org => {
-                      const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+                      const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') ;
                       const logoUrl = org.logo 
-                        ? (org.logo.startsWith('http') ? org.logo : `${backendBaseUrl}${org.logo}`) 
+                        ? (org.logo.startsWith('http') 
+                            ? org.logo 
+                            : (typeof window.mediaUrl === 'function' 
+                                ? window.mediaUrl(org.logo) 
+                                : `${backendBaseUrl}${org.logo}`)) 
                         : '';
                       return (
                         <FilterChip key={org.id} label={
@@ -827,9 +835,13 @@ export default function ClasificacionUt() {
                       const fmt     = (c.formato || 'liga').toLowerCase();
                       const fmtIcon = fmt === 'copa' ? '🥇' : fmt.includes('playoff') ? '🏆' : '🏟️';
                       
-                      const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+                      const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') ;
                       const logoUrl = c.logo 
-                        ? (c.logo.startsWith('http') ? c.logo : `${backendBaseUrl}${c.logo}`) 
+                        ? (c.logo.startsWith('http') 
+                            ? c.logo 
+                            : (typeof window.mediaUrl === 'function' 
+                                ? window.mediaUrl(c.logo) 
+                                : `${backendBaseUrl}${c.logo}`)) 
                         : '';
                       
                       return (

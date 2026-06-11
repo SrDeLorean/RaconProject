@@ -96,7 +96,10 @@ export default function DatosUt() {
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    return `http://localhost:8000${path}`;
+    if (typeof window.mediaUrl === 'function') {
+      return window.mediaUrl(path);
+    }
+    return window.mediaUrl(path);
   };
 
   const playersList = useMemo(() => {
@@ -106,9 +109,13 @@ export default function DatosUt() {
 
   return (
     <div className="relative min-h-screen bg-background pb-16 overflow-hidden text-foreground">
-      {/* Glow ambient background */}
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 blur-[140px] rounded-full pointer-events-none z-0"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-destructive/5 blur-[120px] rounded-full pointer-events-none z-0"></div>
+      {/* Glow ambient background & Scanlines */}
+      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay pointer-events-none z-10"></div>
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(var(--primary-rgb),0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(var(--primary-rgb),0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none z-0"></div>
+      <div className="absolute inset-0 scanlines opacity-10 pointer-events-none z-10"></div>
+      
+      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 blur-[150px] rounded-full pointer-events-none z-0 mix-blend-screen animate-pulse-slow"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-destructive/10 blur-[120px] rounded-full pointer-events-none z-0 mix-blend-screen animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
 
       {/* ========================================================================= */}
       {/* 1. HERO CENTRAL (Cinemático y Táctico)                                    */}
@@ -145,9 +152,10 @@ export default function DatosUt() {
               📊 Centro de Telemetría Táctica
             </Badge>
 
-            <h1 className="text-4xl sm:text-8xl md:text-9xl font-display font-black text-foreground uppercase tracking-[0.01em] leading-[0.82] drop-shadow-2xl z-10 mt-2 select-none">
+            <h1 className="text-4xl sm:text-8xl md:text-9xl font-display font-black text-foreground uppercase tracking-[0.01em] leading-[0.82] drop-shadow-2xl z-10 mt-2 select-none relative group">
+              <span className="absolute -inset-4 bg-primary/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></span>
               CENTRO DE <br />
-              <span className="text-primary tracking-tight font-black shimmer-text">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary/80 to-foreground tracking-tight font-black shimmer-text text-glow-primary inline-block">
                 DATOS UT.
               </span>
             </h1>
@@ -288,7 +296,6 @@ export default function DatosUt() {
             {/* Si es Resumen: Mostrar KPIs y Gráficos Colectivos */}
             {activeSubPage === 'resumen' && (
               <div className="space-y-12 animate-fade-in">
-                {/* KPI Cards Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {[
                     { label: 'Partidos en Base', val: stats.total_partidos || 0, desc: 'Partidos disputados registrados.', icon: '⚽' },
@@ -296,13 +303,28 @@ export default function DatosUt() {
                     { label: 'Ratio de Anotación', val: `${stats.promedio_goles || 0} G/P`, desc: 'Promedio de goles por partido.', icon: '📈' },
                     { label: 'Win Rate Local', val: `${stats.porcentaje_local || 0}%`, desc: 'Porcentaje de victorias de local.', icon: '🏠' }
                   ].map((kpi, idx) => (
-                    <div key={idx} className="glass-card-aaa p-5 rounded-2xl text-left border border-border/40 flex items-center justify-between group">
-                      <div className="space-y-1">
-                        <span className="text-[8px] font-mono font-black text-muted-foreground uppercase tracking-widest block">{kpi.label}</span>
-                        <strong className="text-2xl font-display font-black text-foreground block tracking-wide">{kpi.val}</strong>
-                        <span className="text-[10px] text-muted-foreground leading-none block">{kpi.desc}</span>
+                    <div key={idx} className="relative p-6 rounded-2xl text-left bg-card/25 backdrop-blur-xl border border-border/40 flex flex-col justify-between group overflow-hidden hover:border-primary/50 hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.15)] transition-all duration-500 min-h-[140px]">
+                      {/* Tech corners */}
+                      <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-primary/60 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-primary/60 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-primary/60 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-primary/60 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+
+                      <div className="flex justify-between items-start z-10 relative">
+                        <span className="text-[9px] font-mono font-black text-muted-foreground uppercase tracking-widest bg-background/50 px-2 py-1 rounded-md border border-border/30">{kpi.label}</span>
+                        <span className="text-2xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.1)] group-hover:scale-125 group-hover:rotate-6 transition-all duration-300">{kpi.icon}</span>
                       </div>
-                      <span className="text-3xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.1)] group-hover:scale-110 transition-transform duration-300">{kpi.icon}</span>
+                      <div className="space-y-1 mt-4 z-10 relative">
+                        <strong className="text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-foreground to-foreground/70 block tracking-wide group-hover:text-glow-primary transition-all duration-300">{kpi.val}</strong>
+                        <div className="flex items-center gap-2">
+                          <div className="h-1 w-8 bg-primary/20 rounded-full overflow-hidden">
+                            <div className="h-full bg-primary w-full -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-out"></div>
+                          </div>
+                          <span className="text-[10px] text-muted-foreground leading-none font-mono">{kpi.desc}</span>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>

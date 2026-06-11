@@ -321,7 +321,7 @@ export default function Jugadores() {
                                   <div className="absolute inset-0 border border-white/5 pointer-events-none rounded-lg"></div>
                                   {jugador.foto ? (
                                     <img 
-                                      src={jugador.foto.startsWith('http') ? jugador.foto : `http://localhost:8000${jugador.foto}`} 
+                                      src={jugador.foto.startsWith('http') ? jugador.foto : (typeof window.mediaUrl === 'function' ? window.mediaUrl(jugador.foto) : window.mediaUrl(jugador.foto))} 
                                       alt={jugador.name} 
                                       className="w-full h-full object-cover"
                                       onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; e.target.parentElement.innerHTML = `<div class="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-base shadow-inner uppercase">${jugador.name?.charAt(0)}</div>`; }}

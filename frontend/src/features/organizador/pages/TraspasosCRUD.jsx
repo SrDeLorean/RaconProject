@@ -312,6 +312,36 @@ export default function TraspasosCRUD() {
               </p>
             </div>
 
+            {/* Historial Reciente de Fichajes del Jugador */}
+            {selectedTraspaso.jugador?.historial_fichajes && selectedTraspaso.jugador.historial_fichajes.length > 0 && (
+              <div className="border border-border/40 bg-card/50 p-4 rounded-xl space-y-3">
+                <span className="text-[10px] font-bold text-foreground uppercase tracking-widest block font-mono border-b border-border/20 pb-2">
+                  📜 Últimos {selectedTraspaso.jugador.historial_fichajes.length} Movimientos del Jugador
+                </span>
+                <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
+                  {selectedTraspaso.jugador.historial_fichajes.map((hist, idx) => {
+                    const isBaja = !hist.equipo && hist.equipoOrigen;
+                    return (
+                      <div key={idx} className="bg-background/80 border border-border/30 rounded-lg p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px]">
+                        <div className="flex flex-col">
+                          <span className="font-bold uppercase text-foreground">
+                            {isBaja ? hist.equipoOrigen?.nombre : hist.equipo?.nombre || 'Desconocido'}
+                          </span>
+                          <span className={`font-semibold ${isBaja ? 'text-destructive' : 'text-emerald-500'}`}>
+                            {isBaja ? 'Baja (Desvinculación)' : 'Alta (Fichaje)'}
+                          </span>
+                        </div>
+                        <div className="flex flex-col sm:items-end text-[9px] font-mono text-muted-foreground">
+                          <span>Org: {hist.organizacion?.nombre || 'General'}</span>
+                          <span>{new Date(hist.updated_at || hist.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Input para notas de rechazo */}
             {decisionType === 'rechazar' && (
               <div className="space-y-1.5">

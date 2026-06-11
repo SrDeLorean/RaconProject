@@ -63,6 +63,9 @@ export default function ComparadorAnalitico({ playersList }) {
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
+    if (typeof window.mediaUrl === 'function') {
+      return window.mediaUrl(path);
+    }
     return `http://localhost:8000${path}`;
   };
 
@@ -271,17 +274,22 @@ export default function ComparadorAnalitico({ playersList }) {
   }, [playerA, playerB]);
 
   return (
-    <div className="border border-border/40 bg-card/15 backdrop-blur-xl rounded-3xl p-6 md:p-8 space-y-6 max-w-5xl mx-auto shadow-2xl relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+    <div className="border border-border/40 bg-card/15 backdrop-blur-xl rounded-3xl p-6 md:p-8 space-y-6 max-w-5xl mx-auto shadow-2xl relative overflow-hidden group">
+      {/* Dynamic Versus Background */}
+      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-rose-500/5 pointer-events-none opacity-50 group-hover:opacity-100 transition-opacity duration-700"></div>
+      <div className="absolute top-0 left-0 w-[40%] h-full bg-gradient-to-r from-blue-500/10 to-transparent blur-3xl pointer-events-none -translate-x-1/2"></div>
+      <div className="absolute top-0 right-0 w-[40%] h-full bg-gradient-to-l from-rose-500/10 to-transparent blur-3xl pointer-events-none translate-x-1/2"></div>
       
-      <div className="border-b border-border/40 pb-4">
-        <Badge className="text-primary bg-primary/10 border border-primary/25 text-[10px] uppercase font-condensed tracking-widest px-3 py-1">
-          ⚡ COMPARADOR BIOMÉTRICO
+      <div className="border-b border-border/40 pb-4 relative z-10 text-center">
+        <Badge className="text-foreground bg-background/50 border border-border/50 text-[10px] uppercase font-condensed tracking-widest px-3 py-1 backdrop-blur-md">
+          ⚔️ FIGHTER SELECT
         </Badge>
-        <h2 className="text-2xl md:text-3xl font-display font-black uppercase text-foreground mt-1">
-          COMPARADOR ANALÍTICO DE <span className="text-primary">COMPETIDORES</span>
+        <h2 className="text-3xl md:text-5xl font-display font-black uppercase text-foreground mt-3 tracking-tighter drop-shadow-lg">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">JUGADOR A</span>
+          <span className="mx-4 text-muted-foreground/30 font-light text-2xl italic">VS</span>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-rose-600">JUGADOR B</span>
         </h2>
-        <p className="text-[11px] text-muted-foreground font-light">Selecciona dos jugadores de la base de datos para comparar sus estadísticas agregadas frente a frente.</p>
+        <p className="text-[11px] text-muted-foreground font-light mt-2 uppercase tracking-widest">ENFRENTAMIENTO BIOMÉTRICO DIRECTO</p>
       </div>
 
       {/* Selector de Jugadores */}
@@ -343,50 +351,70 @@ export default function ComparadorAnalitico({ playersList }) {
 
       {/* Visual Comparisons */}
       {playerA && playerB ? (
-        <div className="space-y-8 pt-2">
-          {/* Compare Info Header */}
-          <div className="grid grid-cols-2 gap-4 text-center font-mono py-4 border-b border-border/20">
-            {/* Player A Header */}
-            <div className="border-r border-border/20 p-2 flex flex-col items-center gap-2">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase">Tú / Jugador A</span>
+        <div className="space-y-10 pt-4 relative z-10">
+          {/* Compare Info Header - Fighter Select Style */}
+          <div className="flex justify-between items-center text-center font-mono py-6 relative">
+            
+            {/* VS Badge in the exact center */}
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center animate-pulse">
+              <span className="text-4xl md:text-6xl font-display font-black italic bg-clip-text text-transparent bg-gradient-to-b from-white to-white/20 filter drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
+                VS
+              </span>
+            </div>
+
+            {/* Player A Header (Blue Corner) */}
+            <div className="w-[45%] flex flex-col items-center gap-3 relative group/p1">
+              <div className="absolute inset-0 bg-blue-500/5 blur-2xl rounded-full scale-150 opacity-0 group-hover/p1:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+              <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/30">
+                P1 (AZUL)
+              </span>
               
-              {playerA.foto ? (
-                <img 
-                  src={getImageUrl(playerA.foto)} 
-                  alt="" 
-                  className="w-16 h-16 rounded-full object-cover border border-primary/40 shadow-[0_0_15px_rgba(239,68,68,0.15)] bg-card" 
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-display font-black text-lg text-foreground uppercase">
-                  {playerA.name?.charAt(0)}
-                </div>
-              )}
+              <div className="relative">
+                <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full animate-pulse-slow"></div>
+                {playerA.foto ? (
+                  <img 
+                    src={getImageUrl(playerA.foto)} 
+                    alt="" 
+                    className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-[3px] border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.4)] bg-card relative z-10 group-hover/p1:scale-105 transition-transform duration-300" 
+                  />
+                ) : (
+                  <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-blue-950/50 border-[3px] border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.4)] flex items-center justify-center font-display font-black text-4xl text-blue-400 uppercase relative z-10 group-hover/p1:scale-105 transition-transform duration-300">
+                    {playerA.name?.charAt(0)}
+                  </div>
+                )}
+              </div>
               
-              <div>
-                <strong className="text-sm sm:text-xl font-display font-black text-primary uppercase block mt-1">{playerA.name}</strong>
-                <span className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">{playerA.equipo_nombre} • {playerA.posicion?.toUpperCase()}</span>
+              <div className="relative z-10 mt-2">
+                <strong className="text-xl md:text-3xl font-display font-black text-white uppercase block leading-none drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]">{playerA.name}</strong>
+                <span className="text-[10px] md:text-xs text-blue-300 font-bold uppercase tracking-widest mt-1 block">{playerA.equipo_nombre} • {playerA.posicion?.toUpperCase()}</span>
               </div>
             </div>
 
-            {/* Player B Header */}
-            <div className="p-2 flex flex-col items-center gap-2">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase">Rival / Jugador B</span>
+            {/* Player B Header (Red Corner) */}
+            <div className="w-[45%] flex flex-col items-center gap-3 relative group/p2">
+              <div className="absolute inset-0 bg-rose-500/5 blur-2xl rounded-full scale-150 opacity-0 group-hover/p2:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+              <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/30">
+                P2 (ROJO)
+              </span>
               
-              {playerB.foto ? (
-                <img 
-                  src={getImageUrl(playerB.foto)} 
-                  alt="" 
-                  className="w-16 h-16 rounded-full object-cover border border-foreground/45 shadow-[0_0_15px_rgba(255,255,255,0.1)] bg-card" 
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-full bg-foreground/10 border border-foreground/20 flex items-center justify-center font-display font-black text-lg text-foreground uppercase">
-                  {playerB.name?.charAt(0)}
-                </div>
-              )}
+              <div className="relative">
+                <div className="absolute inset-0 bg-rose-500/20 blur-xl rounded-full animate-pulse-slow"></div>
+                {playerB.foto ? (
+                  <img 
+                    src={getImageUrl(playerB.foto)} 
+                    alt="" 
+                    className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-[3px] border-rose-500 shadow-[0_0_30px_rgba(244,63,94,0.4)] bg-card relative z-10 group-hover/p2:scale-105 transition-transform duration-300" 
+                  />
+                ) : (
+                  <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-rose-950/50 border-[3px] border-rose-500 shadow-[0_0_30px_rgba(244,63,94,0.4)] flex items-center justify-center font-display font-black text-4xl text-rose-400 uppercase relative z-10 group-hover/p2:scale-105 transition-transform duration-300">
+                    {playerB.name?.charAt(0)}
+                  </div>
+                )}
+              </div>
               
-              <div>
-                <strong className="text-sm sm:text-xl font-display font-black text-foreground uppercase block mt-1">{playerB.name}</strong>
-                <span className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">{playerB.equipo_nombre} • {playerB.posicion?.toUpperCase()}</span>
+              <div className="relative z-10 mt-2">
+                <strong className="text-xl md:text-3xl font-display font-black text-white uppercase block leading-none drop-shadow-[0_0_10px_rgba(244,63,94,0.8)]">{playerB.name}</strong>
+                <span className="text-[10px] md:text-xs text-rose-300 font-bold uppercase tracking-widest mt-1 block">{playerB.equipo_nombre} • {playerB.posicion?.toUpperCase()}</span>
               </div>
             </div>
           </div>
@@ -412,45 +440,57 @@ export default function ComparadorAnalitico({ playersList }) {
                           {stat.label}
                         </span>
 
-                        {/* Desktop Layout (Horizontal bars) */}
-                        <div className="hidden sm:flex items-center justify-between gap-6 font-mono">
-                          {/* Left bar (Player A) */}
-                          <div className="w-1/2 flex items-center justify-end gap-3 text-right">
-                            <span className="text-xs font-black text-primary leading-none shrink-0">{stat.format(stat.valA)}</span>
-                            <div className="w-full h-2 bg-muted/40 rounded-full overflow-hidden border border-border/10 flex justify-end">
+                        {/* Desktop Layout (Horizontal bars facing each other) */}
+                        <div className="hidden sm:flex items-center justify-between gap-4 font-mono w-full">
+                          {/* Left bar (Player A - Blue) */}
+                          <div className="w-[45%] flex items-center justify-end gap-3 text-right">
+                            <span className="text-sm font-black text-blue-400 leading-none shrink-0 w-16 drop-shadow-[0_0_5px_rgba(59,130,246,0.5)]">{stat.format(stat.valA)}</span>
+                            <div className="w-full h-3 bg-blue-950/30 rounded-full overflow-hidden border border-blue-500/20 flex justify-end shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] relative">
+                              {/* Highlight effect */}
+                              <div className="absolute top-0 right-0 h-full w-4 bg-white/30 mix-blend-overlay skew-x-[-20deg] pointer-events-none z-10 blur-[1px]"></div>
                               <div 
-                                className="h-full bg-primary rounded-full transition-all duration-500"
+                                className="h-full bg-gradient-to-l from-blue-400 to-blue-600 rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(59,130,246,0.5)] relative overflow-hidden"
                                 style={{ width: `${pctA}%` }}
-                              />
+                              >
+                                <div className="absolute inset-0 bg-[url('/noise.png')] opacity-30 mix-blend-overlay"></div>
+                              </div>
                             </div>
                           </div>
 
-                          {/* Center divider */}
-                          <div className="text-muted-foreground/30 font-bold text-xs select-none">VS</div>
+                          {/* Center divider icon */}
+                          <div className="text-muted-foreground/30 font-black text-[10px] w-[10%] flex justify-center items-center select-none tracking-widest italic">
+                            <div className="w-1 h-1 bg-border/50 rounded-full mx-1"></div>
+                            VS
+                            <div className="w-1 h-1 bg-border/50 rounded-full mx-1"></div>
+                          </div>
 
-                          {/* Right bar (Player B) */}
-                          <div className="w-1/2 flex items-center justify-start gap-3 text-left">
-                            <div className="w-full h-2 bg-muted/40 rounded-full overflow-hidden border border-border/10">
+                          {/* Right bar (Player B - Red) */}
+                          <div className="w-[45%] flex items-center justify-start gap-3 text-left">
+                            <div className="w-full h-3 bg-rose-950/30 rounded-full overflow-hidden border border-rose-500/20 flex justify-start shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] relative">
+                              {/* Highlight effect */}
+                              <div className="absolute top-0 left-0 h-full w-4 bg-white/30 mix-blend-overlay skew-x-[-20deg] pointer-events-none z-10 blur-[1px]"></div>
                               <div 
-                                className="h-full bg-foreground rounded-full transition-all duration-500"
+                                className="h-full bg-gradient-to-r from-rose-400 to-rose-600 rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(244,63,94,0.5)] relative overflow-hidden"
                                 style={{ width: `${pctB}%` }}
-                              />
+                              >
+                                <div className="absolute inset-0 bg-[url('/noise.png')] opacity-30 mix-blend-overlay"></div>
+                              </div>
                             </div>
-                            <span className="text-xs font-black text-foreground leading-none shrink-0">{stat.format(stat.valB)}</span>
+                            <span className="text-sm font-black text-rose-400 leading-none shrink-0 w-16 drop-shadow-[0_0_5px_rgba(244,63,94,0.5)]">{stat.format(stat.valB)}</span>
                           </div>
                         </div>
 
                         {/* Mobile Layout (Stacked vertical bars) */}
-                        <div className="block sm:hidden space-y-2.5 font-mono text-xs">
+                        <div className="block sm:hidden space-y-3 font-mono text-xs w-full">
                           {/* Player A Bar */}
                           <div className="space-y-1">
                             <div className="flex justify-between items-center text-[10px]">
-                              <span className="text-primary font-bold uppercase truncate max-w-[120px]">{playerA.name}</span>
-                              <strong className="text-primary font-black">{stat.format(stat.valA)}</strong>
+                              <span className="text-blue-400 font-bold uppercase truncate max-w-[120px]">{playerA.name}</span>
+                              <strong className="text-blue-400 font-black drop-shadow-[0_0_5px_rgba(59,130,246,0.5)]">{stat.format(stat.valA)}</strong>
                             </div>
-                            <div className="w-full h-2 bg-muted/40 rounded-full overflow-hidden border border-border/10">
+                            <div className="w-full h-3 bg-blue-950/30 rounded-full overflow-hidden border border-blue-500/20 flex justify-start relative">
                               <div 
-                                className="h-full bg-primary rounded-full transition-all duration-500"
+                                className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(59,130,246,0.5)]"
                                 style={{ width: `${pctA}%` }}
                               />
                             </div>
@@ -459,12 +499,12 @@ export default function ComparadorAnalitico({ playersList }) {
                           {/* Player B Bar */}
                           <div className="space-y-1">
                             <div className="flex justify-between items-center text-[10px]">
-                              <span className="text-foreground font-bold uppercase truncate max-w-[120px]">{playerB.name}</span>
-                              <strong className="text-foreground font-black">{stat.format(stat.valB)}</strong>
+                              <span className="text-rose-400 font-bold uppercase truncate max-w-[120px]">{playerB.name}</span>
+                              <strong className="text-rose-400 font-black drop-shadow-[0_0_5px_rgba(244,63,94,0.5)]">{stat.format(stat.valB)}</strong>
                             </div>
-                            <div className="w-full h-2 bg-muted/40 rounded-full overflow-hidden border border-border/10">
+                            <div className="w-full h-3 bg-rose-950/30 rounded-full overflow-hidden border border-rose-500/20 flex justify-start relative">
                               <div 
-                                className="h-full bg-foreground rounded-full transition-all duration-500"
+                                className="h-full bg-gradient-to-r from-rose-600 to-rose-400 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(244,63,94,0.5)]"
                                 style={{ width: `${pctB}%` }}
                               />
                             </div>

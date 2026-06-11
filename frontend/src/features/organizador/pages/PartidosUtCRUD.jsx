@@ -350,12 +350,13 @@ export default function PartidosUtCRUD() {
     {
       header: 'Partido UT / Encuentro',
       render: (row) => {
-        const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+        const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') || 'http://localhost:8000';
+        const getUrl = (path) => typeof window.mediaUrl === 'function' ? window.mediaUrl(path) : `${backendBaseUrl}${path}`;
         return (
           <div className="flex items-center gap-2">
             {row.local?.logo ? (
               <img 
-                src={row.local.logo.startsWith('http') ? row.local.logo : `${backendBaseUrl}${row.local.logo}`} 
+                src={row.local.logo.startsWith('http') ? row.local.logo : getUrl(row.local.logo)} 
                 alt="" 
                 className="w-6 h-6 rounded object-cover border border-border/40 bg-card shrink-0" 
               />
@@ -369,7 +370,7 @@ export default function PartidosUtCRUD() {
             <span className="font-bold text-foreground text-xs uppercase truncate max-w-[120px]">{row.visitante?.nombre || 'TBD'}</span>
             {row.visitante?.logo ? (
               <img 
-                src={row.visitante.logo.startsWith('http') ? row.visitante.logo : `${backendBaseUrl}${row.visitante.logo}`} 
+                src={row.visitante.logo.startsWith('http') ? row.visitante.logo : getUrl(row.visitante.logo)} 
                 alt="" 
                 className="w-6 h-6 rounded object-cover border border-border/40 bg-card shrink-0" 
               />

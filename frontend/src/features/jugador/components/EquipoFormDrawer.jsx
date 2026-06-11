@@ -66,7 +66,7 @@ export default function EquipoFormDrawer({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input 
               label="Nombre del Equipo *" 
-              placeholder="Ej. Successors" 
+              placeholder="Ej. Deportivo Pro" 
               value={formData.nombre} 
               onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} 
               disabled={isSaving} 
@@ -75,7 +75,7 @@ export default function EquipoFormDrawer({
             />
             <Input 
               label="Abreviatura (Tag) *" 
-              placeholder="Ej. SUCC" 
+              placeholder="Ej. DEP" 
               maxLength={10}
               value={formData.abreviatura} 
               onChange={(e) => setFormData({ ...formData, abreviatura: e.target.value })} 
@@ -128,7 +128,7 @@ export default function EquipoFormDrawer({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input 
               label="Usuario de Twitter / X" 
-              placeholder="Ej. @successors_fc" 
+              placeholder="Ej. @deportivo_fc" 
               value={formData.twitter} 
               onChange={(e) => setFormData({ ...formData, twitter: e.target.value })} 
               disabled={isSaving} 

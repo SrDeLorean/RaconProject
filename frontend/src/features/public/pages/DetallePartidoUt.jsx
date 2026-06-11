@@ -56,7 +56,10 @@ export default function DetallePartidoUt() {
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    const backendBaseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000';
+    if (typeof window.mediaUrl === 'function') {
+      return window.mediaUrl(path);
+    }
+    const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') ;
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
     return `${backendBaseUrl}${cleanPath}`;
   };

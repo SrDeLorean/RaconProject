@@ -692,7 +692,7 @@ export default function TacticVisualizer3D({ players = [], activeTab = 'totw', c
           ctx.stroke();
           ctx.fillStyle = '#ffffff';
           ctx.font = '900 8px sans-serif';
-          ctx.fillText('SXS', 323, 588);
+          ctx.fillText('FC', 323, 588);
         }
 
         texture.needsUpdate = true;
@@ -993,10 +993,10 @@ export default function TacticVisualizer3D({ players = [], activeTab = 'totw', c
       return '/images/users/default-user.png';
     }
     const apiBaseUrl = api.defaults.baseURL || 'http://localhost:8000/api';
-    const backendBaseUrl = apiBaseUrl.replace(/\/api$/, '') || 'http://localhost:8000';
+    const backendBaseUrl = apiBaseUrl.replace(/\/api$/, '') ;
     let relativePath = path;
     if (path.startsWith('http')) {
-      if (path.startsWith('http://localhost:8000') || path.startsWith('http://127.0.0.1:8000')) {
+      if (path.startsWith('') || path.startsWith('http://127.0.0.1:8000')) {
         relativePath = path.replace(/^http:\/\/(localhost|127\.0\.0\.1):8000/, '');
       } else if (path.startsWith(backendBaseUrl)) {
         relativePath = path.substring(backendBaseUrl.length);
@@ -1130,7 +1130,7 @@ export default function TacticVisualizer3D({ players = [], activeTab = 'totw', c
                     </span>
                   </div>
                   <div className="bg-amber-500/10 border border-amber-500/25 px-3 py-1 rounded-full text-[9px] text-amber-400 font-mono font-black uppercase tracking-wider">
-                    SXS Elite
+                    PRO Elite
                   </div>
                 </div>
 
