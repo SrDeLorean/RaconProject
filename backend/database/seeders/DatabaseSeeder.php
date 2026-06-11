@@ -321,5 +321,6 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->call(RealDataSeeder::class);
+        $this->call(UtDatabaseSeeder::class);
     }
 }

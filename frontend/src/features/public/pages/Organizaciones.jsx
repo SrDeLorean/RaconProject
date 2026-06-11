@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '@/api/axios';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -11,13 +11,16 @@ export default function Organizaciones() {
   const [competencias, setCompetencias] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tipoParam = searchParams.get('tipo') || 'todas';
 
   // Load organizations and competitions in parallel from backend
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
         const [orgsRes, compsRes] = await Promise.all([
-          api.get('/organizaciones'),
+          api.get('/organizaciones', { params: { tipo: tipoParam, per_page: 100 } }),
           api.get('/competencias').catch(() => ({ data: [] }))
         ]);
         
@@ -33,7 +36,7 @@ export default function Organizaciones() {
       }
     };
     fetchData();
-  }, []);
+  }, [tipoParam]);
 
   // Map dynamic organization and competition logos for the infinite scrolling ticker
   const tickerLogos = useMemo(() => {
@@ -58,20 +61,44 @@ export default function Organizaciones() {
       // 2. Add competition logos from active season
       const activeSeason = org.temporadas?.find(t => t.activa) || org.temporadas?.[0];
       if (activeSeason) {
-        activeSeason.competencias?.forEach(comp => {
-          if (comp.logo) {
-            const compLogoUrl = comp.logo.startsWith('http') 
-              ? comp.logo 
-              : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${comp.logo}`;
-            
-            if (!items.some(item => item.logo === compLogoUrl)) {
-              items.push({
-                nombre: comp.nombre,
-                logo: compLogoUrl
-              });
+        const isTodas = tipoParam === 'todas';
+        const is11v11 = tipoParam === '11v11';
+        const isUt = tipoParam === 'ut' || tipoParam === 'UT';
+
+        if (isTodas || is11v11) {
+          activeSeason.competencias?.forEach(comp => {
+            if (comp.logo) {
+              const compLogoUrl = comp.logo.startsWith('http') 
+                ? comp.logo 
+                : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${comp.logo}`;
+              
+              if (!items.some(item => item.logo === compLogoUrl)) {
+                items.push({
+                  nombre: comp.nombre,
+                  logo: compLogoUrl
+                });
+              }
             }
-          }
-        });
+          });
+        }
+
+        if (isTodas || isUt) {
+          const compsUt = activeSeason.competenciasUt || activeSeason.competencias_ut || [];
+          compsUt.forEach(comp => {
+            if (comp.logo) {
+              const compLogoUrl = comp.logo.startsWith('http') 
+                ? comp.logo 
+                : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${comp.logo}`;
+              
+              if (!items.some(item => item.logo === compLogoUrl)) {
+                items.push({
+                  nombre: comp.nombre,
+                  logo: compLogoUrl
+                });
+              }
+            }
+          });
+        }
       }
     });
 
@@ -86,7 +113,7 @@ export default function Organizaciones() {
       ];
     }
     return items;
-  }, [organizaciones]);
+  }, [organizaciones, tipoParam]);
 
   // Map database organizations and augment with premium eSports stats & banners
   const mappedLeagues = useMemo(() => {
@@ -96,13 +123,30 @@ export default function Organizaciones() {
       let totalMatches = 0;
 
       org.temporadas?.forEach(temp => {
-        temp.competencias?.forEach(comp => {
-          totalDivisions++;
-          comp.equipos?.forEach(eq => {
-            uniqueClubs.add(eq.id);
+        const isTodas = tipoParam === 'todas';
+        const is11v11 = tipoParam === '11v11';
+        const isUt = tipoParam === 'ut' || tipoParam === 'UT';
+
+        if (isTodas || is11v11) {
+          temp.competencias?.forEach(comp => {
+            totalDivisions++;
+            comp.equipos?.forEach(eq => {
+              uniqueClubs.add(eq.id);
+            });
+            totalMatches += comp.partidos?.length || 0;
           });
-          totalMatches += comp.partidos?.length || 0;
-        });
+        }
+
+        if (isTodas || isUt) {
+          const compsUt = temp.competenciasUt || temp.competencias_ut || [];
+          compsUt.forEach(comp => {
+            totalDivisions++;
+            comp.equipos?.forEach(eq => {
+              uniqueClubs.add(eq.id);
+            });
+            totalMatches += comp.partidos?.length || 0;
+          });
+        }
       });
       
       return {
@@ -124,7 +168,7 @@ export default function Organizaciones() {
             : 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=600&auto=format&fit=crop')
       };
     });
-  }, [organizaciones]);
+  }, [organizaciones, tipoParam]);
 
   // Calculate total stats for the top stats bar
   const totalStats = useMemo(() => {
@@ -141,11 +185,26 @@ export default function Organizaciones() {
     // Accumulate total unique clubs across all organizations in DB
     organizaciones.forEach(org => {
       org.temporadas?.forEach(temp => {
-        temp.competencias?.forEach(comp => {
-          comp.equipos?.forEach(eq => {
-            totalClubs.add(eq.id);
+        const isTodas = tipoParam === 'todas';
+        const is11v11 = tipoParam === '11v11';
+        const isUt = tipoParam === 'ut' || tipoParam === 'UT';
+
+        if (isTodas || is11v11) {
+          temp.competencias?.forEach(comp => {
+            comp.equipos?.forEach(eq => {
+              totalClubs.add(eq.id);
+            });
           });
-        });
+        }
+
+        if (isTodas || isUt) {
+          const compsUt = temp.competenciasUt || temp.competencias_ut || [];
+          compsUt.forEach(comp => {
+            comp.equipos?.forEach(eq => {
+              totalClubs.add(eq.id);
+            });
+          });
+        }
       });
     });
 
@@ -155,7 +214,7 @@ export default function Organizaciones() {
       clubes: totalClubs.size,
       jugadores: totalClubs.size * 12
     };
-  }, [mappedLeagues, organizaciones]);
+  }, [mappedLeagues, organizaciones, tipoParam]);
 
   const scrollToDirectory = () => {
     const el = document.getElementById('directory-center');
@@ -327,10 +386,47 @@ export default function Organizaciones() {
               ÍNDICE DE LIGAS <span className="bg-clip-text bg-gradient-to-r from-primary to-foreground text-transparent shimmer-text">COMPETITIVAS.</span>
             </h2>
           </div>
-          <div className="bg-primary/5 border border-primary/20 rounded-xl px-4.5 py-2 shrink-0">
-            <span className="text-[10px] font-condensed tracking-widest font-black text-primary uppercase">
-              🏆 {mappedLeagues.length} ORGANIZACIONES ACTIVAS
-            </span>
+          
+          {/* Tabs Premium de Filtrado por Tipo */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex bg-muted/40 p-0.5 rounded-xl border border-border/40 gap-0.5 select-none shrink-0">
+              <button
+                onClick={() => setSearchParams({ tipo: 'todas' })}
+                className={`px-3.5 py-2 rounded-lg text-[10px] font-condensed tracking-wider uppercase whitespace-nowrap transition-all duration-300 relative cursor-pointer font-black ${
+                  tipoParam === 'todas'
+                    ? 'text-white bg-gradient-to-r from-primary to-destructive shadow-[0_0_12px_rgba(232,0,29,0.3)]'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                }`}
+              >
+                🌐 Todas
+              </button>
+              <button
+                onClick={() => setSearchParams({ tipo: '11v11' })}
+                className={`px-3.5 py-2 rounded-lg text-[10px] font-condensed tracking-wider uppercase whitespace-nowrap transition-all duration-300 relative cursor-pointer font-black ${
+                  tipoParam === '11v11'
+                    ? 'text-white bg-gradient-to-r from-primary to-destructive shadow-[0_0_12px_rgba(232,0,29,0.3)]'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                }`}
+              >
+                🛡️ 11v11
+              </button>
+              <button
+                onClick={() => setSearchParams({ tipo: 'ut' })}
+                className={`px-3.5 py-2 rounded-lg text-[10px] font-condensed tracking-wider uppercase whitespace-nowrap transition-all duration-300 relative cursor-pointer font-black ${
+                  tipoParam === 'ut' || tipoParam === 'UT'
+                    ? 'text-white bg-gradient-to-r from-blue-600 to-indigo-600 shadow-[0_0_12px_rgba(59,130,246,0.3)]'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                }`}
+              >
+                🎮 UT 1v1/2v2
+              </button>
+            </div>
+
+            <div className="bg-primary/5 border border-primary/20 rounded-xl px-4.5 py-2 shrink-0">
+              <span className="text-[10px] font-condensed tracking-widest font-black text-primary uppercase">
+                🏆 {mappedLeagues.length} {tipoParam === 'ut' || tipoParam === 'UT' ? 'UT' : tipoParam === '11v11' ? '11v11' : 'ACTIVAS'}
+              </span>
+            </div>
           </div>
         </div>
 

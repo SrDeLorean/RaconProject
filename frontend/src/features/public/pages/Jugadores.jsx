@@ -51,6 +51,7 @@ export default function Jugadores() {
     fetchJugadores();
   }, [currentPage, debouncedSearch, posicion]);
 
+
   const getPosClass = (groupKey) => {
     switch(groupKey) {
       case 'GK': return 'pos-gk';
@@ -204,7 +205,7 @@ export default function Jugadores() {
       <div className="relative z-20 max-w-7xl mx-auto px-6 lg:px-10 space-y-12">
 
         {/* Panel de Filtros y Buscador Premium */}
-        <div className="filter-panel max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="filter-panel max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Buscador */}
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block font-mono">

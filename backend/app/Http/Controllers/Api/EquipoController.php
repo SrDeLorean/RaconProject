@@ -49,7 +49,10 @@ class EquipoController extends Controller
         $equipo = Equipo::where('id_capitan', auth()->id())->first();
 
         if (!$equipo) {
-            return response()->json(['message' => 'No tienes club registrado.'], 404);
+            return response()->json([
+                'message' => 'No tienes club registrado.',
+                'data' => null
+            ], 200);
         }
 
         // Obtener todas las organizaciones disponibles
@@ -105,6 +108,67 @@ class EquipoController extends Controller
             ];
         });
 
+        // Obtener todos los partidos en los que participa este equipo
+        $partidos = \App\Models\Partido::with([
+            'local:id,nombre,logo,abreviatura',
+            'visitante:id,nombre,logo,abreviatura',
+            'competencia:id,nombre'
+        ])
+        ->where('equipo_local_id', $equipo->id)
+        ->orWhere('equipo_visitante_id', $equipo->id)
+        ->orderBy('fecha', 'desc')
+        ->orderBy('hora', 'desc')
+        ->get();
+
+        // Calcular Estadísticas de partidos finalizados o con goles reportados
+        $stats = [
+            'jugados' => 0,
+            'victorias' => 0,
+            'empates' => 0,
+            'derrotas' => 0,
+            'goles_favor' => 0,
+            'goles_contra' => 0,
+        ];
+
+        foreach ($partidos as $partido) {
+            $hasResult = $partido->goles_local !== null && $partido->goles_visitante !== null;
+            if ($partido->estado === 'finalizado' || $hasResult) {
+                $stats['jugados']++;
+                $isLocal = $partido->equipo_local_id === $equipo->id;
+                $golesFavor = $isLocal ? (int)$partido->goles_local : (int)$partido->goles_visitante;
+                $golesContra = $isLocal ? (int)$partido->goles_visitante : (int)$partido->goles_local;
+                
+                $stats['goles_favor'] += $golesFavor;
+                $stats['goles_contra'] += $golesContra;
+
+                if ($golesFavor > $golesContra) {
+                    $stats['victorias']++;
+                } elseif ($golesFavor < $golesContra) {
+                    $stats['derrotas']++;
+                } else {
+                    $stats['empates']++;
+                }
+            }
+        }
+
+        // Obtener el próximo partido programado
+        $proximoPartido = \App\Models\Partido::with([
+            'local:id,nombre,logo,abreviatura',
+            'visitante:id,nombre,logo,abreviatura',
+            'competencia:id,nombre'
+        ])
+        ->where(function($q) use ($equipo) {
+            $q->where('equipo_local_id', $equipo->id)
+              ->orWhere('equipo_visitante_id', $equipo->id);
+        })
+        ->where(function($q) {
+            $q->whereNull('goles_local')
+              ->whereNull('goles_visitante');
+        })
+        ->orderBy('fecha', 'asc')
+        ->orderBy('hora', 'asc')
+        ->first();
+
         return response()->json([
             'id' => $equipo->id,
             'nombre' => $equipo->nombre,
@@ -120,6 +184,29 @@ class EquipoController extends Controller
             'competencias' => $competencias,
             'organizaciones' => $organizaciones,
             'organizacion_activa_id' => (int)$organizacionId,
+            'estadisticas' => $stats,
+            'proximo_partido' => $proximoPartido ? [
+                'id' => $proximoPartido->id,
+                'fecha' => $proximoPartido->fecha,
+                'hora' => $proximoPartido->hora,
+                'estado' => $proximoPartido->estado,
+                'competencia' => $proximoPartido->competencia ? [
+                    'id' => $proximoPartido->competencia->id,
+                    'nombre' => $proximoPartido->competencia->nombre,
+                ] : null,
+                'local' => [
+                    'id' => $proximoPartido->local->id,
+                    'nombre' => $proximoPartido->local->nombre,
+                    'logo' => $proximoPartido->local->logo,
+                    'abreviatura' => $proximoPartido->local->abreviatura,
+                ],
+                'visitante' => [
+                    'id' => $proximoPartido->visitante->id,
+                    'nombre' => $proximoPartido->visitante->nombre,
+                    'logo' => $proximoPartido->visitante->logo,
+                    'abreviatura' => $proximoPartido->visitante->abreviatura,
+                ]
+            ] : null,
         ], 200);
     }
 
@@ -137,7 +224,12 @@ class EquipoController extends Controller
         // 3. Generamos el slug a partir del nombre (Ej: "Team SoloMid" -> "team-solomid")
         $datos['slug'] = Str::slug($datos['nombre']);
 
-        // 4. Guardamos en la base de datos
+        // 4. Evitamos que 'logo' sea null para que se use el valor default
+        if (empty($datos['logo'])) {
+            $datos['logo'] = 'default.png';
+        }
+
+        // 5. Guardamos en la base de datos
         $equipo = Equipo::create($datos);
 
         return response()->json($equipo, 201);
@@ -464,7 +556,12 @@ class EquipoController extends Controller
      */
     public function update(EquipoRequest $request, Equipo $equipo): JsonResponse
     {
-        $equipo->update($request->validated());
+        $datos = $request->validated();
+        if (empty($datos['logo'])) {
+            $datos['logo'] = 'default.png';
+        }
+
+        $equipo->update($datos);
         Cache::forget('equipo_show_' . $equipo->id);
 
         return response()->json(new EquipoResource($equipo));

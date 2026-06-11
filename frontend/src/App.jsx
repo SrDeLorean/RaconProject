@@ -3,7 +3,6 @@ import { RouterProvider } from 'react-router-dom';
 import { router } from '@/routes';
 import PageLoader from '@/components/ui/PageLoader';
 
-
 function App() {
   return (
     // Suspense atrapa la carga de los componentes React.lazy()

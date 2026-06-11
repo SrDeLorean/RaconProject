@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import logoImg from '@/assets/images/logo.png';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -55,6 +55,58 @@ export default function PublicLayout() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // 5. ESTADO DEL FORMATO (11v11 vs UT)
+  const [formatMode, setFormatMode] = useState(() => {
+    return localStorage.getItem('formatMode') || '11v11';
+  });
+
+  // EFECTO: Sincroniza el formato según la ruta activa
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/ut' || path.endsWith('-ut') || path.includes('/partidos-ut') || path.includes('/clasificacion-ut') || path.includes('/jugadores-ut')) {
+      setFormatMode('UT');
+      localStorage.setItem('formatMode', 'UT');
+    } else if (
+      path === '/11v11' ||
+      path === '/clasificacion' || 
+      path === '/partidos' || 
+      path === '/traspasos' || 
+      path === '/totw-tots' || 
+      path === '/equipos' || 
+      path === '/jugadores' || 
+      path === '/infografia' || 
+      path === '/datos'
+    ) {
+      setFormatMode('11v11');
+      localStorage.setItem('formatMode', '11v11');
+    }
+  }, [location.pathname]);
+
+  const navigate = useNavigate();
+
+  const handleToggleFormat = (newMode) => {
+    setFormatMode(newMode);
+    localStorage.setItem('formatMode', newMode);
+
+    const path = location.pathname;
+    if (newMode === 'UT') {
+      if (path === '/11v11') navigate('/ut');
+      else if (path === '/clasificacion') navigate('/clasificacion-ut');
+      else if (path === '/partidos') navigate('/partidos-ut');
+      else if (path === '/jugadores') navigate('/jugadores-ut');
+      else if (path === '/infografia') navigate('/infografia-ut');
+      else if (path === '/datos') navigate('/datos-ut');
+      else if (path === '/traspasos' || path === '/totw-tots' || path === '/equipos') navigate('/ut');
+    } else {
+      if (path === '/ut') navigate('/11v11');
+      else if (path === '/clasificacion-ut') navigate('/clasificacion');
+      else if (path === '/partidos-ut') navigate('/partidos');
+      else if (path === '/jugadores-ut') navigate('/jugadores');
+      else if (path === '/infografia-ut') navigate('/infografia');
+      else if (path === '/datos-ut') navigate('/datos');
+    }
+  };
+
   // Helper para verificar si un path está activo (incluyendo subpaths)
   const isActive = (path) => location.pathname === path;
   const isGroupActive = (paths) => paths.some(p => location.pathname === p || location.pathname.startsWith(p + '/'));
@@ -67,7 +119,7 @@ export default function PublicLayout() {
       {/* NAVBAR (BARRA DE NAVEGACIÓN PÚBLICA STICKY GLASSMORPHISM)                   */}
       {/* ========================================================================= */}
       <header 
-        className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${
+        className={`fixed top-0 inset-x-0 z-50 perspective-navbar transition-all duration-500 ${
           isScrolled 
             ? 'bg-background/80 backdrop-blur-xl py-3 glow-neon-navbar' 
             : 'bg-transparent py-5'
@@ -80,14 +132,17 @@ export default function PublicLayout() {
             <Link to="/" className="flex items-center gap-3 z-50 group">
               <img src={logoImg} alt="Torneos Pro FC" className="w-10 h-10 object-contain transition-transform duration-300 group-hover:scale-110" />
               <h1 className="text-2xl font-display font-black tracking-widest uppercase hidden sm:block mt-1">
-                <span className="text-primary">Torneos Pro</span>
+                <span className="text-primary">TP</span>
                 <span className="text-foreground"> FC</span>
               </h1>
             </Link>
           </div>
 
           {/* Central Block: Desktop Links & Dropdowns */}
-          <nav className="hidden lg:flex items-center justify-center gap-1 xl:gap-2">
+          <nav 
+            key={formatMode}
+            className="hidden lg:flex items-center justify-center gap-1 xl:gap-2 animate-drum-roll"
+          >
             {/* Inicio */}
             <Link 
               to="/"
@@ -101,136 +156,293 @@ export default function PublicLayout() {
             {/* Separador */}
             <div className="h-4 w-px bg-border/30 mx-1"></div>
 
-            {/* Dropdown: Nosotros */}
-            <div className="relative group py-2">
-              <button 
-                className={`nav-link-underline text-[11px] xl:text-xs font-black tracking-widest uppercase transition-colors duration-300 flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${
-                  isGroupActive(['/organizaciones', '/contacto', '/acerca-de'])
-                    ? 'text-primary' 
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Nosotros <span className="text-[8px] transition-transform duration-300 group-hover:rotate-180 inline-block">▼</span>
-              </button>
-              <div className="dropdown-menu">
-                {[
-                  { path: '/organizaciones', label: 'Circuitos / Orgs', icon: '🏛️' },
-                  { path: '/acerca-de', label: 'Acerca de', icon: 'ℹ️' },
-                  { path: '/contacto', label: 'Contacto', icon: '✉️' },
-                ].map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`dropdown-item flex items-center gap-2 ${
-                      isActive(item.path) ? 'dropdown-item-active' : 'text-muted-foreground'
+            {formatMode === '11v11' ? (
+              <>
+                {/* Nosotros 11v11 */}
+                <div className="relative group py-2">
+                  <button 
+                    className={`nav-link-underline text-[11px] xl:text-xs font-black tracking-widest uppercase transition-colors duration-300 flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${
+                      isGroupActive(['/acerca-de', '/contacto', '/organizaciones']) && !location.search.includes('tipo=ut')
+                        ? 'text-primary' 
+                        : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    <span className="text-xs">{item.icon}</span>
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
+                    Nosotros <span className="text-[8px] transition-transform duration-300 group-hover:rotate-180 inline-block">▼</span>
+                  </button>
+                  <div className="dropdown-menu">
+                    {[
+                      { path: '/organizaciones?tipo=11v11', label: 'Circuitos / Org', icon: '🛡️' },
+                      { path: '/acerca-de', label: 'Acerca de', icon: 'ℹ️' },
+                      { path: '/contacto', label: 'Contacto', icon: '✉️' },
+                    ].map((item, idx) => (
+                      <Link
+                        key={idx}
+                        to={item.path}
+                        className={`dropdown-item flex items-center gap-2 ${
+                          location.pathname + location.search === item.path ? 'dropdown-item-active' : 'text-muted-foreground'
+                        }`}
+                      >
+                        <span className="text-xs">{item.icon}</span>
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Dropdown: Competencias */}
-            <div className="relative group py-2">
-              <button 
-                className={`nav-link-underline text-[11px] xl:text-xs font-black tracking-widest uppercase transition-colors duration-300 flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${
-                  isGroupActive(['/clasificacion', '/partidos', '/traspasos'])
-                    ? 'text-primary' 
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Competencias <span className="text-[8px] transition-transform duration-300 group-hover:rotate-180 inline-block">▼</span>
-              </button>
-              <div className="dropdown-menu">
-                {[
-                  { path: '/clasificacion', label: 'Clasificación', icon: '📊' },
-                  { path: '/partidos', label: 'Partidos', icon: '⚽' },
-                  { path: '/traspasos', label: 'Traspasos', icon: '🔄' },
-                ].map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`dropdown-item flex items-center gap-2 ${
-                      isActive(item.path) ? 'dropdown-item-active' : 'text-muted-foreground'
+                {/* Competencias 11v11 */}
+                <div className="relative group py-2">
+                  <button 
+                    className={`nav-link-underline text-[11px] xl:text-xs font-black tracking-widest uppercase transition-colors duration-300 flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${
+                      isGroupActive(['/clasificacion', '/partidos', '/traspasos']) && !isActive('/clasificacion-ut') && !isActive('/partidos-ut')
+                        ? 'text-primary' 
+                        : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    <span className="text-xs">{item.icon}</span>
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
+                    Competencias <span className="text-[8px] transition-transform duration-300 group-hover:rotate-180 inline-block">▼</span>
+                  </button>
+                  <div className="dropdown-menu">
+                    {[
+                      { path: '/clasificacion', label: 'Clasificación', icon: '📊' },
+                      { path: '/partidos', label: 'Partidos', icon: '⚽' },
+                      { path: '/traspasos', label: 'Traspasos', icon: '🔄' },
+                    ].map((item, idx) => (
+                      <Link
+                        key={idx}
+                        to={item.path}
+                        className={`dropdown-item flex items-center gap-2 ${
+                          isActive(item.path) ? 'dropdown-item-active' : 'text-muted-foreground'
+                        }`}
+                      >
+                        <span className="text-xs">{item.icon}</span>
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Separador */}
-            <div className="h-4 w-px bg-border/30 mx-1"></div>
-
-            {/* Dropdown: Comunidad */}
-            <div className="relative group py-2">
-              <button 
-                className={`nav-link-underline text-[11px] xl:text-xs font-black tracking-widest uppercase transition-colors duration-300 flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${
-                  isGroupActive(['/equipos', '/jugadores'])
-                    ? 'text-primary' 
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Comunidad <span className="text-[8px] transition-transform duration-300 group-hover:rotate-180 inline-block">▼</span>
-              </button>
-              <div className="dropdown-menu">
-                {[
-                  { path: '/equipos', label: 'Equipos', icon: '🛡️' },
-                  { path: '/jugadores', label: 'Jugadores', icon: '👤' },
-                ].map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`dropdown-item flex items-center gap-2 ${
-                      isActive(item.path) ? 'dropdown-item-active' : 'text-muted-foreground'
+                {/* Comunidad 11v11 */}
+                <div className="relative group py-2">
+                  <button 
+                    className={`nav-link-underline text-[11px] xl:text-xs font-black tracking-widest uppercase transition-colors duration-300 flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${
+                      isGroupActive(['/equipos', '/jugadores']) && !isActive('/jugadores-ut')
+                        ? 'text-primary' 
+                        : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    <span className="text-xs">{item.icon}</span>
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
+                    Comunidad <span className="text-[8px] transition-transform duration-300 group-hover:rotate-180 inline-block">▼</span>
+                  </button>
+                  <div className="dropdown-menu">
+                    {[
+                      { path: '/equipos', label: 'Equipos', icon: '🛡️' },
+                      { path: '/jugadores', label: 'Jugadores', icon: '🎮' },
+                    ].map((item, idx) => (
+                      <Link
+                        key={idx}
+                        to={item.path}
+                        className={`dropdown-item flex items-center gap-2 ${
+                          isActive(item.path) ? 'dropdown-item-active' : 'text-muted-foreground'
+                        }`}
+                      >
+                        <span className="text-xs">{item.icon}</span>
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Dropdown: Estadísticas */}
-            <div className="relative group py-2">
-              <button 
-                className={`nav-link-underline text-[11px] xl:text-xs font-black tracking-widest uppercase transition-colors duration-300 flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${
-                  isGroupActive(['/totw-tots', '/infografia', '/datos'])
-                    ? 'text-primary' 
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Estadísticas <span className="text-[8px] transition-transform duration-300 group-hover:rotate-180 inline-block">▼</span>
-              </button>
-              <div className="dropdown-menu">
-                {[
-                  { path: '/totw-tots', label: 'Once Ideal', icon: '⭐' },
-                  { path: '/infografia', label: 'Infografía', icon: '📈' },
-                  { path: '/datos', label: 'Datos', icon: '📊' },
-                ].map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`dropdown-item flex items-center gap-2 ${
-                      isActive(item.path) ? 'dropdown-item-active' : 'text-muted-foreground'
+                {/* Estadísticas 11v11 */}
+                <div className="relative group py-2">
+                  <button 
+                    className={`nav-link-underline text-[11px] xl:text-xs font-black tracking-widest uppercase transition-colors duration-300 flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${
+                      isGroupActive(['/totw-tots', '/infografia', '/datos']) && !isActive('/infografia-ut') && !isActive('/datos-ut')
+                        ? 'text-primary' 
+                        : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    <span className="text-xs">{item.icon}</span>
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
+                    Estadísticas <span className="text-[8px] transition-transform duration-300 group-hover:rotate-180 inline-block">▼</span>
+                  </button>
+                  <div className="dropdown-menu">
+                    {[
+                      { path: '/totw-tots', label: 'Once Ideal', icon: '⭐' },
+                      { path: '/infografia', label: 'Infografía', icon: '📈' },
+                      { path: '/datos', label: 'Datos', icon: '📊' },
+                    ].map((item, idx) => (
+                      <Link
+                        key={idx}
+                        to={item.path}
+                        className={`dropdown-item flex items-center gap-2 ${
+                          isActive(item.path) ? 'dropdown-item-active' : 'text-muted-foreground'
+                        }`}
+                      >
+                        <span className="text-xs">{item.icon}</span>
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Nosotros UT */}
+                <div className="relative group py-2">
+                  <button 
+                    className={`nav-link-underline text-[11px] xl:text-xs font-black tracking-widest uppercase transition-colors duration-300 flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${
+                      isGroupActive(['/acerca-de', '/contacto', '/organizaciones']) && location.search.includes('tipo=ut')
+                        ? 'text-primary' 
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Nosotros <span className="text-[8px] transition-transform duration-300 group-hover:rotate-180 inline-block">▼</span>
+                  </button>
+                  <div className="dropdown-menu">
+                    {[
+                      { path: '/organizaciones?tipo=ut', label: 'Circuitos / Org', icon: '🛡️' },
+                      { path: '/acerca-de', label: 'Acerca de', icon: 'ℹ️' },
+                      { path: '/contacto', label: 'Contacto', icon: '✉️' },
+                    ].map((item, idx) => (
+                      <Link
+                        key={idx}
+                        to={item.path}
+                        className={`dropdown-item flex items-center gap-2 ${
+                          location.pathname + location.search === item.path ? 'dropdown-item-active' : 'text-muted-foreground'
+                        }`}
+                      >
+                        <span className="text-xs">{item.icon}</span>
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Competencias UT */}
+                <div className="relative group py-2">
+                  <button 
+                    className={`nav-link-underline text-[11px] xl:text-xs font-black tracking-widest uppercase transition-colors duration-300 flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${
+                      isGroupActive(['/clasificacion-ut', '/partidos-ut'])
+                        ? 'text-primary' 
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Competencias <span className="text-[8px] transition-transform duration-300 group-hover:rotate-180 inline-block">▼</span>
+                  </button>
+                  <div className="dropdown-menu">
+                    {[
+                      { path: '/clasificacion-ut', label: 'Clasificación', icon: '📊' },
+                      { path: '/partidos-ut', label: 'Partidos', icon: '⚽' },
+                    ].map((item, idx) => (
+                      <Link
+                        key={idx}
+                        to={item.path}
+                        className={`dropdown-item flex items-center gap-2 ${
+                          isActive(item.path) ? 'dropdown-item-active' : 'text-muted-foreground'
+                        }`}
+                      >
+                        <span className="text-xs">{item.icon}</span>
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Comunidad UT */}
+                <div className="relative group py-2">
+                  <button 
+                    className={`nav-link-underline text-[11px] xl:text-xs font-black tracking-widest uppercase transition-colors duration-300 flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${
+                      isActive('/jugadores-ut')
+                        ? 'text-primary' 
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Comunidad <span className="text-[8px] transition-transform duration-300 group-hover:rotate-180 inline-block">▼</span>
+                  </button>
+                  <div className="dropdown-menu">
+                    {[
+                      { path: '/jugadores-ut', label: 'Jugadores', icon: '🎮' },
+                    ].map((item, idx) => (
+                      <Link
+                        key={idx}
+                        to={item.path}
+                        className={`dropdown-item flex items-center gap-2 ${
+                          isActive(item.path) ? 'dropdown-item-active' : 'text-muted-foreground'
+                        }`}
+                      >
+                        <span className="text-xs">{item.icon}</span>
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Estadísticas UT */}
+                <div className="relative group py-2">
+                  <button 
+                    className={`nav-link-underline text-[11px] xl:text-xs font-black tracking-widest uppercase transition-colors duration-300 flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${
+                      isGroupActive(['/infografia-ut', '/datos-ut'])
+                        ? 'text-primary' 
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Estadísticas <span className="text-[8px] transition-transform duration-300 group-hover:rotate-180 inline-block">▼</span>
+                  </button>
+                  <div className="dropdown-menu">
+                    {[
+                      { path: '/infografia-ut', label: 'Infografía', icon: '📈' },
+                      { path: '/datos-ut', label: 'Datos', icon: '📊' },
+                    ].map((item, idx) => (
+                      <Link
+                        key={idx}
+                        to={item.path}
+                        className={`dropdown-item flex items-center gap-2 ${
+                          isActive(item.path) ? 'dropdown-item-active' : 'text-muted-foreground'
+                        }`}
+                      >
+                        <span className="text-xs">{item.icon}</span>
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </nav>
 
           {/* Right Block: Action Controls */}
           <div className="flex-1 hidden lg:flex items-center justify-end gap-2.5">
             
+            {/* PASTILLA TOGGLE FORMATO (11v11 VS UT) AVANZADA */}
+            <div className="relative flex bg-background/80 backdrop-blur-md p-1 rounded-full border border-border/50 shrink-0 select-none shadow-inner w-[180px] h-[36px]">
+              {/* Slider Thumb */}
+              <div 
+                className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+                  formatMode === '11v11' 
+                    ? 'left-1 bg-gradient-to-r from-red-600 to-red-800 shadow-[0_0_15px_rgba(232,0,29,0.5)]' 
+                    : 'left-[calc(50%+3px)] bg-gradient-to-r from-blue-600 to-indigo-800 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
+                }`}
+              />
+              <button
+                onClick={() => {
+                  if (formatMode !== '11v11') handleToggleFormat('11v11');
+                }}
+                className={`relative z-10 flex-1 flex items-center justify-center gap-1 text-[10px] font-condensed tracking-widest uppercase transition-colors duration-300 font-black ${
+                  formatMode === '11v11' ? 'text-white' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span>🛡️</span> 11v11
+              </button>
+              <button
+                onClick={() => {
+                  if (formatMode !== 'UT') handleToggleFormat('UT');
+                }}
+                className={`relative z-10 flex-1 flex items-center justify-center gap-1 text-[10px] font-condensed tracking-widest uppercase transition-colors duration-300 font-black ${
+                  formatMode === 'UT' ? 'text-white' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span>🎮</span> UT
+              </button>
+            </div>
+
+            <div className="h-4 w-px bg-border/40 mx-0.5"></div>
+
             {/* BOTÓN CAMBIO DE TEMA */}
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
@@ -284,20 +496,16 @@ export default function PublicLayout() {
             </button>
             
             <button 
-              className="p-2 text-foreground z-50 focus:outline-none"
+              className="p-2 text-foreground z-50 focus:outline-none hover:bg-muted/30 rounded-xl transition-colors"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               <svg 
-                className={`w-7 h-7 transition-transform duration-300 ${isMobileMenuOpen ? 'rotate-180 text-primary' : ''}`} 
+                className="w-7 h-7" 
                 fill="none" 
                 stroke="currentColor" 
                 viewBox="0 0 24 24"
               >
-                {isMobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                )}
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
           </div>
@@ -306,115 +514,261 @@ export default function PublicLayout() {
       </header>
 
       {/* ========================================================================= */}
-      {/* MOBILE MENU (FULLSCREEN SCROLLABLE OVERLAY)                               */}
+      {/* MOBILE MENU (RIGHT SIDE DRAWER)                                           */}
       {/* ========================================================================= */}
+      {/* Backdrop Blur */}
       <div 
-        className={`fixed inset-0 z-40 bg-background/95 backdrop-blur-xl flex flex-col justify-start items-center px-6 py-24 transition-all duration-500 lg:hidden overflow-y-auto custom-scrollbar ${
-          isMobileMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
+        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-500 lg:hidden ${
+          isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setIsMobileMenuOpen(false)}
+      />
+
+      {/* Drawer */}
+      <div 
+        className={`fixed top-0 right-0 bottom-0 z-50 w-[85vw] max-w-[360px] bg-background/95 backdrop-blur-xl border-l border-border/30 flex flex-col px-6 py-10 transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] lg:hidden overflow-y-auto custom-scrollbar shadow-[0_0_50px_rgba(0,0,0,0.8)] ${
+          isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <nav className="flex flex-col items-center gap-5 w-full max-w-sm">
-          <Link 
-            to="/"
-            className="text-base font-display font-black tracking-widest uppercase text-foreground hover:text-primary transition-colors py-1"
+        <div className="flex justify-between items-center mb-10 w-full">
+          <span className="font-display font-black text-xl tracking-widest uppercase text-foreground">
+            MENÚ <span className="text-primary">TP FC</span>
+          </span>
+          <button 
+            className="p-2 text-foreground focus:outline-none bg-muted/20 rounded-full hover:bg-muted/40 transition-colors"
+            onClick={() => setIsMobileMenuOpen(false)}
           >
-            Inicio
-          </Link>
-          
-          {/* Grupo Móvil: Nosotros */}
-          <div className="flex flex-col items-center gap-1.5 w-full border-b border-border/30 pb-3">
-            <span className="text-[10px] font-condensed font-black tracking-[0.2em] text-primary uppercase">👥 Nosotros</span>
-            <div className="flex flex-wrap justify-center gap-2">
-              {[
-                { path: '/organizaciones', label: 'Organizaciones' },
-                { path: '/acerca-de', label: 'Acerca de' },
-                { path: '/contacto', label: 'Contacto' },
-              ].map((item) => (
-                <Link
-                  key={item.label}
-                  to={item.path}
-                  className={`text-xs font-display font-bold uppercase tracking-wider px-3 py-1.5 border rounded-lg transition-all duration-200 ${
-                    isActive(item.path)
-                      ? 'bg-primary/10 text-primary border-primary/30'
-                      : 'text-muted-foreground hover:text-foreground bg-muted/30 border-border/40 hover:border-primary/30'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <nav className="flex flex-col items-center gap-5 w-full">
+          {/* Selector de Formato Móvil Avanzado */}
+          <div className="relative flex bg-background/80 backdrop-blur-md p-1 rounded-full border border-border/50 shrink-0 select-none shadow-inner w-full max-w-[280px] h-[44px] mb-4">
+            {/* Slider Thumb */}
+            <div 
+              className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+                formatMode === '11v11' 
+                  ? 'left-1 bg-gradient-to-r from-red-600 to-red-800 shadow-[0_0_15px_rgba(232,0,29,0.5)]' 
+                  : 'left-[calc(50%+3px)] bg-gradient-to-r from-blue-600 to-indigo-800 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
+              }`}
+            />
+            <button
+              onClick={() => {
+                if (formatMode !== '11v11') handleToggleFormat('11v11');
+              }}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 text-[10px] md:text-xs font-condensed tracking-widest uppercase transition-colors duration-300 font-black ${
+                formatMode === '11v11' ? 'text-white' : 'text-muted-foreground'
+              }`}
+            >
+              <span>🛡️</span> 11v11
+            </button>
+            <button
+              onClick={() => {
+                if (formatMode !== 'UT') handleToggleFormat('UT');
+              }}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 text-[10px] md:text-xs font-condensed tracking-widest uppercase transition-colors duration-300 font-black ${
+                formatMode === 'UT' ? 'text-white' : 'text-muted-foreground'
+              }`}
+            >
+              <span>🎮</span> UT 1v1/2v2
+            </button>
           </div>
 
-          {/* Grupo Móvil: Competencias */}
-          <div className="flex flex-col items-center gap-1.5 w-full border-b border-border/30 pb-3">
-            <span className="text-[10px] font-condensed font-black tracking-[0.2em] text-primary uppercase">🏆 Competencias</span>
-            <div className="flex flex-wrap justify-center gap-2">
-              {[
-                { path: '/clasificacion', label: 'Clasificación' },
-                { path: '/partidos', label: 'Partidos' },
-                { path: '/traspasos', label: 'Traspasos' },
-              ].map((item) => (
-                <Link
-                  key={item.label}
-                  to={item.path}
-                  className={`text-xs font-display font-bold uppercase tracking-wider px-3 py-1.5 border rounded-lg transition-all duration-200 ${
-                    isActive(item.path)
-                      ? 'bg-primary/10 text-primary border-primary/30'
-                      : 'text-muted-foreground hover:text-foreground bg-muted/30 border-border/40 hover:border-primary/30'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          </div>
+          {formatMode === '11v11' ? (
+            <>
+              {/* Grupo Móvil: Nosotros 11v11 */}
+              <div className="flex flex-col items-center gap-1.5 w-full border-b border-border/30 pb-3">
+                <span className="text-[10px] font-condensed font-black tracking-[0.2em] text-primary uppercase">👥 Nosotros</span>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {[
+                    { path: '/organizaciones?tipo=11v11', label: 'Circuitos / Org' },
+                    { path: '/acerca-de', label: 'Acerca de' },
+                    { path: '/contacto', label: 'Contacto' },
+                  ].map((item) => (
+                    <Link
+                      key={item.label}
+                      to={item.path}
+                      className={`text-xs font-display font-bold uppercase tracking-wider px-3 py-1.5 border rounded-lg transition-all duration-200 ${
+                        location.pathname + location.search === item.path
+                          ? 'bg-primary/10 text-primary border-primary/30'
+                          : 'text-muted-foreground hover:text-foreground bg-muted/30 border-border/40 hover:border-primary/30'
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
 
-          {/* Grupo Móvil: Comunidad */}
-          <div className="flex flex-col items-center gap-1.5 w-full border-b border-border/30 pb-3">
-            <span className="text-[10px] font-condensed font-black tracking-[0.2em] text-primary uppercase">👥 Comunidad</span>
-            <div className="flex flex-wrap justify-center gap-2">
-              {[
-                { path: '/equipos', label: 'Equipos' },
-                { path: '/jugadores', label: 'Jugadores' },
-              ].map((item) => (
-                <Link
-                  key={item.label}
-                  to={item.path}
-                  className={`text-xs font-display font-bold uppercase tracking-wider px-3 py-1.5 border rounded-lg transition-all duration-200 ${
-                    isActive(item.path)
-                      ? 'bg-primary/10 text-primary border-primary/30'
-                      : 'text-muted-foreground hover:text-foreground bg-muted/30 border-border/40 hover:border-primary/30'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          </div>
+              {/* Grupo Móvil: Competencias 11v11 */}
+              <div className="flex flex-col items-center gap-1.5 w-full border-b border-border/30 pb-3">
+                <span className="text-[10px] font-condensed font-black tracking-[0.2em] text-primary uppercase">🏆 Competencias</span>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {[
+                    { path: '/clasificacion', label: 'Clasificación' },
+                    { path: '/partidos', label: 'Partidos' },
+                    { path: '/traspasos', label: 'Traspasos' },
+                  ].map((item) => (
+                    <Link
+                      key={item.label}
+                      to={item.path}
+                      className={`text-xs font-display font-bold uppercase tracking-wider px-3 py-1.5 border rounded-lg transition-all duration-200 ${
+                        isActive(item.path)
+                          ? 'bg-primary/10 text-primary border-primary/30'
+                          : 'text-muted-foreground hover:text-foreground bg-muted/30 border-border/40 hover:border-primary/30'
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
 
-          {/* Grupo Móvil: Estadísticas */}
-          <div className="flex flex-col items-center gap-1.5 w-full border-b border-border/30 pb-3">
-            <span className="text-[10px] font-condensed font-black tracking-[0.2em] text-primary uppercase">📊 Estadísticas</span>
-            <div className="flex flex-wrap justify-center gap-2">
-              {[
-                { path: '/totw-tots', label: 'Once Ideal' },
-                { path: '/infografia', label: 'Infografía' },
-                { path: '/datos', label: 'Datos' },
-              ].map((item) => (
-                <Link
-                  key={item.label}
-                  to={item.path}
-                  className={`text-xs font-display font-bold uppercase tracking-wider px-3 py-1.5 border rounded-lg transition-all duration-200 ${
-                    isActive(item.path)
-                      ? 'bg-primary/10 text-primary border-primary/30'
-                      : 'text-muted-foreground hover:text-foreground bg-muted/30 border-border/40 hover:border-primary/30'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          </div>
+              {/* Grupo Móvil: Comunidad 11v11 */}
+              <div className="flex flex-col items-center gap-1.5 w-full border-b border-border/30 pb-3">
+                <span className="text-[10px] font-condensed font-black tracking-[0.2em] text-primary uppercase">🛡️ Comunidad</span>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {[
+                    { path: '/equipos', label: 'Equipos' },
+                    { path: '/jugadores', label: 'Jugadores' },
+                  ].map((item) => (
+                    <Link
+                      key={item.label}
+                      to={item.path}
+                      className={`text-xs font-display font-bold uppercase tracking-wider px-3 py-1.5 border rounded-lg transition-all duration-200 ${
+                        isActive(item.path)
+                          ? 'bg-primary/10 text-primary border-primary/30'
+                          : 'text-muted-foreground hover:text-foreground bg-muted/30 border-border/40 hover:border-primary/30'
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Grupo Móvil: Estadísticas 11v11 */}
+              <div className="flex flex-col items-center gap-1.5 w-full border-b border-border/30 pb-3">
+                <span className="text-[10px] font-condensed font-black tracking-[0.2em] text-primary uppercase">📈 Estadísticas</span>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {[
+                    { path: '/totw-tots', label: 'Once Ideal' },
+                    { path: '/infografia', label: 'Infografía' },
+                    { path: '/datos', label: 'Datos' },
+                  ].map((item) => (
+                    <Link
+                      key={item.label}
+                      to={item.path}
+                      className={`text-xs font-display font-bold uppercase tracking-wider px-3 py-1.5 border rounded-lg transition-all duration-200 ${
+                        isActive(item.path)
+                          ? 'bg-primary/10 text-primary border-primary/30'
+                          : 'text-muted-foreground hover:text-foreground bg-muted/30 border-border/40 hover:border-primary/30'
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Grupo Móvil: Nosotros UT */}
+              <div className="flex flex-col items-center gap-1.5 w-full border-b border-border/30 pb-3">
+                <span className="text-[10px] font-condensed font-black tracking-[0.2em] text-primary uppercase">👥 Nosotros</span>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {[
+                    { path: '/organizaciones?tipo=ut', label: 'Circuitos / Org' },
+                    { path: '/acerca-de', label: 'Acerca de' },
+                    { path: '/contacto', label: 'Contacto' },
+                  ].map((item) => (
+                    <Link
+                      key={item.label}
+                      to={item.path}
+                      className={`text-xs font-display font-bold uppercase tracking-wider px-3 py-1.5 border rounded-lg transition-all duration-200 ${
+                        location.pathname + location.search === item.path
+                          ? 'bg-primary/10 text-primary border-primary/30'
+                          : 'text-muted-foreground hover:text-foreground bg-muted/30 border-border/40 hover:border-primary/30'
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Grupo Móvil: Competencias UT */}
+              <div className="flex flex-col items-center gap-1.5 w-full border-b border-border/30 pb-3">
+                <span className="text-[10px] font-condensed font-black tracking-[0.2em] text-primary uppercase">🏆 Competencias</span>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {[
+                    { path: '/clasificacion-ut', label: 'Clasificación' },
+                    { path: '/partidos-ut', label: 'Partidos' },
+                  ].map((item) => (
+                    <Link
+                      key={item.label}
+                      to={item.path}
+                      className={`text-xs font-display font-bold uppercase tracking-wider px-3 py-1.5 border rounded-lg transition-all duration-200 ${
+                        isActive(item.path)
+                          ? 'bg-primary/10 text-primary border-primary/30'
+                          : 'text-muted-foreground hover:text-foreground bg-muted/30 border-border/40 hover:border-primary/30'
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Grupo Móvil: Comunidad UT */}
+              <div className="flex flex-col items-center gap-1.5 w-full border-b border-border/30 pb-3">
+                <span className="text-[10px] font-condensed font-black tracking-[0.2em] text-primary uppercase">🛡️ Comunidad</span>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {[
+                    { path: '/jugadores-ut', label: 'Jugadores' },
+                  ].map((item) => (
+                    <Link
+                      key={item.label}
+                      to={item.path}
+                      className={`text-xs font-display font-bold uppercase tracking-wider px-3 py-1.5 border rounded-lg transition-all duration-200 ${
+                        isActive(item.path)
+                          ? 'bg-primary/10 text-primary border-primary/30'
+                          : 'text-muted-foreground hover:text-foreground bg-muted/30 border-border/40 hover:border-primary/30'
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Grupo Móvil: Estadísticas UT */}
+              <div className="flex flex-col items-center gap-1.5 w-full border-b border-border/30 pb-3">
+                <span className="text-[10px] font-condensed font-black tracking-[0.2em] text-primary uppercase">📈 Estadísticas</span>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {[
+                    { path: '/infografia-ut', label: 'Infografía' },
+                    { path: '/datos-ut', label: 'Datos' },
+                  ].map((item) => (
+                    <Link
+                      key={item.label}
+                      to={item.path}
+                      className={`text-xs font-display font-bold uppercase tracking-wider px-3 py-1.5 border rounded-lg transition-all duration-200 ${
+                        isActive(item.path)
+                          ? 'bg-primary/10 text-primary border-primary/30'
+                          : 'text-muted-foreground hover:text-foreground bg-muted/30 border-border/40 hover:border-primary/30'
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
           
           <div className="w-full h-px bg-border/50 my-2"></div>
           
@@ -445,10 +799,9 @@ export default function PublicLayout() {
       {/* ÁREA DE CONTENIDO (Main Content)                                          */}
       {/* ========================================================================= */}
       <main className="flex-1 relative z-10 flex flex-col">
-        {/* Retiramos el pt-24 excesivo del layout, ya que los layouts como el "Split-Screen"
-            que diseñamos para Login/Register manejan su propio espaciado de pantalla completa.
-            Si el Home normal necesita padding, lo debe aplicar internamente. */}
-        <Outlet />
+        <div key={location.pathname + formatMode} className="flex-1 flex flex-col animate-fade-in">
+          <Outlet />
+        </div>
       </main>
 
       {/* ========================================================================= */}
@@ -467,7 +820,7 @@ export default function PublicLayout() {
                 <Link to="/" className="flex items-center gap-2.5 group">
                   <img src={logoImg} alt="Torneos Pro FC" className="w-9 h-9 object-contain transition-transform duration-300 group-hover:scale-110" />
                   <h2 className="text-xl font-display font-black tracking-widest uppercase">
-                    <span className="text-primary">Torneos Pro</span>
+                    <span className="text-primary">TP</span>
                     <span className="text-foreground"> FC</span>
                   </h2>
                 </Link>

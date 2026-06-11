@@ -55,6 +55,23 @@ class UserController extends Controller
             }
         });
 
+        // 5. Filtro por tipo de participación UT (1vs1 o 2vs2 o all/any)
+        $query->when($request->filled('tipo_ut'), function ($q) use ($request) {
+            $tipoUt = $request->tipo_ut; // '1vs1', '2vs2', 'all', or 'any'
+            $q->where(function ($subQ) use ($tipoUt) {
+                if ($tipoUt === 'all' || $tipoUt === 'any') {
+                    $subQ->whereHas('equiposUtCapitan.competencias')
+                         ->orWhereHas('equiposUtCompanero.competencias');
+                } else {
+                    $subQ->whereHas('equiposUtCapitan.competencias', function ($compQ) use ($tipoUt) {
+                        $compQ->where('competencias_ut.tipo', $tipoUt);
+                    })->orWhereHas('equiposUtCompanero.competencias', function ($compQ) use ($tipoUt) {
+                        $compQ->where('competencias_ut.tipo', $tipoUt);
+                    });
+                }
+            });
+        });
+
         $perPage = $request->get('per_page', 10);
         $users = $query->paginate($perPage);
 
@@ -755,19 +772,30 @@ class UserController extends Controller
         $orgId = $request->query('organizacion_id');
         $tempId = $request->query('temporada_id');
         $compId = $request->query('competencia_id');
+        $isUt = $request->query('is_ut') === 'true';
+        $tipoUt = $request->query('tipo_ut');
 
-        $queryPartidos = DB::table('partidos')
-            ->join('competencias', 'partidos.competencia_id', '=', 'competencias.id')
-            ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id');
+        if ($isUt) {
+            $queryPartidos = DB::table('partidos_ut')
+                ->join('competencias_ut', 'partidos_ut.competencia_ut_id', '=', 'competencias_ut.id')
+                ->join('temporadas', 'competencias_ut.temporada_id', '=', 'temporadas.id');
+            if ($tipoUt && $tipoUt !== 'todas') {
+                $queryPartidos->where('competencias_ut.tipo', $tipoUt);
+            }
+        } else {
+            $queryPartidos = DB::table('partidos')
+                ->join('competencias', 'partidos.competencia_id', '=', 'competencias.id')
+                ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id');
+        }
 
         if ($orgId && $orgId !== 'todas') {
             $queryPartidos->where('temporadas.organizacion_id', $orgId);
         }
         if ($tempId && $tempId !== 'todas') {
-            $queryPartidos->where('competencias.temporada_id', $tempId);
+            $queryPartidos->where(($isUt ? 'competencias_ut' : 'competencias') . '.temporada_id', $tempId);
         }
         if ($compId && $compId !== 'todas') {
-            $queryPartidos->where('partidos.competencia_id', $compId);
+            $queryPartidos->where('partidos' . ($isUt ? '_ut' : '') . '.' . ($isUt ? 'competencia_ut_id' : 'competencia_id'), $compId);
         }
 
         // Clonamos para diferentes consultas
@@ -799,194 +827,222 @@ class UserController extends Controller
         $porcentajeEmpate = $totalPartidos > 0 ? round(($empates / $totalPartidos) * 100, 1) : 0;
         $porcentajeVisita = $totalPartidos > 0 ? round(($victoriasVisitante / $totalPartidos) * 100, 1) : 0;
 
-        // Base query para estadísticas de jugadores
-        $queryJugadoresBase = DB::table('estadisticas_jugadores')
-            ->join('users', 'estadisticas_jugadores.jugador_id', '=', 'users.id')
-            ->join('equipos', 'estadisticas_jugadores.equipo_id', '=', 'equipos.id')
-            ->join('competencias', 'estadisticas_jugadores.competencia_id', '=', 'competencias.id')
-            ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id');
+        // Base query para estadísticas de jugadores con alias
+        if ($isUt) {
+            $queryJugadoresBase = DB::table('estadisticas_jugadores_ut as ej')
+                ->join('users as u', 'ej.jugador_id', '=', 'u.id')
+                ->join('equipos_ut as eq', 'ej.equipo_ut_id', '=', 'eq.id')
+                ->join('competencias_ut as comp', 'ej.competencia_ut_id', '=', 'comp.id')
+                ->join('temporadas as temp', 'comp.temporada_id', '=', 'temp.id');
+            if ($tipoUt && $tipoUt !== 'todas') {
+                $queryJugadoresBase->where('comp.tipo', $tipoUt);
+            }
+        } else {
+            $queryJugadoresBase = DB::table('estadisticas_jugadores as ej')
+                ->join('users as u', 'ej.jugador_id', '=', 'u.id')
+                ->join('equipos as eq', 'ej.equipo_id', '=', 'eq.id')
+                ->join('competencias as comp', 'ej.competencia_id', '=', 'comp.id')
+                ->join('temporadas as temp', 'comp.temporada_id', '=', 'temp.id');
+        }
 
         if ($orgId && $orgId !== 'todas') {
-            $queryJugadoresBase->where('temporadas.organizacion_id', $orgId);
+            $queryJugadoresBase->where('temp.organizacion_id', $orgId);
         }
         if ($tempId && $tempId !== 'todas') {
-            $queryJugadoresBase->where('competencias.temporada_id', $tempId);
+            $queryJugadoresBase->where('comp.temporada_id', $tempId);
         }
         if ($compId && $compId !== 'todas') {
-            $queryJugadoresBase->where('estadisticas_jugadores.competencia_id', $compId);
+            $queryJugadoresBase->where('ej.' . ($isUt ? 'competencia_ut_id' : 'competencia_id'), $compId);
         }
 
         // 1. Goleadores
         $goleadores = (clone $queryJugadoresBase)->select(
-            'users.id',
-            'users.name',
-            'users.foto',
-            'equipos.nombre as equipo_nombre',
-            DB::raw('SUM(estadisticas_jugadores.goles) as total_goles')
+            'u.id',
+            'u.name',
+            'u.foto',
+            'eq.nombre as equipo_nombre',
+            DB::raw('SUM(ej.goles) as total_goles'),
+            DB::raw('SUM(ej.asistencias) as total_asistencias'),
+            DB::raw('AVG(ej.valoracion) as avg_valoracion'),
+            DB::raw('COUNT(ej.id) as partidos_jugados'),
+            DB::raw('SUM(ej.jugador_partido) as total_mvp'),
+            DB::raw($isUt ? '0 as avg_precision_tiro' : 'AVG(ej.precision_tiro) as avg_precision_tiro')
         )
-        ->groupBy('users.id', 'users.name', 'users.foto', 'equipos.nombre')
+        ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre')
         ->orderByDesc('total_goles')
         ->take(25)
         ->get();
 
         // 2. Asistentes
         $asistentes = (clone $queryJugadoresBase)->select(
-            'users.id',
-            'users.name',
-            'users.foto',
-            'equipos.nombre as equipo_nombre',
-            DB::raw('SUM(estadisticas_jugadores.asistencias) as total_asistencias')
+            'u.id',
+            'u.name',
+            'u.foto',
+            'eq.nombre as equipo_nombre',
+            DB::raw('SUM(ej.asistencias) as total_asistencias')
         )
-        ->groupBy('users.id', 'users.name', 'users.foto', 'equipos.nombre')
+        ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre')
         ->orderByDesc('total_asistencias')
         ->take(25)
         ->get();
 
-        // 3. Prestigio de Delanteros (Poder Ofensivo): Goles, Asistencias, Tiros, Precisión
+        // 3. Prestigio de Delanteros
         $prestigioDelanteros = (clone $queryJugadoresBase)
-            ->whereIn(DB::raw('UPPER(estadisticas_jugadores.posicion)'), ['DEL', 'DC', 'EI', 'ED', 'ST', 'LW', 'RW', 'CF', 'FORWARD'])
+            ->whereIn(DB::raw('UPPER(ej.posicion)'), ['DEL', 'DC', 'EI', 'ED', 'ST', 'LW', 'RW', 'CF', 'FORWARD'])
             ->select(
-                'users.id',
-                'users.name',
-                'users.foto',
-                'equipos.nombre as equipo_nombre',
-                DB::raw('SUM(estadisticas_jugadores.goles) as total_goles'),
-                DB::raw('SUM(estadisticas_jugadores.asistencias) as total_asistencias'),
-                DB::raw('AVG(estadisticas_jugadores.precision_tiro) as avg_precision_tiro'),
-                DB::raw('AVG(estadisticas_jugadores.precision_pases) as avg_precision_pases'),
-                DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_valoracion'),
-                DB::raw('COUNT(estadisticas_jugadores.id) as partidos_jugados'),
-                DB::raw('SUM(estadisticas_jugadores.jugador_partido) as total_mvp'),
-                DB::raw('ROUND(AVG(estadisticas_jugadores.valoracion) * 5 + SUM(estadisticas_jugadores.goles) * 7 + SUM(estadisticas_jugadores.asistencias) * 4, 1) as score')
+                'u.id',
+                'u.name',
+                'u.foto',
+                'eq.nombre as equipo_nombre',
+                DB::raw('SUM(ej.goles) as total_goles'),
+                DB::raw('SUM(ej.asistencias) as total_asistencias'),
+                DB::raw($isUt ? '0 as avg_precision_tiro' : 'AVG(ej.precision_tiro) as avg_precision_tiro'),
+                DB::raw('AVG(ej.precision_pases) as avg_precision_pases'),
+                DB::raw('AVG(ej.valoracion) as avg_valoracion'),
+                DB::raw('COUNT(ej.id) as partidos_jugados'),
+                DB::raw('SUM(ej.jugador_partido) as total_mvp'),
+                DB::raw('ROUND(AVG(ej.valoracion) * 5 + SUM(ej.goles) * 7 + SUM(ej.asistencias) * 4, 1) as score')
             )
-            ->groupBy('users.id', 'users.name', 'users.foto', 'equipos.nombre')
+            ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre')
             ->orderByDesc('score')
             ->take(25)
             ->get();
 
-        // 4. Prestigio de Mediocampistas (Efectividad Creativa): Asistencias, Pases Completados, Precisión
+        // 4. Prestigio de Mediocampistas
         $prestigioMedios = (clone $queryJugadoresBase)
-            ->whereIn(DB::raw('UPPER(estadisticas_jugadores.posicion)'), ['MC', 'MCO', 'MCD', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'MIDFIELDER'])
+            ->whereIn(DB::raw('UPPER(ej.posicion)'), ['MC', 'MCO', 'MCD', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'MIDFIELDER'])
             ->select(
-                'users.id',
-                'users.name',
-                'users.foto',
-                'equipos.nombre as equipo_nombre',
-                DB::raw('SUM(estadisticas_jugadores.goles) as total_goles'),
-                DB::raw('SUM(estadisticas_jugadores.asistencias) as total_asistencias'),
-                DB::raw('AVG(estadisticas_jugadores.precision_pases) as avg_precision_pases'),
-                DB::raw('AVG(estadisticas_jugadores.precision_tiro) as avg_precision_tiro'),
-                DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_valoracion'),
-                DB::raw('COUNT(estadisticas_jugadores.id) as partidos_jugados'),
-                DB::raw('SUM(estadisticas_jugadores.jugador_partido) as total_mvp'),
-                DB::raw('ROUND(AVG(estadisticas_jugadores.valoracion) * 6 + SUM(estadisticas_jugadores.asistencias) * 8 + AVG(estadisticas_jugadores.precision_pases) * 0.2, 1) as score')
+                'u.id',
+                'u.name',
+                'u.foto',
+                'eq.nombre as equipo_nombre',
+                DB::raw('SUM(ej.goles) as total_goles'),
+                DB::raw('SUM(ej.asistencias) as total_asistencias'),
+                DB::raw('AVG(ej.precision_pases) as avg_precision_pases'),
+                DB::raw($isUt ? '0 as avg_precision_tiro' : 'AVG(ej.precision_tiro) as avg_precision_tiro'),
+                DB::raw('AVG(ej.valoracion) as avg_valoracion'),
+                DB::raw('COUNT(ej.id) as partidos_jugados'),
+                DB::raw('SUM(ej.jugador_partido) as total_mvp'),
+                DB::raw('ROUND(AVG(ej.valoracion) * 6 + SUM(ej.asistencias) * 8 + AVG(ej.precision_pases) * 0.2, 1) as score')
             )
-            ->groupBy('users.id', 'users.name', 'users.foto', 'equipos.nombre')
+            ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre')
             ->orderByDesc('score')
             ->take(25)
             ->get();
 
-        // 5. Prestigio de Defensores (Solidez Defensiva): Entradas Exitosas, Tasa de Quites, Valoración
+        // 5. Prestigio de Defensores
         $prestigioDefensas = (clone $queryJugadoresBase)
-            ->whereIn(DB::raw('UPPER(estadisticas_jugadores.posicion)'), ['DFC', 'DFI', 'DFD', 'CB', 'LB', 'RB', 'DEFENDER'])
+            ->whereIn(DB::raw('UPPER(ej.posicion)'), ['DFC', 'DFI', 'DFD', 'CB', 'LB', 'RB', 'DEFENDER'])
             ->select(
-                'users.id',
-                'users.name',
-                'users.foto',
-                'equipos.nombre as equipo_nombre',
-                DB::raw('SUM(estadisticas_jugadores.goles) as total_goles'),
-                DB::raw('SUM(estadisticas_jugadores.asistencias) as total_asistencias'),
-                DB::raw('SUM(estadisticas_jugadores.entradas_exitosas) as total_entradas'),
-                DB::raw('AVG(estadisticas_jugadores.tasa_exito_entradas) as avg_exito_entradas'),
-                DB::raw('AVG(estadisticas_jugadores.precision_pases) as avg_precision_pases'),
-                DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_valoracion'),
-                DB::raw('COUNT(estadisticas_jugadores.id) as partidos_jugados'),
-                DB::raw('SUM(estadisticas_jugadores.jugador_partido) as total_mvp'),
-                DB::raw('ROUND(AVG(estadisticas_jugadores.valoracion) * 8 + SUM(estadisticas_jugadores.entradas_exitosas) * 5 + AVG(estadisticas_jugadores.tasa_exito_entradas) * 0.15 - SUM(estadisticas_jugadores.tarjetas_rojas) * 5, 1) as score')
+                'u.id',
+                'u.name',
+                'u.foto',
+                'eq.nombre as equipo_nombre',
+                DB::raw('SUM(ej.goles) as total_goles'),
+                DB::raw('SUM(ej.asistencias) as total_asistencias'),
+                DB::raw('SUM(ej.entradas_exitosas) as total_entradas'),
+                DB::raw('AVG(ej.tasa_exito_entradas) as avg_exito_entradas'),
+                DB::raw('AVG(ej.precision_pases) as avg_precision_pases'),
+                DB::raw('AVG(ej.valoracion) as avg_valoracion'),
+                DB::raw('COUNT(ej.id) as partidos_jugados'),
+                DB::raw('SUM(ej.jugador_partido) as total_mvp'),
+                DB::raw('ROUND(AVG(ej.valoracion) * 8 + SUM(ej.entradas_exitosas) * 5 + AVG(ej.tasa_exito_entradas) * 0.15 - SUM(ej.tarjetas_rojas) * 5, 1) as score')
             )
-            ->groupBy('users.id', 'users.name', 'users.foto', 'equipos.nombre')
+            ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre')
             ->orderByDesc('score')
             ->take(25)
             ->get();
 
-        // 6. Prestigio de Arqueros (Muro de Contención): Atajadas, Goles Recibidos, Valoración
+        // 6. Prestigio de Arqueros
+        $atajadasSum = $isUt ? '0' : 'SUM(ej.atajadas)';
+        $golesRecibidosSum = $isUt ? '0' : 'SUM(ej.goles_recibidos)';
         $prestigioPorteros = (clone $queryJugadoresBase)
-            ->whereIn(DB::raw('UPPER(estadisticas_jugadores.posicion)'), ['POR', 'GK', 'GOALKEEPER'])
+            ->whereIn(DB::raw('UPPER(ej.posicion)'), ['POR', 'GK', 'GOALKEEPER'])
             ->select(
-                'users.id',
-                'users.name',
-                'users.foto',
-                'equipos.nombre as equipo_nombre',
-                DB::raw('SUM(estadisticas_jugadores.goles) as total_goles'),
-                DB::raw('SUM(estadisticas_jugadores.asistencias) as total_asistencias'),
-                DB::raw('SUM(estadisticas_jugadores.atajadas) as total_atajadas'),
-                DB::raw('SUM(estadisticas_jugadores.goles_recibidos) as total_goles_recibidos'),
-                DB::raw('AVG(estadisticas_jugadores.precision_pases) as avg_precision_pases'),
-                DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_valoracion'),
-                DB::raw('COUNT(estadisticas_jugadores.id) as partidos_jugados'),
-                DB::raw('SUM(estadisticas_jugadores.jugador_partido) as total_mvp'),
-                DB::raw('ROUND(AVG(estadisticas_jugadores.valoracion) * 10 + SUM(estadisticas_jugadores.atajadas) * 4 - SUM(estadisticas_jugadores.goles_recibidos) * 3, 1) as score')
+                'u.id',
+                'u.name',
+                'u.foto',
+                'eq.nombre as equipo_nombre',
+                DB::raw('SUM(ej.goles) as total_goles'),
+                DB::raw('SUM(ej.asistencias) as total_asistencias'),
+                DB::raw($isUt ? '0 as total_atajadas' : 'SUM(ej.atajadas) as total_atajadas'),
+                DB::raw($isUt ? '0 as total_goles_recibidos' : 'SUM(ej.goles_recibidos) as total_goles_recibidos'),
+                DB::raw('AVG(ej.precision_pases) as avg_precision_pases'),
+                DB::raw('AVG(ej.valoracion) as avg_valoracion'),
+                DB::raw('COUNT(ej.id) as partidos_jugados'),
+                DB::raw('SUM(ej.jugador_partido) as total_mvp'),
+                DB::raw("ROUND(AVG(ej.valoracion) * 10 + ({$atajadasSum}) * 4 - ({$golesRecibidosSum}) * 3, 1) as score")
             )
-            ->groupBy('users.id', 'users.name', 'users.foto', 'equipos.nombre')
+            ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre')
             ->orderByDesc('score')
             ->take(25)
             ->get();
 
-        // Base query para estadísticas de equipos
-        $queryEquiposBase = DB::table('estadisticas_equipos')
-            ->join('equipos', 'estadisticas_equipos.equipo_id', '=', 'equipos.id')
-            ->join('competencias', 'estadisticas_equipos.competencia_id', '=', 'competencias.id')
-            ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id');
+        // Base query para estadísticas de equipos con alias
+        if ($isUt) {
+            $queryEquiposBase = DB::table('estadisticas_equipos_ut as eeq')
+                ->join('equipos_ut as eq', 'eeq.equipo_ut_id', '=', 'eq.id')
+                ->join('competencias_ut as comp', 'eeq.competencia_ut_id', '=', 'comp.id')
+                ->join('temporadas as temp', 'comp.temporada_id', '=', 'temp.id');
+            if ($tipoUt && $tipoUt !== 'todas') {
+                $queryEquiposBase->where('comp.tipo', $tipoUt);
+            }
+        } else {
+            $queryEquiposBase = DB::table('estadisticas_equipos as eeq')
+                ->join('equipos as eq', 'eeq.equipo_id', '=', 'eq.id')
+                ->join('competencias as comp', 'eeq.competencia_id', '=', 'comp.id')
+                ->join('temporadas as temp', 'comp.temporada_id', '=', 'temp.id');
+        }
 
         if ($orgId && $orgId !== 'todas') {
-            $queryEquiposBase->where('temporadas.organizacion_id', $orgId);
+            $queryEquiposBase->where('temp.organizacion_id', $orgId);
         }
         if ($tempId && $tempId !== 'todas') {
-            $queryEquiposBase->where('competencias.temporada_id', $tempId);
+            $queryEquiposBase->where('comp.temporada_id', $tempId);
         }
         if ($compId && $compId !== 'todas') {
-            $queryEquiposBase->where('estadisticas_equipos.competencia_id', $compId);
+            $queryEquiposBase->where('eeq.' . ($isUt ? 'competencia_ut_id' : 'competencia_id'), $compId);
         }
 
         // Promedio global de pases y entradas de equipo
         $promediosEquipo = (clone $queryEquiposBase)->select(
-            DB::raw('AVG(precision_pases) as avg_pases'),
-            DB::raw('AVG(tasa_exito_entradas) as avg_entradas')
+            DB::raw('AVG(eeq.precision_pases) as avg_pases'),
+            DB::raw('AVG(eeq.tasa_exito_entradas) as avg_entradas')
         )->first();
 
         // 1. Equipos con Más Goles Favor
         $equiposGoleadores = (clone $queryEquiposBase)->select(
-            'equipos.id',
-            'equipos.nombre',
-            'equipos.logo',
-            DB::raw('SUM(estadisticas_equipos.goles_favor) as total_goles_favor')
+            'eq.id',
+            'eq.nombre',
+            'eq.logo',
+            DB::raw('SUM(eeq.goles_favor) as total_goles_favor')
         )
-        ->groupBy('equipos.id', 'equipos.nombre', 'equipos.logo')
+        ->groupBy('eq.id', 'eq.nombre', 'eq.logo')
         ->orderByDesc('total_goles_favor')
         ->take(25)
         ->get();
 
         // 2. Equipos con Mayor Precisión de Pases
         $equiposPases = (clone $queryEquiposBase)->select(
-            'equipos.id',
-            'equipos.nombre',
-            'equipos.logo',
-            DB::raw('ROUND(AVG(estadisticas_equipos.precision_pases), 1) as avg_precision_pases')
+            'eq.id',
+            'eq.nombre',
+            'eq.logo',
+            DB::raw('ROUND(AVG(eeq.precision_pases), 1) as avg_precision_pases')
         )
-        ->groupBy('equipos.id', 'equipos.nombre', 'equipos.logo')
+        ->groupBy('eq.id', 'eq.nombre', 'eq.logo')
         ->orderByDesc('avg_precision_pases')
         ->take(25)
         ->get();
 
-        // 3. Equipos con Mejor Defensa (Menos Goles Recibidos)
+        // 3. Equipos con Mejor Defensa
         $equiposDefensa = (clone $queryEquiposBase)->select(
-            'equipos.id',
-            'equipos.nombre',
-            'equipos.logo',
-            DB::raw('SUM(estadisticas_equipos.goles_en_contra) as total_goles_recibidos')
+            'eq.id',
+            'eq.nombre',
+            'eq.logo',
+            DB::raw('SUM(eeq.goles_en_contra) as total_goles_recibidos')
         )
-        ->groupBy('equipos.id', 'equipos.nombre', 'equipos.logo')
-        ->orderBy('total_goles_recibidos', 'asc') // El menor es el mejor
+        ->groupBy('eq.id', 'eq.nombre', 'eq.logo')
+        ->orderBy('total_goles_recibidos', 'asc')
         ->take(25)
         ->get();
 
@@ -1003,52 +1059,51 @@ class UserController extends Controller
 
         if ($request->query('all') === 'true') {
             $todosJugadores = (clone $queryJugadoresBase)->select(
-                'users.id',
-                'users.name',
-                'users.foto',
-                'equipos.nombre as equipo_nombre',
-                'estadisticas_jugadores.posicion',
-                DB::raw('SUM(estadisticas_jugadores.goles) as total_goles'),
-                DB::raw('SUM(estadisticas_jugadores.asistencias) as total_asistencias'),
-                DB::raw('AVG(estadisticas_jugadores.valoracion) as avg_valoracion'),
-                DB::raw('COUNT(estadisticas_jugadores.id) as partidos_jugados'),
-                DB::raw('SUM(estadisticas_jugadores.jugador_partido) as total_mvp'),
-                DB::raw('AVG(estadisticas_jugadores.precision_pases) as avg_precision_pases'),
-                DB::raw('AVG(estadisticas_jugadores.precision_tiro) as avg_precision_tiro'),
-                DB::raw('SUM(estadisticas_jugadores.entradas_exitosas) as total_entradas'),
-                DB::raw('AVG(estadisticas_jugadores.tasa_exito_entradas) as avg_exito_entradas'),
-                DB::raw('SUM(estadisticas_jugadores.atajadas) as total_atajadas'),
-                DB::raw('SUM(estadisticas_jugadores.goles_recibidos) as total_goles_recibidos'),
+                'u.id',
+                'u.name',
+                'u.foto',
+                'eq.nombre as equipo_nombre',
+                'ej.posicion',
+                DB::raw('SUM(ej.goles) as total_goles'),
+                DB::raw('SUM(ej.asistencias) as total_asistencias'),
+                DB::raw('AVG(ej.valoracion) as avg_valoracion'),
+                DB::raw('COUNT(ej.id) as partidos_jugados'),
+                DB::raw('SUM(ej.jugador_partido) as total_mvp'),
+                DB::raw('AVG(ej.precision_pases) as avg_precision_pases'),
+                DB::raw($isUt ? '0 as avg_precision_tiro' : 'AVG(ej.precision_tiro) as avg_precision_tiro'),
+                DB::raw('SUM(ej.entradas_exitosas) as total_entradas'),
+                DB::raw('AVG(ej.tasa_exito_entradas) as avg_exito_entradas'),
+                DB::raw($isUt ? '0 as total_atajadas' : 'SUM(ej.atajadas) as total_atajadas'),
+                DB::raw($isUt ? '0 as total_goles_recibidos' : 'SUM(ej.goles_recibidos) as total_goles_recibidos'),
                 
-                // Nuevas estadísticas
-                DB::raw('SUM(estadisticas_jugadores.tiros) as total_tiros'),
-                DB::raw('SUM(estadisticas_jugadores.tarjetas_rojas) as total_tarjetas_rojas'),
-                DB::raw('SUM(estadisticas_jugadores.pases_intentados) as total_pases_intentados'),
-                DB::raw('SUM(estadisticas_jugadores.pases_completados) as total_pases_completados'),
-                DB::raw('SUM(estadisticas_jugadores.entradas_intentadas) as total_entradas_intentadas'),
-                DB::raw('SUM(estadisticas_jugadores.atajadas_buena_colocacion) as total_atajadas_buena_colocacion'),
-                DB::raw('SUM(estadisticas_jugadores.atajadas_volada) as total_atajadas_volada'),
-                DB::raw('SUM(estadisticas_jugadores.atajadas_reflejos) as total_atajadas_reflejos'),
-                DB::raw('SUM(estadisticas_jugadores.centros_cortados) as total_centros_cortados'),
-                DB::raw('SUM(estadisticas_jugadores.despejes_punos) as total_despejes_punos'),
-                DB::raw('SUM(estadisticas_jugadores.desvios) as total_desvios'),
-                DB::raw('SUM(estadisticas_jugadores.segundos_jugados) as total_segundos_jugados')
+                DB::raw('SUM(ej.tiros) as total_tiros'),
+                DB::raw('SUM(ej.tarjetas_rojas) as total_tarjetas_rojas'),
+                DB::raw('SUM(ej.pases_intentados) as total_pases_intentados'),
+                DB::raw('SUM(ej.pases_completados) as total_pases_completados'),
+                DB::raw('SUM(ej.entradas_intentadas) as total_entradas_intentadas'),
+                DB::raw($isUt ? '0 as total_atajadas_buena_colocacion' : 'SUM(ej.atajadas_buena_colocacion) as total_atajadas_buena_colocacion'),
+                DB::raw($isUt ? '0 as total_atajadas_volada' : 'SUM(ej.atajadas_volada) as total_atajadas_volada'),
+                DB::raw($isUt ? '0 as total_atajadas_reflejos' : 'SUM(ej.atajadas_reflejos) as total_atajadas_reflejos'),
+                DB::raw($isUt ? '0 as total_centros_cortados' : 'SUM(ej.centros_cortados) as total_centros_cortados'),
+                DB::raw($isUt ? '0 as total_despejes_punos' : 'SUM(ej.despejes_punos) as total_despejes_punos'),
+                DB::raw($isUt ? '0 as total_desvios' : 'SUM(ej.desvios) as total_desvios'),
+                DB::raw('SUM(ej.segundos_jugados) as total_segundos_jugados')
             )
-            ->groupBy('users.id', 'users.name', 'users.foto', 'equipos.nombre', 'estadisticas_jugadores.posicion')
+            ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre', 'ej.posicion')
             ->orderByDesc('avg_valoracion')
             ->get();
 
             $todosEquipos = (clone $queryEquiposBase)->select(
-                'equipos.id',
-                'equipos.nombre',
-                'equipos.logo',
-                DB::raw('SUM(estadisticas_equipos.goles_favor) as total_goles_favor'),
-                DB::raw('SUM(estadisticas_equipos.goles_en_contra) as total_goles_recibidos'),
-                DB::raw('ROUND(AVG(estadisticas_equipos.precision_pases), 1) as avg_precision_pases'),
-                DB::raw('ROUND(AVG(estadisticas_equipos.tasa_exito_entradas), 1) as avg_tasa_exito_entradas'),
-                DB::raw('COUNT(estadisticas_equipos.id) as partidos_jugados')
+                'eq.id',
+                'eq.nombre',
+                'eq.logo',
+                DB::raw('SUM(eeq.goles_favor) as total_goles_favor'),
+                DB::raw('SUM(eeq.goles_en_contra) as total_goles_recibidos'),
+                DB::raw('ROUND(AVG(eeq.precision_pases), 1) as avg_precision_pases'),
+                DB::raw('ROUND(AVG(eeq.tasa_exito_entradas), 1) as avg_tasa_exito_entradas'),
+                DB::raw('COUNT(eeq.id) as partidos_jugados')
             )
-            ->groupBy('equipos.id', 'equipos.nombre', 'equipos.logo')
+            ->groupBy('eq.id', 'eq.nombre', 'eq.logo')
             ->orderByDesc('total_goles_favor')
             ->get();
         }
@@ -1080,7 +1135,6 @@ class UserController extends Controller
             'precision_tackles' => round($promediosEquipo->avg_entradas ?? 62.4, 1),
             'jornada_max_goles' => $jornadaGoles ? [
                 'jornada' => $jornadaGoles->jornada,
-                'goles' => (int)$jornadaGoles->total_goles
             ] : null
         ]);
     }

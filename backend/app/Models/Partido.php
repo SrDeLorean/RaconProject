@@ -30,6 +30,13 @@ class Partido extends Model
         'goles_visitante' => 'integer'
     ];
 
+    protected $appends = ['estado'];
+
+    public function getEstadoAttribute()
+    {
+        return ($this->goles_local !== null && $this->goles_visitante !== null) ? 'finalizado' : 'pendiente';
+    }
+
     public function competencia()
     {
         return $this->belongsTo(Competencia::class, 'competencia_id');

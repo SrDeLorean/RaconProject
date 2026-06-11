@@ -19,6 +19,7 @@ export default function Competencias() {
   const [organizacion, setOrganizacion] = useState(null);
   const [temporada, setTemporada] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('clubpro'); // clubpro | ut
 
   useEffect(() => {
     const fetchOrgDetail = async () => {
@@ -61,6 +62,10 @@ export default function Competencias() {
     );
   }
 
+  const listadoCompetencias = activeTab === 'clubpro' 
+    ? (temporada.competencias || []) 
+    : (temporada.competencias_ut || []);
+
   return (
     <div className="relative min-h-screen bg-background text-foreground overflow-hidden selection:bg-primary/30 selection:text-primary font-sans">
       
@@ -79,9 +84,7 @@ export default function Competencias() {
         </button>
       </div>
 
-      {/* ========================================================================= */}
-      {/* 2. HERO CENTRAL (Cinemático y Táctico - Estilo Organizaciones)            */}
-      {/* ========================================================================= */}
+      {/* Hero central */}
       <section className="relative z-20 max-w-7xl mx-auto overflow-hidden rounded-3xl border border-border/40 bg-card/45 backdrop-blur-md shadow-2xl mb-8">
         
         {/* Banner image as header */}
@@ -132,7 +135,7 @@ export default function Competencias() {
                     {organizacion?.nombre}
                   </h1>
                   <p className="text-xs md:text-sm text-muted-foreground mt-2 max-w-xl font-light leading-relaxed">
-                    {organizacion?.descripcion || 'American Club Leagues. Confederación líder en eSports Pro Clubs profesionales.'}
+                    {organizacion?.descripcion || 'Confederación líder en eSports profesionales.'}
                   </p>
                 </div>
               </div>
@@ -149,8 +152,8 @@ export default function Competencias() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">TORNEOS</h4>
-                    <span className="text-2xl font-display font-black text-foreground">{temporada.competencias?.length || 0}</span>
+                    <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">TORNEOS PRO</h4>
+                    <span className="text-2xl font-display font-black text-foreground">{(temporada.competencias?.length || 0) + (temporada.competencias_ut?.length || 0)}</span>
                   </div>
                   <div>
                     <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">ESTADO</h4>
@@ -165,7 +168,7 @@ export default function Competencias() {
                 </div>
 
                 <p className="text-[11px] text-muted-foreground leading-relaxed font-sans font-light">
-                  Listado oficial de divisiones creadas para la disputa de la temporada activa.
+                  Listado oficial de divisiones y torneos UT creados para la disputa de la temporada activa.
                 </p>
               </div>
             </div>
@@ -174,11 +177,37 @@ export default function Competencias() {
         </div>
       </section>
 
-      <div className="relative z-20 max-w-7xl mx-auto px-6 lg:px-10 space-y-12">
+      {/* Tab Switcher */}
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 mb-8 flex justify-center relative z-20">
+        <div className="flex gap-2 p-1.5 bg-card/40 backdrop-blur-md border border-border/40 rounded-2xl shadow-lg">
+          <button
+            onClick={() => setActiveTab('clubpro')}
+            className={`px-6 py-2.5 rounded-xl text-xs font-condensed tracking-wider font-bold transition-all duration-300 flex items-center gap-2 cursor-pointer ${
+              activeTab === 'clubpro'
+                ? 'bg-primary text-primary-foreground shadow-[0_0_15px_hsla(var(--primary),0.3)]'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+            }`}
+          >
+            🛡️ CLUBES PRO (11vs11)
+          </button>
+          <button
+            onClick={() => setActiveTab('ut')}
+            className={`px-6 py-2.5 rounded-xl text-xs font-condensed tracking-wider font-bold transition-all duration-300 flex items-center gap-2 cursor-pointer ${
+              activeTab === 'ut'
+                ? 'bg-primary text-primary-foreground shadow-[0_0_15px_hsla(var(--primary),0.3)]'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+            }`}
+          >
+            🎮 ULTIMATE TEAM (1v1 / 2v2)
+          </button>
+        </div>
+      </div>
 
-        {temporada.competencias && temporada.competencias.length > 0 ? (
+      <div className="relative z-20 max-w-7xl mx-auto px-6 lg:px-10 space-y-12 pb-16">
+
+        {listadoCompetencias.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {temporada.competencias.map((comp, index) => (
+            {listadoCompetencias.map((comp, index) => (
               <div 
                 key={comp.id} 
                 className="group border border-border/50 bg-card/25 backdrop-blur-md rounded-2xl flex flex-col justify-between overflow-hidden shadow-lg relative league-card-interactive scanlines animate-fade-in-up hover:border-primary/45 transition-all duration-300"
@@ -234,7 +263,9 @@ export default function Competencias() {
                       <span className={`text-[9px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border ${formatoBadge(comp.formato)}`}>
                         {comp.formato === 'liga' ? '🏟️' : comp.formato === 'copa' ? '🏆' : '⚽'} {comp.formato}
                       </span>
-                      <span className="text-[9px] font-mono font-bold text-muted-foreground uppercase leading-none">{comp.plataforma}</span>
+                      <span className="text-[9px] font-mono font-bold text-muted-foreground uppercase leading-none">
+                        {activeTab === 'ut' ? `🎮 ${comp.tipo} - ` : ''}{comp.plataforma}
+                      </span>
                     </div>
                   </div>
 
@@ -245,7 +276,9 @@ export default function Competencias() {
                   <div className="space-y-2 text-xs text-muted-foreground font-semibold">
                     <div className="flex justify-between">
                       <span>Cupo Máximo:</span>
-                      <span className="text-foreground font-bold font-mono">{comp.max_participantes} Clubes</span>
+                      <span className="text-foreground font-bold font-mono">
+                        {comp.max_participantes} {activeTab === 'clubpro' ? 'Clubes' : 'Parejas/Jugadores'}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Prize Pool:</span>
@@ -255,18 +288,20 @@ export default function Competencias() {
                       <span>Inscripción:</span>
                       <span className="text-foreground font-bold font-mono">${comp.entry_fee || 'Gratis'}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Periodo Fichajes:</span>
-                      <span className={`font-bold ${comp.periodo_traspasos_abierto ? 'text-emerald-400' : 'text-primary'}`}>
-                        {comp.periodo_traspasos_abierto ? 'Abierto 🔓' : 'Cerrado 🔒'}
-                      </span>
-                    </div>
+                    {activeTab === 'clubpro' && (
+                      <div className="flex justify-between">
+                        <span>Periodo Fichajes:</span>
+                        <span className={`font-bold ${comp.periodo_traspasos_abierto ? 'text-emerald-400' : 'text-primary'}`}>
+                          {comp.periodo_traspasos_abierto ? 'Abierto 🔓' : 'Cerrado 🔒'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="p-6 pt-0 relative z-20">
                   <Button 
-                    onClick={() => navigate(`/competencia-detalle/${comp.id}`)}
+                    onClick={() => navigate(activeTab === 'clubpro' ? `/competencia-detalle/${comp.id}` : `/competencia-ut-detalle/${comp.id}`)}
                     className="w-full h-10 text-[10px] font-sans font-bold uppercase tracking-wider bg-primary text-primary-foreground border border-transparent hover:bg-primary/90 hover:shadow-[0_0_15px_hsl(var(--primary)/0.35)] transition-all duration-300"
                   >
                     🏟️ Ver Ficha del Torneo
@@ -277,11 +312,13 @@ export default function Competencias() {
           </div>
         ) : (
           <div className="border border-border/60 bg-muted/25 rounded-2xl p-16 flex flex-col items-center text-center max-w-2xl mx-auto gap-6 shadow-sm animate-fade-in-up">
-            <span className="text-3xl">🏆</span>
+            <span className="text-3xl">{activeTab === 'clubpro' ? '🛡️' : '🎮'}</span>
             <div className="space-y-2">
-              <h2 className="text-xl font-display font-black tracking-wide text-foreground uppercase">Sin Competencias Vigentes</h2>
+              <h2 className="text-xl font-display font-black tracking-wide text-foreground uppercase">
+                Sin Competencias Vigentes
+              </h2>
               <p className="text-sm text-muted-foreground max-w-md">
-                No se registran ligas o competencias activas para esta temporada en nuestro sistema.
+                No se registran torneos de esta modalidad para la temporada actual.
               </p>
             </div>
           </div>

@@ -1,0 +1,120 @@
+import React, { useEffect } from 'react';
+import Drawer from '@/components/ui/Drawer';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import ImageUploader from '@/components/ui/ImageUploader';
+
+export default function CompetenciaUtFormDrawer({ 
+  isOpen, onClose, onSave, isSaving, selectedCompetencia, formData, setFormData, formErrors = {}, 
+  temporadasList = [] 
+}) {
+
+  useEffect(() => {
+    if (!selectedCompetencia && formData.nombre) {
+      const generatedSlug = formData.nombre.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');        
+      setFormData(prev => ({ ...prev, slug: generatedSlug }));
+    }
+  }, [formData.nombre, selectedCompetencia, setFormData]);
+
+  const opcionesTemporadas = temporadasList.map(t => ({
+    value: t.id,
+    label: t.nombre
+  }));
+
+  return (
+    <Drawer
+      isOpen={isOpen}
+      onClose={onClose}
+      title={selectedCompetencia ? "Configurar Torneo UT" : "Crear Nuevo Torneo UT"}
+      footer={
+        <div className="flex gap-4 w-full mt-2">
+          <Button variant="outline" className="flex-1 h-12 border-border/60 text-foreground" onClick={onClose} disabled={isSaving}>Cancelar</Button>
+          <Button onClick={onSave} isLoading={isSaving} className="flex-1 h-12 bg-gradient-to-r from-primary to-destructive text-primary-foreground font-display font-black uppercase shadow-lg">
+            {selectedCompetencia ? "Guardar Ajustes" : "Crear Torneo"}
+          </Button>
+        </div>
+      }
+    >
+      <form className="flex flex-col gap-6 pt-2 pb-8" onSubmit={(e) => e.preventDefault()}>
+        
+        {/* VINCULACIÓN MAESTRA DE TEMPORADA */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-bold text-primary uppercase tracking-widest border-b border-border/50 pb-1.5">Asignación de Ciclo</h3>
+          <Select 
+            label="Vincular a Temporada / Torneo Madre *" 
+            value={formData.temporada_id} 
+            onChange={(e) => setFormData({ ...formData, temporada_id: e.target.value })} 
+            disabled={isSaving} 
+            error={formErrors?.temporada_id?.[0]}
+            options={[
+              { value: '', label: 'Selecciona la temporada de destino...' },
+              ...opcionesTemporadas
+            ]}
+            required
+          />
+        </div>
+
+        {/* IDENTIDAD */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest border-b border-border/50 pb-1.5">Identidad del Torneo</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input label="Nombre de Torneo *" placeholder="Ej. Torneo de Campeones UT" value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} error={formErrors?.nombre?.[0]} disabled={isSaving} required />
+            <Input label="Slug *" value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })} error={formErrors?.slug?.[0]} disabled={isSaving} required />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input label="Color Tema (HEX)" type="color" className="h-10 p-1 cursor-pointer" value={formData.color_tema} onChange={(e) => setFormData({ ...formData, color_tema: e.target.value })} disabled={isSaving} />
+            <Select label="Privacidad" value={formData.es_publico} onChange={(e) => setFormData({ ...formData, es_publico: e.target.value === 'true' })} disabled={isSaving} options={[{ value: 'true', label: '🌍 Público' }, { value: 'false', label: '🔒 Privado' }]} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ImageUploader 
+              label="Logo de la Competencia" 
+              value={formData.logo} 
+              onChange={(url) => setFormData({ ...formData, logo: url })} 
+              folder="competencias"
+              disabled={isSaving}
+            />
+            <ImageUploader 
+              label="Banner de la Competencia" 
+              value={formData.banner} 
+              onChange={(url) => setFormData({ ...formData, banner: url })} 
+              folder="competencias"
+              disabled={isSaving}
+            />
+          </div>
+        </div>
+
+        {/* REGLAS Y FORMATO */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest border-b border-border/50 pb-1.5">Reglas y Formato</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Select label="Modalidad UT *" value={formData.tipo} onChange={(e) => setFormData({ ...formData, tipo: e.target.value })} disabled={isSaving} options={[{ value: '1vs1', label: '1vs1 UT' }, { value: '2vs2', label: '2vs2 UT' }]} />
+            <Select label="Formato *" value={formData.formato} onChange={(e) => setFormData({ ...formData, formato: e.target.value })} disabled={isSaving} options={[{ value: 'liga', label: 'Liga (Todos vs Todos)' }, { value: 'copa', label: 'Copa (Grupos + Playoffs)' }, { value: 'eliminatoria', label: 'Eliminación Directa' }]} />
+            <Select label="Plataforma *" value={formData.plataforma} onChange={(e) => setFormData({ ...formData, plataforma: e.target.value })} disabled={isSaving} options={[{ value: 'crossplay', label: 'Crossplay' }, { value: 'ps5', label: 'PlayStation 5' }, { value: 'xbox', label: 'Xbox Series' }, { value: 'pc', label: 'PC Windows' }]} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input label="Inscripción ($)" type="number" value={formData.entry_fee} onChange={(e) => setFormData({ ...formData, entry_fee: e.target.value })} error={formErrors?.entry_fee?.[0]} disabled={isSaving} />
+            <Input label="Premios ($)" type="number" value={formData.prize_pool} onChange={(e) => setFormData({ ...formData, prize_pool: e.target.value })} error={formErrors?.prize_pool?.[0]} disabled={isSaving} />
+            <Input label="Cupos Max *" type="number" value={formData.max_participantes} onChange={(e) => setFormData({ ...formData, max_participantes: e.target.value })} error={formErrors?.max_participantes?.[0]} disabled={isSaving} required />
+          </div>
+        </div>
+
+        {/* FECHAS */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest border-b border-border/50 pb-1.5">Calendario del Torneo</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input label="Apertura Inscripciones" type="datetime-local" value={formData.fecha_inicio_inscripciones} onChange={(e) => setFormData({ ...formData, fecha_inicio_inscripciones: e.target.value })} error={formErrors?.fecha_inicio_inscripciones?.[0]} disabled={isSaving} />
+            <Input label="Cierre Inscripciones" type="datetime-local" value={formData.fecha_fin_inscripciones} onChange={(e) => setFormData({ ...formData, fecha_fin_inscripciones: e.target.value })} error={formErrors?.fecha_fin_inscripciones?.[0]} disabled={isSaving} />
+          </div>
+          <Input label="Kick-off (Inicio Torneo)" type="datetime-local" value={formData.fecha_inicio_competencia} onChange={(e) => setFormData({ ...formData, fecha_inicio_competencia: e.target.value })} error={formErrors?.fecha_inicio_competencia?.[0]} disabled={isSaving} />
+        </div>
+
+        {/* ESTADO */}
+        <div className="bg-muted/30 p-4 rounded-lg border border-border/50 mt-2">
+          <Select label="Estado Operativo" value={formData.estado} onChange={(e) => setFormData({ ...formData, estado: e.target.value })} disabled={isSaving} options={[{ value: 'borrador', label: '🛠️ En Borrador (No visible)' }, { value: 'inscripciones', label: '📝 Inscripciones Abiertas' }, { value: 'en_curso', label: '⚽ Torneo en Curso' }, { value: 'finalizada', label: '🏁 Torneo Finalizado' }]} />
+        </div>
+
+      </form>
+    </Drawer>
+  );
+}

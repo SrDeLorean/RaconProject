@@ -11,6 +11,10 @@ use App\Http\Controllers\Api\EquipoJugadorController;
 use App\Http\Controllers\Api\SolicitudFichajeController;
 use App\Http\Controllers\Api\TemporadaController;
 use App\Http\Controllers\Api\CompetenciaEquipoController;
+use App\Http\Controllers\Api\CompetenciaUtController;
+use App\Http\Controllers\Api\PartidoUtController;
+use App\Http\Controllers\Api\ReporteUtController;
+use App\Http\Controllers\Api\InscripcionUTController;
 
 // 1. Rutas Públicas (No requieren token)
 Route::post('/login', [AuthController::class, 'login']);
@@ -27,7 +31,7 @@ Route::get('/equipos', [EquipoController::class, 'index']);
 Route::get('/equipos/{equipo}', [EquipoController::class, 'show']);
 Route::get('/users', [UserController::class, 'index']);
 Route::get('/usuarios', [UserController::class, 'index']);
-Route::get('/usuarios/{usuario}', [UserController::class, 'show']);
+Route::get('/usuarios/{usuario}', [UserController::class, 'show'])->whereNumber('usuario');
 Route::get('/competencias', [CompetenciaController::class, 'index']);
 Route::get('/competencias/{competencia}', [CompetenciaController::class, 'show']);
 Route::get('/traspasos/aprobados', [SolicitudFichajeController::class, 'aprobados']);
@@ -88,10 +92,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/mi-equipo', [EquipoController::class, 'miEquipo']);
     Route::get('/user/mis-equipos', [EquipoController::class, 'misEquiposInscritos']);
     Route::apiResource('equipos', EquipoController::class)->except(['index', 'show']);
+    Route::get('/usuarios/auditoria', [UserController::class, 'auditoriaGamerTAGs']);
+    Route::post('/usuarios/disponibles', [UserController::class, 'disponibles']);
     Route::apiResource('users', UserController::class)->except(['index', 'show']);
     Route::apiResource('usuarios', UserController::class)->except(['index', 'show']);
-    Route::post('/usuarios/disponibles', [UserController::class, 'disponibles']);
-    Route::get('/usuarios/auditoria', [UserController::class, 'auditoriaGamerTAGs']);
 
     Route::apiResource('competencias', CompetenciaController::class)->except(['index', 'show']);
     Route::apiResource('equipo-jugador', EquipoJugadorController::class);
@@ -117,13 +121,31 @@ Route::middleware('auth:sanctum')->group(function () {
     // Reporte de Partidos vía EA Pro Clubs API
     Route::get('/partidos/{partido}/ea-matches', [\App\Http\Controllers\Api\ReporteController::class, 'getEaMatches']);
     Route::post('/partidos/{partido}/ea-report', [\App\Http\Controllers\Api\ReporteController::class, 'storeEaReport']);
+
+    // ─── Rutas Protegidas UT 1v1 y 2v2 ───────────────────
+    Route::apiResource('competencias-ut', CompetenciaUtController::class)->except(['index', 'show']);
+    Route::post('/competencias-ut/{competenciaUt}/inscribir', [CompetenciaUtController::class, 'inscribir']);
+    Route::post('/competencias-ut/{competenciaUt}/partidos/bulk', [PartidoUtController::class, 'bulkStore']);
+    Route::apiResource('partidos-ut', PartidoUtController::class)->except(['index', 'show']);
+    Route::get('/partidos-ut/{partido}/ea-matches', [ReporteUtController::class, 'getEaMatches']);
+    Route::post('/partidos-ut/{partido}/ea-report', [ReporteUtController::class, 'storeEaReport']);
+    Route::put('/inscripciones-ut/{id}', [InscripcionUTController::class, 'update']);
+    Route::delete('/inscripciones-ut/{id}', [InscripcionUTController::class, 'destroy']);
 });
 
-// Rutas Públicas de Partidos
+// Rutas Públicas de Partidos 11v11
 Route::get('/partidos', [\App\Http\Controllers\Api\PartidoController::class, 'index']);
 Route::get('/partidos-fechas', [\App\Http\Controllers\Api\PartidoController::class, 'dates']);
 Route::get('/partidos-conteos', [\App\Http\Controllers\Api\PartidoController::class, 'counts']);
 Route::get('/partidos/{partido}', [\App\Http\Controllers\Api\PartidoController::class, 'show']);
+
+// Rutas Públicas UT 1v1 y 2v2
+Route::get('/competencias-ut', [CompetenciaUtController::class, 'index']);
+Route::get('/competencias-ut/{competenciaUt}', [CompetenciaUtController::class, 'show']);
+Route::get('/partidos-ut', [PartidoUtController::class, 'index']);
+Route::get('/partidos-ut-fechas', [PartidoUtController::class, 'dates']);
+Route::get('/partidos-ut-conteos', [PartidoUtController::class, 'counts']);
+Route::get('/partidos-ut/{partido}', [PartidoUtController::class, 'show']);
 
 
 

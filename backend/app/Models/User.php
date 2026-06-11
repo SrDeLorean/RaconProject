@@ -98,6 +98,16 @@ class User extends Authenticatable
         return $this->hasOne(Organizacion::class, 'owner_id', 'id');
     }
 
+    public function equiposUtCapitan()
+    {
+        return $this->hasMany(EquipoUt::class, 'id_capitan');
+    }
+
+    public function equiposUtCompanero()
+    {
+        return $this->hasMany(EquipoUt::class, 'id_companero');
+    }
+
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */

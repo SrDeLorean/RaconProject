@@ -5,11 +5,14 @@ import OrganizadorLayout from '@/layouts/OrganizadorLayout';
 const DashboardOrganizador = lazy(() => import('@/features/organizador/pages/DashboardOrganizador'));
 const CompetenciasCRUD = lazy(() => import('@/features/organizador/pages/CompetenciasCRUD'));
 const CompetenciaDetalle = lazy(() => import('@/features/organizador/pages/CompetenciaDetalle')); // 🔥 Nueva Vista
+const CompetenciasUtCRUD = lazy(() => import('@/features/organizador/pages/CompetenciasUtCRUD'));
+const CompetenciaUtDetalle = lazy(() => import('@/features/organizador/pages/CompetenciaUtDetalle'));
 const TemporadasCRUD = lazy(() => import('@/features/organizador/pages/TemporadasCRUD'));
 const EquiposCRUD = lazy(() => import('@/features/organizador/pages/EquiposCRUD'));
 const JugadoresCRUD = lazy(() => import('@/features/organizador/pages/JugadoresCRUD'));
 const TraspasosCRUD = lazy(() => import('@/features/organizador/pages/TraspasosCRUD'));
 const PartidosCRUD = lazy(() => import('@/features/organizador/pages/PartidosCRUD'));
+const PartidosUtCRUD = lazy(() => import('@/features/organizador/pages/PartidosUtCRUD'));
 
 // Shared
 const MiPerfil = lazy(() => import('@/features/shared/MiPerfil'));
@@ -32,6 +35,13 @@ export const organizadorRoutes = {
       ]
     },
     {
+      path: 'competencias-ut',
+      children: [
+        { index: true, element: <CompetenciasUtCRUD /> },
+        { path: ':id', element: <CompetenciaUtDetalle /> }
+      ]
+    },
+    {
       path: 'jugadores',
       element: <JugadoresCRUD />
     },
@@ -46,6 +56,10 @@ export const organizadorRoutes = {
     {
       path: 'partidos',
       element: <PartidosCRUD />
+    },
+    {
+      path: 'partidos-ut',
+      element: <PartidosUtCRUD />
     },
     { path: 'perfil', element: <MiPerfil /> },
     { path: 'configuracion', element: <Configuracion /> },

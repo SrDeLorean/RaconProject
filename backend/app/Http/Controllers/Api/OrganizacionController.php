@@ -18,10 +18,24 @@ class OrganizacionController extends Controller
     public function index(Request $request)
     {
         // Cargamos todas las relaciones necesarias para calcular estadísticas reales en el frontend
-        $query = \App\Models\Organizacion::query()->with(['owner', 'temporadas.competencias.equipos', 'temporadas.competencias.partidos']);
+        $query = \App\Models\Organizacion::query()->with([
+            'owner', 
+            'temporadas.competencias.equipos', 
+            'temporadas.competencias.partidos',
+            'temporadas.competenciasUt.equipos',
+            'temporadas.competenciasUt.partidos'
+        ]);
 
         if ($request->filled('estado') && $request->estado !== 'todas') {
             $query->where('estado', $request->estado);
+        }
+
+        if ($request->filled('tipo') && $request->tipo !== 'todas') {
+            if ($request->tipo === '11v11') {
+                $query->whereHas('temporadas.competencias');
+            } elseif ($request->tipo === 'ut' || $request->tipo === 'UT') {
+                $query->whereHas('temporadas.competenciasUt');
+            }
         }
 
         if ($request->filled('owner_id')) {
@@ -58,7 +72,13 @@ class OrganizacionController extends Controller
      */
     public function show(Organizacion $organizacion): JsonResponse
     {
-        $organizacion->load(['temporadas.competencias.equipos', 'temporadas.competencias.partidos', 'owner']);
+        $organizacion->load([
+            'temporadas.competencias.equipos', 
+            'temporadas.competencias.partidos', 
+            'temporadas.competenciasUt.equipos', 
+            'temporadas.competenciasUt.partidos', 
+            'owner'
+        ]);
         return response()->json($organizacion);
     }
 

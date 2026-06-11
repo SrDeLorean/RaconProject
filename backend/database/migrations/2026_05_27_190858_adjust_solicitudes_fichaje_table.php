@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::table('solicitudes_fichaje', function (Blueprint $table) {
             $table->foreignId('organizacion_id')->nullable()->after('id')->constrained('organizaciones')->onDelete('cascade');
             $table->unsignedBigInteger('temporada_id')->nullable()->change();
+            $table->dropIndex(['estado']);
             $table->dropColumn('estado');
         });
 

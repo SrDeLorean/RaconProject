@@ -79,7 +79,7 @@ export default function DashboardLayout({ menuItems = [], profile }) {
         {/* Logo de la plataforma */}
         <div className="h-20 flex items-center justify-center border-b border-border/50 shrink-0">
           {isSidebarOpen ? (
-            <Link to="/admin" className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2">
               <img src={logoImg} alt="Torneos Pro FC" className="h-10 object-contain" />
               <h1 className="text-display font-black text-xl tracking-widest mt-1 uppercase">
                 <span className="text-primary">Torneos Pro</span>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '@/api/axios';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -45,6 +45,8 @@ function computeStandings(partidos, equipos) {
 export default function Temporadas() {
   const { orgId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tipoParam = searchParams.get('tipo') || 'todas';
 
   const [organizacion, setOrganizacion] = useState(null);
   const [partidos, setPartidos] = useState([]);
@@ -100,12 +102,28 @@ export default function Temporadas() {
     let totalMatches = scheduleLoaded ? partidos.length : 0;
 
     organizacion.temporadas?.forEach(temp => {
-      temp.competencias?.forEach(comp => {
-        totalDivs++;
-        comp.equipos?.forEach(eq => {
-          uniqueClubs.add(eq.id);
+      const isTodas = tipoParam === 'todas';
+      const is11v11 = tipoParam === '11v11';
+      const isUt = tipoParam === 'ut' || tipoParam === 'UT';
+
+      if (isTodas || is11v11) {
+        temp.competencias?.forEach(comp => {
+          totalDivs++;
+          comp.equipos?.forEach(eq => {
+            uniqueClubs.add(eq.id);
+          });
         });
-      });
+      }
+
+      if (isTodas || isUt) {
+        const compsUt = temp.competenciasUt || temp.competencias_ut || [];
+        compsUt.forEach(comp => {
+          totalDivs++;
+          comp.equipos?.forEach(eq => {
+            uniqueClubs.add(eq.id);
+          });
+        });
+      }
     });
 
     return {
@@ -114,7 +132,7 @@ export default function Temporadas() {
       partidos: totalMatches,
       jugadores: uniqueClubs.size * 12 // Estimated roster size
     };
-  }, [organizacion, partidos, scheduleLoaded]);
+  }, [organizacion, partidos, scheduleLoaded, tipoParam]);
 
   // Active Season
   const activeSeason = useMemo(() => {
@@ -124,9 +142,21 @@ export default function Temporadas() {
 
   // Active Divisions/Competencias
   const activeDivisions = useMemo(() => {
-    if (!activeSeason?.competencias) return [];
-    return activeSeason.competencias;
-  }, [activeSeason]);
+    if (!activeSeason) return [];
+    const list = [];
+    const isTodas = tipoParam === 'todas';
+    const is11v11 = tipoParam === '11v11';
+    const isUt = tipoParam === 'ut' || tipoParam === 'UT';
+
+    if ((isTodas || is11v11) && activeSeason.competencias) {
+      list.push(...activeSeason.competencias.map(c => ({ ...c, esUt: false })));
+    }
+    if ((isTodas || isUt) && (activeSeason.competenciasUt || activeSeason.competencias_ut)) {
+      const compsUt = activeSeason.competenciasUt || activeSeason.competencias_ut;
+      list.push(...compsUt.map(c => ({ ...c, esUt: true })));
+    }
+    return list;
+  }, [activeSeason, tipoParam]);
 
   // Statistics/Infographics per available division in activeSeason
   const divisionStats = useMemo(() => {
@@ -155,6 +185,7 @@ export default function Temporadas() {
         nombre: comp.nombre,
         banner: comp.banner,
         logo: comp.logo,
+        esUt: comp.esUt,
         totalMatches,
         playedMatches,
         progressPercent,
@@ -174,41 +205,89 @@ export default function Temporadas() {
     if (!organizacion?.temporadas) return [];
     const list = [];
     organizacion.temporadas.forEach(t => {
-      t.competencias?.forEach(c => {
-        if (c.estado === 'finalizada') {
-          const standings = computeStandings(c.partidos || [], c.equipos || []);
-          list.push({
-            id: c.id,
-            nombre: c.nombre,
-            temporadaNombre: t.nombre,
-            top3: standings.slice(0, 3)
-          });
-        }
-      });
+      const isTodas = tipoParam === 'todas';
+      const is11v11 = tipoParam === '11v11';
+      const isUt = tipoParam === 'ut' || tipoParam === 'UT';
+
+      if (isTodas || is11v11) {
+        t.competencias?.forEach(c => {
+          if (c.estado === 'finalizada') {
+            const standings = computeStandings(c.partidos || [], c.equipos || []);
+            list.push({
+              id: c.id,
+              nombre: c.nombre,
+              esUt: false,
+              temporadaNombre: t.nombre,
+              top3: standings.slice(0, 3)
+            });
+          }
+        });
+      }
+
+      if (isTodas || isUt) {
+        const compsUt = t.competenciasUt || t.competencias_ut || [];
+        compsUt.forEach(c => {
+          if (c.estado === 'finalizada') {
+            const standings = computeStandings(c.partidos || [], c.equipos || []);
+            list.push({
+              id: c.id,
+              nombre: c.nombre,
+              esUt: true,
+              temporadaNombre: t.nombre,
+              top3: standings.slice(0, 3)
+            });
+          }
+        });
+      }
     });
     return list;
-  }, [organizacion]);
+  }, [organizacion, tipoParam]);
 
   // Aggregate all unique team logos of the active season's competencies
   const orgTeams = useMemo(() => {
     if (!activeSeason) return [];
     const unique = new Map();
-    activeSeason.competencias?.forEach(comp => {
-      comp.equipos?.forEach(eq => {
-        if (!unique.has(eq.id)) {
-          unique.set(eq.id, {
-            id: eq.id,
-            nombre: eq.nombre,
-            abreviatura: eq.abreviatura,
-            logo: eq.logo 
-              ? (eq.logo.startsWith('http') ? eq.logo : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${eq.logo}`) 
-              : null
-          });
-        }
+    const isTodas = tipoParam === 'todas';
+    const is11v11 = tipoParam === '11v11';
+    const isUt = tipoParam === 'ut' || tipoParam === 'UT';
+
+    if (isTodas || is11v11) {
+      activeSeason.competencias?.forEach(comp => {
+        comp.equipos?.forEach(eq => {
+          if (!unique.has(eq.id)) {
+            unique.set(eq.id, {
+              id: eq.id,
+              nombre: eq.nombre,
+              abreviatura: eq.abreviatura,
+              logo: eq.logo 
+                ? (eq.logo.startsWith('http') ? eq.logo : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${eq.logo}`) 
+                : null
+            });
+          }
+        });
       });
-    });
+    }
+
+    if (isTodas || isUt) {
+      const compsUt = activeSeason.competenciasUt || activeSeason.competencias_ut || [];
+      compsUt.forEach(comp => {
+        comp.equipos?.forEach(eq => {
+          if (!unique.has(eq.id)) {
+            unique.set(eq.id, {
+              id: eq.id,
+              nombre: eq.nombre,
+              abreviatura: eq.abreviatura,
+              logo: eq.logo 
+                ? (eq.logo.startsWith('http') ? eq.logo : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8000'}${eq.logo}`) 
+                : null
+            });
+          }
+        });
+      });
+    }
+
     return Array.from(unique.values());
-  }, [activeSeason]);
+  }, [activeSeason, tipoParam]);
 
   const orgTeamsWithLogos = useMemo(() => {
     return orgTeams.filter(team => team.logo);
@@ -348,29 +427,65 @@ export default function Temporadas() {
       {/* 3. TABS DE NAVEGACIÓN (Horizontal premium eSports tabs)                     */}
       {/* ========================================================================= */}
       <section className="relative z-20 max-w-7xl mx-auto px-6 lg:px-10 my-4">
-        <div className="border-b border-border/40 flex items-center gap-6 md:gap-10 overflow-x-auto pb-0.5 custom-scrollbar">
-          {[
-            { id: 'Overview', label: 'RESUMEN' },
-            { id: 'Divisions', label: 'DIVISIONES' },
-            { id: 'Champions', label: 'SALÓN DE LA FAMA' },
-            { id: 'Stats', label: 'ESTADÍSTICAS' }
-          ].map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-3.5 relative text-xs md:text-sm font-condensed font-black uppercase tracking-widest cursor-pointer whitespace-nowrap transition-colors duration-300 ${
-                  isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {tab.label}
-                {isActive && (
-                  <div className="absolute bottom-0 inset-x-0 h-0.5 bg-primary tab-underline-glow"></div>
-                )}
-              </button>
-            );
-          })}
+        <div className="border-b border-border/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 sm:pb-0">
+          <div className="flex items-center gap-6 md:gap-10 overflow-x-auto pb-0.5 custom-scrollbar w-full sm:w-auto">
+            {[
+              { id: 'Overview', label: 'RESUMEN' },
+              { id: 'Divisions', label: 'DIVISIONES' },
+              { id: 'Champions', label: 'SALÓN DE LA FAMA' },
+              { id: 'Stats', label: 'ESTADÍSTICAS' }
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-3.5 relative text-xs md:text-sm font-condensed font-black uppercase tracking-widest cursor-pointer whitespace-nowrap transition-colors duration-300 ${
+                    isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {tab.label}
+                  {isActive && (
+                    <div className="absolute bottom-0 inset-x-0 h-0.5 bg-primary tab-underline-glow"></div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Tabs Premium de Filtrado por Tipo (11v11 vs UT) */}
+          <div className="flex bg-muted/40 p-0.5 rounded-xl border border-border/40 gap-0.5 select-none shrink-0 self-start sm:self-auto mb-2 sm:mb-0">
+            <button
+              onClick={() => setSearchParams({ tipo: 'todas' })}
+              className={`px-3.5 py-1.5 rounded-lg text-[10px] font-condensed tracking-wider uppercase whitespace-nowrap transition-all duration-300 relative cursor-pointer font-black ${
+                tipoParam === 'todas'
+                  ? 'text-white bg-gradient-to-r from-primary to-destructive shadow-[0_0_12px_rgba(232,0,29,0.3)]'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+              }`}
+            >
+              🌐 Todas
+            </button>
+            <button
+              onClick={() => setSearchParams({ tipo: '11v11' })}
+              className={`px-3.5 py-1.5 rounded-lg text-[10px] font-condensed tracking-wider uppercase whitespace-nowrap transition-all duration-300 relative cursor-pointer font-black ${
+                tipoParam === '11v11'
+                  ? 'text-white bg-gradient-to-r from-primary to-destructive shadow-[0_0_12px_rgba(232,0,29,0.3)]'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+              }`}
+            >
+              🛡️ 11v11
+            </button>
+            <button
+              onClick={() => setSearchParams({ tipo: 'ut' })}
+              className={`px-3.5 py-1.5 rounded-lg text-[10px] font-condensed tracking-wider uppercase whitespace-nowrap transition-all duration-300 relative cursor-pointer font-black ${
+                tipoParam === 'ut' || tipoParam === 'UT'
+                  ? 'text-white bg-gradient-to-r from-blue-600 to-indigo-600 shadow-[0_0_12px_rgba(59,130,246,0.3)]'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+              }`}
+            >
+              🎮 UT 1v1/2v2
+            </button>
+          </div>
         </div>
       </section>
 
@@ -581,7 +696,7 @@ export default function Temporadas() {
 
                     <div className="p-6 pt-0 relative z-20">
                       <Button 
-                        onClick={() => navigate(`/competencia-detalle/${comp.id}`)}
+                        onClick={() => navigate(comp.esUt ? `/competencia-ut-detalle/${comp.id}` : `/competencia-detalle/${comp.id}`)}
                         className="w-full h-10 text-[10px] font-sans font-bold uppercase tracking-wider bg-primary text-primary-foreground border border-transparent hover:bg-primary/90 hover:shadow-[0_0_15px_hsl(var(--primary)/0.35)] transition-all duration-300"
                       >
                         🏟️ FICHA DE LA DIVISIÓN
@@ -783,7 +898,7 @@ export default function Temporadas() {
 
                     <div className="mt-5 relative z-10">
                       <Button 
-                        onClick={() => navigate(`/competencia-detalle/${ds.id}`)}
+                        onClick={() => navigate(ds.esUt ? `/competencia-ut-detalle/${ds.id}` : `/competencia-detalle/${ds.id}`)}
                         className="w-full h-10 text-[10px] font-sans font-bold uppercase tracking-wider bg-primary text-primary-foreground border border-transparent hover:bg-primary/90 hover:shadow-[0_0_15px_hsl(var(--primary)/0.35)] transition-all duration-300"
                       >
                         📊 Ficha & Calendario

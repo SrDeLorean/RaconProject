@@ -34,4 +34,9 @@ class Temporada extends Model
     {
         return $this->hasMany(Competencia::class);
     }
+
+    public function competenciasUt()
+    {
+        return $this->hasMany(CompetenciaUt::class, 'temporada_id');
+    }
 }

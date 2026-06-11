@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "Torneos Pro FC",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,9 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
     "@tailwindcss/vite": "^4.3.0",
     "axios": "^1.16.1",
     "gsap": "^3.15.0",
+    "lottie-react": "^2.4.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.15.1",
