@@ -240,6 +240,32 @@
     @apply bg-background/30 backdrop-blur-3xl border-r border-white/5 shadow-[4px_0_24px_rgba(0,0,0,0.12)];
   }
 
+  .glass-hud-panel {
+    @apply bg-card/60 backdrop-blur-2xl border border-white/5 shadow-2xl;
+  }
+
+  /* --- CALENDAR PICKERS & NATIVE FORMS --- */
+  input[type="date"], input[type="time"], input[type="datetime-local"], select {
+    color-scheme: dark;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    background-color: hsl(var(--primary) / 0.2);
+    border-radius: 6px;
+    padding: 6px;
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.2));
+    transition: all 0.3s ease;
+  }
+
+  input[type="date"]:hover::-webkit-calendar-picker-indicator,
+  input[type="time"]:hover::-webkit-calendar-picker-indicator {
+    background-color: hsl(var(--primary) / 0.5);
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 6px rgba(232, 0, 29, 0.4));
+  }
+
   .glass-card {
     @apply bg-card/40 backdrop-blur-2xl border border-white/5 shadow-xl rounded-xl;
     background-image: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 100%) !important;

@@ -16,12 +16,12 @@ export default function CrudHeader({
       <div className="absolute top-0 left-1/4 w-1/2 h-full bg-primary/5 blur-[80px] -z-10 rounded-full pointer-events-none"></div>
 
       {/* 🌟 1. SECCIÓN SUPERIOR: Título y Botón (Responsive) */}
-      <div className="bg-card/40 backdrop-blur-xl border border-border/40 shadow-lg rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 relative overflow-hidden">
+      <div className="bg-card/40 backdrop-blur-xl border border-border/40 shadow-lg rounded-2xl p-4 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 relative overflow-hidden">
         {/* Acento lateral luminiscente */}
         <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-primary via-primary/50 to-transparent"></div>
 
-        <div>
-          <h2 className="text-2xl md:text-3xl font-display font-black tracking-wide text-foreground uppercase drop-shadow-[0_0_10px_hsla(var(--primary),0.3)] flex items-center gap-3">
+        <div className="w-full">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-display font-black tracking-wide text-foreground uppercase drop-shadow-[0_0_10px_hsla(var(--primary),0.3)] flex items-center gap-2 sm:gap-3">
             {title}
           </h2>
           {description && (
@@ -52,7 +52,7 @@ export default function CrudHeader({
                   key={tab.id}
                   onClick={() => onTabChange(tab.id)}
                   className={`
-                    flex items-center gap-2.5 py-2.5 px-4 text-xs font-bold uppercase tracking-wider transition-all duration-300 rounded-lg relative overflow-hidden shrink-0
+                    flex items-center gap-1.5 sm:gap-2.5 py-2 sm:py-2.5 px-3 sm:px-4 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300 rounded-lg relative overflow-hidden shrink-0
                     ${isActive
                       ? 'bg-primary/10 text-primary border border-primary/20 shadow-[inset_0_0_10px_hsla(var(--primary),0.1)]'
                       : 'bg-transparent text-muted-foreground hover:bg-white/5 hover:text-foreground border border-transparent'

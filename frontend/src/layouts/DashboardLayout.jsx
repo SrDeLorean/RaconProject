@@ -163,7 +163,7 @@ export default function DashboardLayout({ menuItems = [], profile }) {
         {/* ========================================================================= */}
         {/* TOPBAR (HEADER SUPERIOR)                                                  */}
         {/* ========================================================================= */}
-        <header className="h-20 bg-card/40 backdrop-blur-3xl border-b border-white/5 sticky top-0 z-30 px-6 flex items-center justify-between shrink-0 shadow-[0_8px_30px_rgb(0,0,0,0.05)]">
+        <header className="h-20 bg-card/40 backdrop-blur-3xl border-b border-white/5 sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between shrink-0 shadow-[0_8px_30px_rgb(0,0,0,0.05)]">
           
           {/* LADO IZQUIERDO: Hamburguesa + Título */}
           <div className="flex items-center gap-4">
@@ -273,7 +273,7 @@ export default function DashboardLayout({ menuItems = [], profile }) {
         {/* ========================================================================= */}
         {/* 3. ÁREA DE CONTENIDO (OUTLET)                                             */}
         {/* ========================================================================= */}
-        <main className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-10 scroll-smooth relative z-10">
+        <main className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-10 scroll-smooth relative z-10">
           <div className="max-w-7xl mx-auto">
              <Outlet />
           </div>

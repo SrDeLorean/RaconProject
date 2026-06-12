@@ -73,10 +73,10 @@ export default function MisEquiposInscritos() {
           {equipos.map((contrato) => (
             <div 
               key={contrato.id} 
-              className="group border border-border/50 bg-card/30 backdrop-blur-md rounded-2xl p-6 flex flex-col justify-between gap-6 relative overflow-hidden shadow-lg hover:border-primary/40 hover:shadow-[0_0_25px_rgba(var(--primary),0.05)] transition-all duration-300"
+              className="group border border-white/10 bg-card/40 backdrop-blur-2xl rounded-3xl p-5 sm:p-6 flex flex-col justify-between gap-6 relative overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:border-primary/40 hover:shadow-[0_0_25px_rgba(var(--primary),0.15)] transition-all duration-500 hover:-translate-y-1"
             >
               {/* Resplandor decorativo de fondo */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-destructive/5 rounded-full blur-3xl pointer-events-none group-hover:from-primary/20 transition-all duration-500"></div>
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-primary/15 to-transparent rounded-full blur-[50px] pointer-events-none group-hover:from-primary/30 transition-all duration-700"></div>
               
               <div className="space-y-4 relative z-10">
                 {/* Cabecera de la Ficha: Organización & Estatus */}

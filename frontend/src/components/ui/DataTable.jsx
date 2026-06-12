@@ -39,7 +39,7 @@ export default function DataTable({
         {isLoading && <div className="absolute inset-0 z-0 animate-scanline pointer-events-none opacity-20"></div>}
         
         {/* ================= HEADER ================= */}
-        <div className="p-5 sm:px-6 py-5 border-b border-white/5 flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between relative z-20 bg-gradient-to-b from-white/5 to-transparent">
+        <div className="p-4 sm:p-5 sm:px-6 border-b border-white/5 flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between relative z-20 bg-gradient-to-b from-white/5 to-transparent">
           {title && (
             <div className="flex items-center gap-3">
               <h3 className="text-xl font-display font-black tracking-widest text-foreground uppercase drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">
@@ -115,7 +115,7 @@ export default function DataTable({
             
             (
               <tr>
-                <td colSpan={columns.length} className="py-24 text-center">
+                <td colSpan={columns.length} className="py-16 sm:py-24 text-center px-4">
                   <div className="flex flex-col items-center justify-center animate-fade-in opacity-60">
                     <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
                       <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -411,7 +411,7 @@ export default function CampeonatosJugadorUtPage() {
             <div className="space-y-8">
               
               {/* Tarjeta del Torneo (Hero Card) */}
-              <section className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/45 backdrop-blur-md shadow-2xl">
+              <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-card/60 backdrop-blur-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
                 <div className="relative h-48 md:h-56 w-full overflow-hidden border-b border-border/40">
                   {selectedTorneo.banner || selectedTorneo.temporada?.organizacion?.banner ? (
                     <img 
@@ -472,7 +472,7 @@ export default function CampeonatosJugadorUtPage() {
               </section>
 
               {/* Pestañas de Navegación del Torneo */}
-              <div className="flex flex-wrap gap-2 border-b border-border/20 dark:border-white/[0.05] pb-3.5 relative z-20">
+              <div className="flex gap-2 border-b border-border/20 dark:border-white/[0.05] pb-3.5 relative z-20 overflow-x-auto no-scrollbar">
                 {[
                   { id: 'resumen', label: 'Resumen y Reglamento', icon: '📋' },
                   { id: 'calendario', label: 'Calendario / Fixture', icon: '📅' },
@@ -482,10 +482,10 @@ export default function CampeonatosJugadorUtPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveSubTab(tab.id)}
-                    className={`px-4.5 py-2.5 rounded-xl text-[10px] font-condensed font-black uppercase tracking-wider border transition-all duration-300 flex items-center gap-2.5 cursor-pointer ${
+                    className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[10px] sm:text-[11px] font-condensed font-black uppercase tracking-wider border transition-all duration-300 flex items-center gap-2 cursor-pointer shrink-0 ${
                       activeSubTab === tab.id
-                        ? 'bg-primary/15 text-primary border-primary/45 shadow-[0_0_20px_rgba(232,0,29,0.15)] active-date-glow'
-                        : 'bg-card/30 border-border-border/30 dark:border-white/[0.05] text-muted-foreground hover:text-foreground hover:bg-card/70 hover:border-primary/30'
+                        ? 'bg-primary/15 text-primary border-primary/45 shadow-[0_0_20px_rgba(232,0,29,0.15)]'
+                        : 'bg-card/40 border-white/5 text-muted-foreground hover:text-foreground hover:bg-white/5 hover:border-primary/30'
                     }`}
                   >
                     <span>{tab.icon}</span>

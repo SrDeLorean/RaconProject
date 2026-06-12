@@ -33,13 +33,13 @@ const Input = forwardRef(({
             relative w-full text-foreground border rounded-xl px-4 py-3 
             transition-all duration-300 outline-none
             font-sans text-sm shadow-inner
-            /* Glassmorphism Base */
-            bg-card/40 backdrop-blur-md
+            /* Glassmorphism Inset Base */
+            bg-black/20 backdrop-blur-xl shadow-[inset_0_2px_8px_rgba(0,0,0,0.3)]
             ${icon ? 'pl-11' : ''}
             /* Estados */
             ${error 
-              ? 'border-destructive/60 focus:border-destructive/80 focus:bg-destructive/5' 
-              : 'border-border/50 focus:border-primary/60 hover:border-border focus:bg-card/60'
+              ? 'border-destructive/60 focus:border-destructive/80 focus:bg-destructive/10' 
+              : 'border-white/10 focus:border-primary/60 hover:border-white/20 focus:bg-black/40'
             }
           `}
           {...props}
