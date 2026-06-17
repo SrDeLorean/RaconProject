@@ -108,6 +108,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('competencias/{competencia}/equipos/disponibles', [CompetenciaEquipoController::class, 'disponibles']);
     Route::apiResource('competencias.equipos', CompetenciaEquipoController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::post('/competencias/{competencia}/equipos/{equipo_id}/wo', [CompetenciaEquipoController::class, 'darWO']);
+    Route::post('/competencias/{competencia}/equipos/{equipo_id}/reemplazar', [CompetenciaEquipoController::class, 'reemplazar']);
 
     // Gestión del Roster del Equipo por Organización
     Route::post('/equipos/{equipo}/roster', [EquipoController::class, 'addRosterJugador']);
@@ -118,9 +120,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/competencias/{competencia}/partidos/bulk', [\App\Http\Controllers\Api\PartidoController::class, 'bulkStore']);
     Route::apiResource('partidos', \App\Http\Controllers\Api\PartidoController::class)->except(['index', 'show']);
 
-    // Reporte de Partidos vía EA Pro Clubs API
+    // Reporte de Partidos vía EA Pro Clubs API & Manual
     Route::get('/partidos/{partido}/ea-matches', [\App\Http\Controllers\Api\ReporteController::class, 'getEaMatches']);
     Route::post('/partidos/{partido}/ea-report', [\App\Http\Controllers\Api\ReporteController::class, 'storeEaReport']);
+    Route::post('/partidos/{partido}/manual-report', [\App\Http\Controllers\Api\ReporteController::class, 'submitManualReport']);
+    Route::post('/partidos/{partido}/confirm-report', [\App\Http\Controllers\Api\ReporteController::class, 'confirmManualReport']);
 
     // ─── Rutas Protegidas UT 1v1 y 2v2 ───────────────────
     Route::apiResource('competencias-ut', CompetenciaUtController::class)->except(['index', 'show']);
@@ -129,8 +133,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('partidos-ut', PartidoUtController::class)->except(['index', 'show']);
     Route::get('/partidos-ut/{partido}/ea-matches', [ReporteUtController::class, 'getEaMatches']);
     Route::post('/partidos-ut/{partido}/ea-report', [ReporteUtController::class, 'storeEaReport']);
+    Route::post('/partidos-ut/{partido}/manual-report', [ReporteUtController::class, 'submitManualReport']);
+    Route::post('/partidos-ut/{partido}/confirm-report', [ReporteUtController::class, 'confirmManualReport']);
     Route::put('/inscripciones-ut/{id}', [InscripcionUTController::class, 'update']);
     Route::delete('/inscripciones-ut/{id}', [InscripcionUTController::class, 'destroy']);
+    Route::post('/competencias-ut/{competenciaUt}/equipos/{equipo_ut_id}/wo', [CompetenciaUtController::class, 'darWO']);
+    Route::post('/competencias-ut/{competenciaUt}/equipos/{equipo_ut_id}/reemplazar', [CompetenciaUtController::class, 'reemplazar']);
 });
 
 // Rutas Públicas de Partidos 11v11

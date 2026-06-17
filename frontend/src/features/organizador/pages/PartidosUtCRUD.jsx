@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '@/components/ui/DataTable';
 import CrudHeader from '@/components/shared/CrudHeader';
+import PageHelp from '@/components/shared/PageHelp';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
@@ -9,6 +10,7 @@ import Select from '@/components/ui/Select';
 import Input from '@/components/ui/Input';
 import api from '@/api/axios';
 import Modal from '@/components/ui/Modal';
+
 
 export default function PartidosUtCRUD() {
   const navigate = useNavigate();
@@ -42,18 +44,43 @@ export default function PartidosUtCRUD() {
   const [eaWarnings, setEaWarnings] = useState(null);
   const [eaMismatchModal, setEaMismatchModal] = useState(null);
 
+
   // Manual Input States
   const [statsScoreLocal, setStatsScoreLocal] = useState('');
   const [statsScoreVisitante, setStatsScoreVisitante] = useState('');
   const [teamLocalStats, setTeamLocalStats] = useState({ shots: 10, possession: 50, corners: 4, fouls: 5 });
   const [teamVisitanteStats, setTeamVisitanteStats] = useState({ shots: 10, possession: 50, corners: 4, fouls: 5 });
   
-  // Plantilla oficial cargada bajo demanda para estadísticas de jugadores (capitán + compañero)
+  // Plantilla oficial cargada bajo demanda para estadísticas de jugadores
   const [localRoster, setLocalRoster] = useState([]);
   const [visitanteRoster, setVisitanteRoster] = useState([]);
   const [localPlayerStats, setLocalPlayerStats] = useState([]);
   const [visitantePlayerStats, setVisitantePlayerStats] = useState([]);
   const [manualProcessing, setManualProcessing] = useState(false);
+
+  // Confirm Manual Report States
+  const [selectedConfirmMatch, setSelectedConfirmMatch] = useState(null);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [confirmProcessing, setConfirmProcessing] = useState(false);
+
+  // States for the unified editor in the confirmation modal
+  const [confirmScoreLocal, setConfirmScoreLocal] = useState('');
+  const [confirmScoreVisitante, setConfirmScoreVisitante] = useState('');
+  const [confirmTeamLocalStats, setConfirmTeamLocalStats] = useState({});
+  const [confirmTeamVisitanteStats, setConfirmTeamVisitanteStats] = useState({});
+  const [confirmLocalPlayers, setConfirmLocalPlayers] = useState([]);
+  const [confirmVisitantePlayers, setConfirmVisitantePlayers] = useState([]);
+  const [readOnlyLocalPlayers, setReadOnlyLocalPlayers] = useState([]);
+  const [readOnlyVisitantePlayers, setReadOnlyVisitantePlayers] = useState([]);
+  const [confirmActiveTab, setConfirmActiveTab] = useState('local');
+
+  const getImageUrl = (path) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') || 'http://localhost:8000';
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    return `${backendBaseUrl}${cleanPath}`;
+  };
 
   const fetchPartidos = async () => {
     setLoading(true);
@@ -62,8 +89,8 @@ export default function PartidosUtCRUD() {
       const res = await api.get('/partidos-ut', { params: { for_organizer: true } });
       setPartidos(res.data || []);
     } catch (err) {
-      console.error("Error al obtener partidos UT:", err);
-      setError("No se pudieron obtener los partidos oficiales de Ultimate Team.");
+      console.error("Error al obtener partidos:", err);
+      setError("No se pudieron obtener los partidos oficiales.");
     } finally {
       setLoading(false);
     }
@@ -73,57 +100,45 @@ export default function PartidosUtCRUD() {
     fetchPartidos();
   }, []);
 
-  // Cargar duplas (capitán y compañero) bajo demanda para reporte manual
+  // Cargar rosters bajo demanda cuando se activa el reporte manual
   useEffect(() => {
     if (selectedMatch && reportMethod === 'manual') {
-      const lRoster = [];
+      // 1. Cargar local
+      const localRosterList = [];
       if (selectedMatch.local?.capitan) {
-        lRoster.push({
-          id: selectedMatch.local.capitan.id,
-          name: selectedMatch.local.capitan.gamertag || selectedMatch.local.capitan.name || 'Capitán Local'
-        });
+        localRosterList.push(selectedMatch.local.capitan);
       }
       if (selectedMatch.local?.companero) {
-        lRoster.push({
-          id: selectedMatch.local.companero.id,
-          name: selectedMatch.local.companero.gamertag || selectedMatch.local.companero.name || 'Compañero Local'
-        });
+        localRosterList.push(selectedMatch.local.companero);
       }
-      setLocalRoster(lRoster);
-      setLocalPlayerStats(lRoster.map(p => ({
-        id: p.id,
-        name: p.name,
-        equipo_id: selectedMatch.equipo_ut_local_id,
+      setLocalRoster(localRosterList);
+      setLocalPlayerStats(localRosterList.map(userObj => ({
+        id: userObj.id,
+        name: userObj.gamertag || userObj.name || 'Jugador',
+        equipo_id: selectedMatch.equipo_ut_local_id || selectedMatch.equipo_local_id,
         goals: 0,
         assists: 0,
         yellowCard: false,
-        redCard: false,
-        posicion: 'DEL'
+        redCard: false
       })));
 
-      const vRoster = [];
+      // 2. Cargar visitante
+      const visitanteRosterList = [];
       if (selectedMatch.visitante?.capitan) {
-        vRoster.push({
-          id: selectedMatch.visitante.capitan.id,
-          name: selectedMatch.visitante.capitan.gamertag || selectedMatch.visitante.capitan.name || 'Capitán Visitante'
-        });
+        visitanteRosterList.push(selectedMatch.visitante.capitan);
       }
       if (selectedMatch.visitante?.companero) {
-        vRoster.push({
-          id: selectedMatch.visitante.companero.id,
-          name: selectedMatch.visitante.companero.gamertag || selectedMatch.visitante.companero.name || 'Compañero Visitante'
-        });
+        visitanteRosterList.push(selectedMatch.visitante.companero);
       }
-      setVisitanteRoster(vRoster);
-      setVisitantePlayerStats(vRoster.map(p => ({
-        id: p.id,
-        name: p.name,
-        equipo_id: selectedMatch.equipo_ut_visitante_id,
+      setVisitanteRoster(visitanteRosterList);
+      setVisitantePlayerStats(visitanteRosterList.map(userObj => ({
+        id: userObj.id,
+        name: userObj.gamertag || userObj.name || 'Jugador',
+        equipo_id: selectedMatch.equipo_ut_visitante_id || selectedMatch.equipo_visitante_id,
         goals: 0,
         assists: 0,
         yellowCard: false,
-        redCard: false,
-        posicion: 'DEL'
+        redCard: false
       })));
     }
   }, [selectedMatch, reportMethod]);
@@ -163,7 +178,7 @@ export default function PartidosUtCRUD() {
       }
     } catch (err) {
       console.warn("No se pudieron obtener los partidos de EA:", err);
-      setEaError(err.response?.data?.message || "No se pudo conectar a la API de EA. Asegúrate de configurar los IDs de Club de EA.");
+      setEaError(err.response?.data?.message || "No se pudo conectar a la API de EA. Asegúrate de configurar los IDs de Club de EA en la Oficina de los Clubes.");
     } finally {
       setEaLoading(false);
     }
@@ -204,6 +219,7 @@ export default function PartidosUtCRUD() {
       return;
     }
 
+
     setEaProcessing(true);
     setEaWarnings(null);
     try {
@@ -215,7 +231,7 @@ export default function PartidosUtCRUD() {
       });
 
       if (res.data && res.data.success) {
-        setSuccessMsg("🎉 ¡Partido UT reportado exitosamente con datos de la API de EA Sports!");
+        setSuccessMsg("🎉 ¡Partido reportado exitosamente con datos de la API de EA Sports!");
         setIsStatsModalOpen(false);
         fetchPartidos();
       }
@@ -250,7 +266,7 @@ export default function PartidosUtCRUD() {
       });
 
       if (res.data) {
-        setSuccessMsg("🎉 ¡Marcador y estadísticas UT reportadas manualmente con éxito!");
+        setSuccessMsg("🎉 ¡Marcador y estadísticas reportadas manualmente con éxito!");
         setIsStatsModalOpen(false);
         fetchPartidos();
       }
@@ -261,10 +277,193 @@ export default function PartidosUtCRUD() {
     }
   };
 
+  // Abrir Modal de Confirmación
+  const openConfirmModal = async (match) => {
+    setSelectedConfirmMatch(match);
+    
+    const rLocal = match.reporte_local_stats || {};
+    const rVisit = match.reporte_visitante_stats || {};
+
+    // Goles oficiales pre-llenados
+    const scoreLocal = rLocal.goles_local !== undefined ? String(rLocal.goles_local) : (rVisit.goles_local !== undefined ? String(rVisit.goles_local) : '');
+    const scoreVisitante = rLocal.goles_visitante !== undefined ? String(rLocal.goles_visitante) : (rVisit.goles_visitante !== undefined ? String(rVisit.goles_visitante) : '');
+
+    setConfirmScoreLocal(scoreLocal);
+    setConfirmScoreVisitante(scoreVisitante);
+
+    // Estadísticas de equipo
+    setConfirmTeamLocalStats({
+      goles_favor: rLocal.team_stats?.goles_favor !== undefined ? rLocal.team_stats.goles_favor : (scoreLocal ? Number(scoreLocal) : 0),
+      goles_en_contra: rLocal.team_stats?.goles_en_contra !== undefined ? rLocal.team_stats.goles_en_contra : (scoreVisitante ? Number(scoreVisitante) : 0),
+      asistencias: rLocal.team_stats?.asistencias || 0,
+      tiros: rLocal.team_stats?.tiros || 0,
+      pases_intentados: rLocal.team_stats?.pases_intentados || 0,
+      precision_pases: rLocal.team_stats?.precision_pases || 0,
+      entradas_intentadas: rLocal.team_stats?.entradas_intentadas || 0,
+      entradas_exitosas: rLocal.team_stats?.entradas_exitosas || 0,
+      tarjetas_rojas: rLocal.team_stats?.tarjetas_rojas || 0,
+      tarjetas_amarillas: rLocal.team_stats?.tarjetas_amarillas || 0,
+      atajadas: rLocal.team_stats?.atajadas || 0
+    });
+
+    setConfirmTeamVisitanteStats({
+      goles_favor: rVisit.team_stats?.goles_favor !== undefined ? rVisit.team_stats.goles_favor : (scoreVisitante ? Number(scoreVisitante) : 0),
+      goles_en_contra: rVisit.team_stats?.goles_en_contra !== undefined ? rVisit.team_stats.goles_en_contra : (scoreLocal ? Number(scoreLocal) : 0),
+      asistencias: rVisit.team_stats?.asistencias || 0,
+      tiros: rVisit.team_stats?.tiros || 0,
+      pases_intentados: rVisit.team_stats?.pases_intentados || 0,
+      precision_pases: rVisit.team_stats?.precision_pases || 0,
+      entradas_intentadas: rVisit.team_stats?.entradas_intentadas || 0,
+      entradas_exitosas: rVisit.team_stats?.entradas_exitosas || 0,
+      tarjetas_rojas: rVisit.team_stats?.tarjetas_rojas || 0,
+      tarjetas_amarillas: rVisit.team_stats?.tarjetas_amarillas || 0,
+      atajadas: rVisit.team_stats?.atajadas || 0
+    });
+
+    setConfirmActiveTab('local');
+
+    // Cargar Roster Local y Combinar con reporte si existe
+    let localPlayersList = [];
+    if (match.equipo_ut_local_id || match.equipo_local_id) {
+      try {
+        const roster = [];
+        if (match.local?.capitan) {
+          roster.push(match.local.capitan);
+        }
+        if (match.local?.companero) {
+          roster.push(match.local.companero);
+        }
+        const reportedMap = new Map();
+        if (rLocal.player_stats) {
+          rLocal.player_stats.forEach(p => reportedMap.set(Number(p.jugador_id), p));
+        }
+        localPlayersList = roster.map(userObj => {
+          const reported = reportedMap.get(Number(userObj.id));
+          return {
+            jugador_id: userObj.id,
+            name: userObj.gamertag || userObj.name || 'Jugador',
+            valoracion: reported ? Number(reported.valoracion ?? 6.0) : 6.0,
+            goles: reported ? Number(reported.goles ?? 0) : 0,
+            asistencias: reported ? Number(reported.asistencias ?? 0) : 0,
+            yellowCard: reported ? !!reported.yellowCard : false,
+            redCard: reported ? !!reported.redCard : false,
+          };
+        });
+      } catch (err) {
+        console.warn("Error cargando roster local para confirmación:", err);
+        localPlayersList = rLocal.player_stats || [];
+      }
+    } else {
+      localPlayersList = rLocal.player_stats || [];
+    }
+    setConfirmLocalPlayers(localPlayersList);
+    setReadOnlyLocalPlayers(localPlayersList);
+
+    // Cargar Roster Visitante y Combinar con reporte si existe
+    let visitantePlayersList = [];
+    if (match.equipo_ut_visitante_id || match.equipo_visitante_id) {
+      try {
+        const roster = [];
+        if (match.visitante?.capitan) {
+          roster.push(match.visitante.capitan);
+        }
+        if (match.visitante?.companero) {
+          roster.push(match.visitante.companero);
+        }
+        const reportedMap = new Map();
+        if (rVisit.player_stats) {
+          rVisit.player_stats.forEach(p => reportedMap.set(Number(p.jugador_id), p));
+        }
+        visitantePlayersList = roster.map(userObj => {
+          const reported = reportedMap.get(Number(userObj.id));
+          return {
+            jugador_id: userObj.id,
+            name: userObj.gamertag || userObj.name || 'Jugador',
+            valoracion: reported ? Number(reported.valoracion ?? 6.0) : 6.0,
+            goles: reported ? Number(reported.goles ?? 0) : 0,
+            asistencias: reported ? Number(reported.asistencias ?? 0) : 0,
+            yellowCard: reported ? !!reported.yellowCard : false,
+            redCard: reported ? !!reported.redCard : false,
+          };
+        });
+      } catch (err) {
+        console.warn("Error cargando roster visitante para confirmación:", err);
+        visitantePlayersList = rVisit.player_stats || [];
+      }
+    } else {
+      visitantePlayersList = rVisit.player_stats || [];
+    }
+    setConfirmVisitantePlayers(visitantePlayersList);
+    setReadOnlyVisitantePlayers(visitantePlayersList);
+
+    setIsConfirmModalOpen(true);
+  };
+
+  // Enviar Confirmación de Reporte Manual (Organizador)
+  const handleConfirmReportSubmit = async () => {
+    if (confirmScoreLocal === '' || confirmScoreVisitante === '') {
+      alert("⚠️ Por favor ingresa los goles oficiales.");
+      return;
+    }
+
+    // Validar coherencia de estadísticas de plantilla Local
+    const localGoalsSum = confirmLocalPlayers.reduce((acc, p) => acc + Number(p.goles || 0), 0);
+    const localAssistsSum = confirmLocalPlayers.reduce((acc, p) => acc + Number(p.asistencias || 0), 0);
+
+    if (localGoalsSum !== Number(confirmTeamLocalStats.goles_favor || 0)) {
+      alert(`⚠️ La suma de goles de los jugadores locales (${localGoalsSum}) no coincide con los Goles a Favor del club local (${confirmTeamLocalStats.goles_favor || 0}).`);
+      return;
+    }
+    if (localAssistsSum !== Number(confirmTeamLocalStats.asistencias || 0)) {
+      alert(`⚠️ La suma de asistencias de los jugadores locales (${localAssistsSum}) no coincide con las Asistencias del club local (${confirmTeamLocalStats.asistencias || 0}).`);
+      return;
+    }
+
+    // Validar coherencia de estadísticas de plantilla Visitante
+    const visitanteGoalsSum = confirmVisitantePlayers.reduce((acc, p) => acc + Number(p.goles || 0), 0);
+    const visitanteAssistsSum = confirmVisitantePlayers.reduce((acc, p) => acc + Number(p.asistencias || 0), 0);
+
+    if (visitanteGoalsSum !== Number(confirmTeamVisitanteStats.goles_favor || 0)) {
+      alert(`⚠️ La suma de goles de los jugadores visitantes (${visitanteGoalsSum}) no coincide con los Goles a Favor del club visitante (${confirmTeamVisitanteStats.goles_favor || 0}).`);
+      return;
+    }
+    if (visitanteAssistsSum !== Number(confirmTeamVisitanteStats.asistencias || 0)) {
+      alert(`⚠️ La suma de asistencias de los jugadores visitantes (${visitanteAssistsSum}) no coincide con las Asistencias del club visitante (${confirmTeamVisitanteStats.asistencias || 0}).`);
+      return;
+    }
+
+    setConfirmProcessing(true);
+    try {
+      const res = await api.post(`/partidos-ut/${selectedConfirmMatch.id}/confirm-report`, {
+        goles_local: Number(confirmScoreLocal),
+        goles_visitante: Number(confirmScoreVisitante),
+        local_stats: {
+          team_stats: confirmTeamLocalStats,
+          player_stats: confirmLocalPlayers
+        },
+        visitante_stats: {
+          team_stats: confirmTeamVisitanteStats,
+          player_stats: confirmVisitantePlayers
+        }
+      });
+
+      if (res.data) {
+        setSuccessMsg("🎉 ¡Ficha unificada y estadísticas confirmadas exitosamente!");
+        setIsConfirmModalOpen(false);
+        fetchPartidos();
+      }
+    } catch (err) {
+      alert("❌ Error al confirmar el reporte: " + (err.response?.data?.message || err.message));
+    } finally {
+      setConfirmProcessing(false);
+    }
+  };
+
   // Tabs de CrudHeader
   const tabsConfig = useMemo(() => [
     { id: 'todos', label: 'Todos los Partidos', icon: '🏟️' },
     { id: 'por_reportar', label: 'Por Reportar', icon: '🚨' },
+    { id: 'por_confirmar', label: 'Por Confirmar', icon: '🛡️' },
     { id: 'pendiente', label: 'Pendientes', icon: '⏳' },
     { id: 'finalizado', label: 'Finalizados', icon: '🟢' },
   ], []);
@@ -299,13 +498,18 @@ export default function PartidosUtCRUD() {
   // Filtrar según Pestaña seleccionada, dropdowns y término de búsqueda
   const filteredData = useMemo(() => {
     return partidos.filter(p => {
-      // Filtro de Pestaña
       const yaReportado = p.goles_local !== null && p.goles_visitante !== null;
-      if (activeTab === 'pendiente' && yaReportado) return false;
-      if (activeTab === 'finalizado' && !yaReportado) return false;
+      const porConfirmar = (p.reporte_local_completado || p.reporte_visitante_completado) && !p.reporte_confirmado;
 
-      if (activeTab === 'por_reportar') {
-        if (yaReportado) return false;
+      // Filtro de Pestaña
+      if (activeTab === 'por_confirmar') {
+        if (!porConfirmar) return false;
+      } else if (activeTab === 'pendiente') {
+        if (yaReportado || porConfirmar) return false;
+      } else if (activeTab === 'finalizado') {
+        if (!yaReportado && !p.reporte_confirmado) return false;
+      } else if (activeTab === 'por_reportar') {
+        if (yaReportado || porConfirmar) return false;
         if (!p.fecha) return false;
         const today = new Date();
         const year = today.getFullYear();
@@ -321,7 +525,7 @@ export default function PartidosUtCRUD() {
       }
 
       // Filtro de Competencia
-      if (selectedCompetencia !== 'todos' && p.competencia_ut_id !== Number(selectedCompetencia)) {
+      if (selectedCompetencia !== 'todos' && p.competencia_id !== Number(selectedCompetencia)) {
         return false;
       }
 
@@ -348,7 +552,7 @@ export default function PartidosUtCRUD() {
   // Columnas para DataTable
   const columnas = useMemo(() => [
     {
-      header: 'Partido UT / Encuentro',
+      header: 'Partido / Encuentro',
       render: (row) => {
         const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') || 'http://localhost:8000';
         const getUrl = (path) => typeof window.mediaUrl === 'function' ? window.mediaUrl(path) : `${backendBaseUrl}${path}`;
@@ -361,7 +565,7 @@ export default function PartidosUtCRUD() {
                 className="w-6 h-6 rounded object-cover border border-border/40 bg-card shrink-0" 
               />
             ) : (
-              <Badge variant="neutral" className="font-mono">LOC</Badge>
+              <Badge variant="neutral" className="font-mono">{row.local?.abreviatura || 'LOC'}</Badge>
             )}
             <span className="font-bold text-foreground text-xs uppercase truncate max-w-[120px]">{row.local?.nombre || 'TBD'}</span>
             <span className="text-primary font-black font-mono px-2 py-0.5 rounded bg-muted/40 text-xs shrink-0 mx-1">
@@ -375,17 +579,17 @@ export default function PartidosUtCRUD() {
                 className="w-6 h-6 rounded object-cover border border-border/40 bg-card shrink-0" 
               />
             ) : (
-              <Badge variant="neutral" className="font-mono">VIS</Badge>
+              <Badge variant="neutral" className="font-mono">{row.visitante?.abreviatura || 'VIS'}</Badge>
             )}
           </div>
         );
       }
     },
     {
-      header: 'Torneo UT / Competencia',
+      header: 'Torneo / Competencia',
       render: (row) => (
         <span className="text-xs font-bold text-foreground uppercase truncate max-w-[150px]">
-          🎮 {row.competencia?.nombre || 'Competencia UT'}
+          🏆 {row.competencia?.nombre || 'Competencia'}
         </span>
       )
     },
@@ -410,6 +614,10 @@ export default function PartidosUtCRUD() {
       header: 'Estado',
       render: (row) => {
         const yaRep = row.goles_local !== null && row.goles_visitante !== null;
+        const porConfirmar = (row.reporte_local_completado || row.reporte_visitante_completado) && !row.reporte_confirmado;
+        if (porConfirmar) {
+          return <Badge variant="warning">Por Confirmar</Badge>;
+        }
         return (
           <Badge variant={yaRep ? 'success' : 'warning'}>
             {yaRep ? 'Finalizado' : 'Pendiente'}
@@ -421,25 +629,36 @@ export default function PartidosUtCRUD() {
       header: 'Acciones',
       render: (row) => {
         const yaRep = row.goles_local !== null && row.goles_visitante !== null;
+        const porConfirmar = (row.reporte_local_completado || row.reporte_visitante_completado) && !row.reporte_confirmado;
         return (
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={() => openReportModal(row)}
-              className="h-8 px-3 text-[10px] bg-gradient-to-r from-primary to-destructive text-primary-foreground border-none font-display font-black uppercase tracking-wider shadow-md whitespace-nowrap shrink-0"
-            >
-              🎮 Ficha UT / Reportar
-            </Button>
+            {porConfirmar ? (
+              <Button
+                size="sm"
+                onClick={() => openConfirmModal(row)}
+                className="h-8 px-3 text-[10px] bg-amber-500 hover:bg-amber-600 text-white border-none font-display font-black uppercase tracking-wider shadow-md whitespace-nowrap shrink-0"
+              >
+                🛡️ Revisar Reporte
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => openReportModal(row)}
+                className="h-8 px-3 text-[10px] bg-gradient-to-r from-primary to-destructive text-primary-foreground border-none font-display font-black uppercase tracking-wider shadow-md whitespace-nowrap shrink-0"
+              >
+                🛡️ Ficha / Reportar
+              </Button>
+            )}
             <Button
               size="sm"
               onClick={() => navigate(`/partidos-ut/${row.id}`)}
               className={`h-8 px-3 text-[10px] font-display font-black uppercase tracking-wider shadow-sm flex items-center justify-center gap-1 transition-all whitespace-nowrap shrink-0 border border-border/45 ${
-                yaRep 
+                yaRep || row.reporte_confirmado 
                   ? 'bg-sky-600/15 hover:bg-sky-600 text-sky-400 hover:text-white border-sky-500/30' 
                   : 'bg-card/60 hover:bg-muted text-foreground'
               }`}
             >
-              📊 {yaRep ? 'Ver Reporte' : 'Ver Previa'}
+              📊 {yaRep || row.reporte_confirmado ? 'Ver Reporte' : 'Ver Previa'}
             </Button>
           </div>
         );
@@ -463,9 +682,9 @@ export default function PartidosUtCRUD() {
       )}
 
       <CrudHeader 
-        title="Partidos y Calendarios UT (1v1/2v2)"
-        description="Monitorea y reporta los marcadores e incidentes oficiales de las competencias Ultimate Team."
-        buttonText={null}
+        title="Partidos UT y Calendarios"
+        description="Monitorea y reporta los marcadores e incidentes oficiales de las competencias de Ultimate Team."
+        buttonText={null} // No se crean desde aquí (se generan en el Matchmaker)
         tabs={tabsConfig}
         activeTab={activeTab}
         onTabChange={(tabId) => {
@@ -475,7 +694,7 @@ export default function PartidosUtCRUD() {
         }}
       />
 
-      {/* SECCIÓN DE FILTROS ADICIONALES */}
+      {/* SECCIÓN DE FILTROS ADICIONALES (TEMPORADA Y COMPETENCIA) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border border-border/50 bg-card/25 backdrop-blur-md p-4 rounded-xl shadow-sm">
         <div className="space-y-1.5">
           <label className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block">📅 Filtrar por Temporada</label>
@@ -483,7 +702,7 @@ export default function PartidosUtCRUD() {
             value={selectedTemporada}
             onChange={(e) => {
               setSelectedTemporada(e.target.value);
-              setSelectedCompetencia('todos');
+              setSelectedCompetencia('todos'); // Resetear competencia
               setCurrentPage(1);
             }}
             className="w-full h-10 px-3 text-xs bg-muted/30 border border-border/60 rounded-lg text-foreground focus:ring-1 focus:ring-primary focus:outline-none cursor-pointer font-bold"
@@ -496,7 +715,7 @@ export default function PartidosUtCRUD() {
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block">🏆 Filtrar por Competencia UT</label>
+          <label className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block">🏆 Filtrar por Competencia / División</label>
           <select
             value={selectedCompetencia}
             onChange={(e) => {
@@ -505,7 +724,7 @@ export default function PartidosUtCRUD() {
             }}
             className="w-full h-10 px-3 text-xs bg-muted/30 border border-border/60 rounded-lg text-foreground focus:ring-1 focus:ring-primary focus:outline-none cursor-pointer font-bold"
           >
-            <option value="todos">Todas las Competencias UT</option>
+            <option value="todos">Todas las Competencias</option>
             {competenciasFiltradas.map(c => (
               <option key={c.id} value={c.id}>{c.nombre}</option>
             ))}
@@ -515,10 +734,10 @@ export default function PartidosUtCRUD() {
 
       <div className="relative">
         <DataTable 
-          title={`Lista de Partidos UT (${filteredData.length})`}
+          title={`Lista de Partidos (${filteredData.length})`}
           columns={columnas}
           data={paginatedData}
-          searchPlaceholder="Buscar por equipo UT o torneo..."
+          searchPlaceholder="Buscar por equipo o torneo..."
           onSearch={(value) => {
             setSearchTerm(value);
             setCurrentPage(1);
@@ -543,9 +762,9 @@ export default function PartidosUtCRUD() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-border/40 pb-3 gap-3">
               <div>
                 <h3 className="text-lg font-display font-black text-foreground uppercase tracking-wide flex items-center gap-2">
-                  🛡️ Reportar Ficha del Encuentro UT
+                  🛡️ Reportar Ficha del Encuentro
                 </h3>
-                <p className="text-[10px] text-muted-foreground mt-0.5">Reporte administrativo del encuentro oficial de UT.</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Reporte administrativo del encuentro oficial.</p>
               </div>
 
               {/* Selector de Pestañas del Reporte */}
@@ -554,7 +773,7 @@ export default function PartidosUtCRUD() {
                   onClick={() => setReportMethod('ea')}
                   className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-1 ${reportMethod === 'ea' ? 'bg-background text-primary shadow-sm border border-border/20' : 'text-muted-foreground hover:text-foreground'}`}
                 >
-                  🎮 EA Sports API
+                  🎮 EA UT API
                 </button>
                 <button 
                   onClick={() => setReportMethod('manual')}
@@ -584,12 +803,12 @@ export default function PartidosUtCRUD() {
                   <div className="border border-amber-500/30 bg-amber-500/5 rounded-xl p-4 space-y-2">
                     <p className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
                       ⚠️ No se pudo obtener información de EA Sports
-                  </p>
+                    </p>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
                       {eaError}
                     </p>
                     <div className="text-[10px] text-amber-500 font-semibold bg-amber-500/10 p-2.5 rounded-lg">
-                      💡 Asegúrate de que los clubes de UT tengan registrado su <strong>ID de Club de EA</strong> en su configuración antes de reportar.
+                      💡 Asegúrate de que los clubes tengan registrado su <strong>ID de Club de EA</strong> en la Oficina de su sede antes de reportar.
                     </div>
                   </div>
                 )}
@@ -653,6 +872,7 @@ export default function PartidosUtCRUD() {
                                 setEaAlertEmpate(false);
                                 return;
                               }
+
                               
                               // Asignar determinando quién es quién
                               if (isMatch0Local) {
@@ -695,7 +915,7 @@ export default function PartidosUtCRUD() {
                     {/* Alerta de Empate detectado en EA */}
                     {eaAlertEmpate && (
                       <Alert variant="warning" className="text-xs">
-                        <strong>⚠️ Empate Detectado en EA Sports API:</strong> Las copas o ligas no admiten empates absolutos. Te recomendamos **cambiar a la pestaña de "Entrada Manual"** para registrar los penales o marcador de desempate oficial junto con las estadísticas de la dupla.
+                        <strong>⚠️ Empate Detectado en EA UT API:</strong> Las ligas oficiales o copas de eliminación directa no admiten empates absolutos. Si este partido se definió en penales o tiempo extra, te recomendamos **cambiar a la pestaña de "Entrada Manual"** para registrar los penales o marcador de desempate oficial junto con las estadísticas.
                       </Alert>
                     )}
 
@@ -728,14 +948,15 @@ export default function PartidosUtCRUD() {
                   </div>
                 )}
 
-                {/* Warnings de Jugadores No Registrados */}
+                {/* Botones */}
+                {/* Warnings de Jugadores No Registrados / Desalineados */}
                 {eaWarnings && (
                   <div className="border border-red-500/30 bg-red-500/5 rounded-xl p-4 space-y-3 animate-fade-in">
                     <p className="text-xs font-bold text-red-400 flex items-center gap-1.5 uppercase font-display tracking-wide">
-                      🚨 Advertencia de Inscripción de Jugadores UT
+                      🚨 Advertencia de Inscripción de Jugadores
                     </p>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Los siguientes jugadores que participaron en el encuentro de EA Sports no están registrados correctamente en el sistema:
+                      Los siguientes jugadores que participaron en el encuentro de EA Sports no están inscritos correctamente en el sistema:
                     </p>
                     
                     <ul className="text-[10px] space-y-1.5 font-mono bg-black/35 p-3 rounded-lg divide-y divide-white/5 max-h-36 overflow-y-auto">
@@ -748,7 +969,7 @@ export default function PartidosUtCRUD() {
                     </ul>
 
                     <p className="text-[10px] text-yellow-500 font-semibold leading-relaxed">
-                      💡 Asegúrate de que las duplas tengan registrados sus Gamertags/EA IDs correctos en su perfil.
+                      💡 Hablar con un administrador u organizador para actualizar este tema, de lo contrario el equipo rival puede reclamar los puntos por no jugar en las condiciones pactadas.
                     </p>
 
                     <div className="flex justify-end pt-1.5 border-t border-border/20">
@@ -773,7 +994,7 @@ export default function PartidosUtCRUD() {
                     disabled={!selectedEaMatchId || eaLoading || eaWarnings !== null}
                     className="h-10 text-[10px] bg-gradient-to-r from-primary to-destructive text-primary-foreground border-none font-display font-black uppercase tracking-wider shadow-lg"
                   >
-                    ⚽ Sincronizar Ficha EA UT
+                    ⚽ Sincronizar Ficha EA
                   </Button>
                 </div>
               </div>
@@ -864,14 +1085,14 @@ export default function PartidosUtCRUD() {
                   </div>
                 </div>
 
-                {/* Estadísticas de Jugadores de ambas duplas */}
+                {/* Estadísticas de Jugadores de ambas plantillas */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border/30 pt-3">
                   {/* LOCAL */}
                   <div className="space-y-2">
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-primary truncate">Integrantes {selectedMatch.local?.nombre || 'Local'}</h4>
                     <div className="max-h-48 overflow-y-auto border border-border/40 rounded-xl bg-muted/5 divide-y divide-border/20 pr-1">
                       {localPlayerStats.length === 0 ? (
-                        <p className="text-[10px] text-muted-foreground text-center py-4">No hay duplas registradas en el equipo local.</p>
+                        <p className="text-[10px] text-muted-foreground text-center py-4">No hay jugadores registrados en la pareja local.</p>
                       ) : (
                         localPlayerStats.map((p, idx) => (
                           <div key={p.id} className="flex justify-between items-center p-2.5 gap-2 text-[10px] font-semibold">
@@ -941,7 +1162,7 @@ export default function PartidosUtCRUD() {
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-primary truncate">Integrantes {selectedMatch.visitante?.nombre || 'Visitante'}</h4>
                     <div className="max-h-48 overflow-y-auto border border-border/40 rounded-xl bg-muted/5 divide-y divide-border/20 pr-1">
                       {visitantePlayerStats.length === 0 ? (
-                        <p className="text-[10px] text-muted-foreground text-center py-4">No hay duplas registradas en el equipo visitante.</p>
+                        <p className="text-[10px] text-muted-foreground text-center py-4">No hay jugadores registrados en la pareja visitante.</p>
                       ) : (
                         visitantePlayerStats.map((p, idx) => (
                           <div key={p.id} className="flex justify-between items-center p-2.5 gap-2 text-[10px] font-semibold">
@@ -1017,7 +1238,7 @@ export default function PartidosUtCRUD() {
                     isLoading={manualProcessing}
                     className="h-10 text-[10px] bg-primary border-none text-primary-foreground font-display font-black uppercase tracking-wider shadow-lg"
                   >
-                    💾 Enviar Reporte Manual UT
+                    💾 Enviar Reporte Manual
                   </Button>
                 </div>
 
@@ -1032,67 +1253,638 @@ export default function PartidosUtCRUD() {
       <Modal
         isOpen={eaMismatchModal !== null}
         onClose={() => setEaMismatchModal(null)}
-        title="⚠️ Discrepancia de Clubes EA Sports UT"
-        maxWidth="max-w-lg"
+        title="⚠️ Discrepancia de Clubes EA Sports"
+        maxWidth="max-w-xl"
         zIndex="z-[130]"
       >
-        <div className="space-y-4">
-          <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-xl">
-            <p className="text-xs text-destructive-foreground font-semibold leading-relaxed">
-              Los clubes detectados en el partido de EA Sports no corresponden con los clubes del partido oficial programado. Por favor, selecciona el partido correcto o verifica los IDs en la configuración.
+        <div className="space-y-6 text-center font-sans text-xs pt-2">
+          {/* Icono con resplandor neón */}
+          <div className="relative py-2">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-amber-500/15 rounded-full blur-xl animate-pulse pointer-events-none"></div>
+            <div className="relative w-14 h-14 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 flex items-center justify-center text-xl mx-auto mb-2 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+              ⚠️
+            </div>
+            <h4 className="text-base font-display font-black text-foreground uppercase tracking-wider">
+              Conflicto de Identificación de Clubes
+            </h4>
+            <p className="text-[11px] text-muted-foreground leading-relaxed max-w-md mx-auto mt-1">
+              Los clubes reportados desde la API de EA Sports no coinciden con los configurados en el partido oficial programado.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Comparación visual lado a lado */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
             {/* Partido Programado Oficial */}
-            <div className="space-y-2.5 p-3 rounded-xl bg-card border border-border/45">
-              <h4 className="text-[10px] font-black text-primary uppercase tracking-wider border-b border-border/20 pb-1">
-                📌 Partido Programado (DB)
-              </h4>
-              <div className="space-y-1.5 text-xs">
-                <div>
-                  <span className="text-[9px] text-muted-foreground block uppercase font-bold">Local</span>
-                  <span className="font-bold text-foreground truncate block">{eaMismatchModal?.expectedLocal}</span>
-                  <code className="block text-[10px] text-primary/80 font-mono mt-0.5">ID EA: {eaMismatchModal?.expectedLocalId || 'Sin ID'}</code>
+            <div className="relative p-4 rounded-xl bg-card border border-border/60 shadow-md overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
+              <h5 className="text-[10px] font-black text-primary uppercase tracking-widest border-b border-border/20 pb-2 mb-3 flex items-center gap-1.5">
+                <span>📌</span> Partido Programado (DB)
+              </h5>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between items-center bg-muted/20 p-2 rounded-lg border border-border/30">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-muted-foreground uppercase font-black">Local</span>
+                    <span className="font-bold text-foreground text-xs truncate max-w-[150px]">{eaMismatchModal?.expectedLocal}</span>
+                  </div>
+                  <code className="text-[9px] bg-background px-2 py-0.5 rounded font-mono font-bold text-primary border border-border/40">
+                    ID: {eaMismatchModal?.expectedLocalId || 'Sin ID'}
+                  </code>
                 </div>
-                <div className="pt-1.5 border-t border-border/10">
-                  <span className="text-[9px] text-muted-foreground block uppercase font-bold">Visitante</span>
-                  <span className="font-bold text-foreground truncate block">{eaMismatchModal?.expectedVisitante}</span>
-                  <code className="block text-[10px] text-primary/80 font-mono mt-0.5">ID EA: {eaMismatchModal?.expectedVisitanteId || 'Sin ID'}</code>
+
+                <div className="flex justify-between items-center bg-muted/20 p-2 rounded-lg border border-border/30">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-muted-foreground uppercase font-black">Visitante</span>
+                    <span className="font-bold text-foreground text-xs truncate max-w-[150px]">{eaMismatchModal?.expectedVisitante}</span>
+                  </div>
+                  <code className="text-[9px] bg-background px-2 py-0.5 rounded font-mono font-bold text-primary border border-border/40">
+                    ID: {eaMismatchModal?.expectedVisitanteId || 'Sin ID'}
+                  </code>
                 </div>
               </div>
             </div>
 
             {/* Partido Detectado en EA */}
-            <div className="space-y-2.5 p-3 rounded-xl bg-muted/10 border border-border/45">
-              <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-wider border-b border-border/20 pb-1">
-                🎮 Detectado en EA Sports
-              </h4>
-              <div className="space-y-1.5 text-xs">
-                <div>
-                  <span className="text-[9px] text-muted-foreground block uppercase font-bold">Club A</span>
-                  <span className="font-bold text-amber-400 truncate block">{eaMismatchModal?.receivedLocal}</span>
-                  <code className="block text-[10px] text-amber-500/80 font-mono mt-0.5">ID EA: {eaMismatchModal?.receivedLocalId}</code>
+            <div className="relative p-4 rounded-xl bg-card border border-border/60 shadow-md overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
+              <h5 className="text-[10px] font-black text-amber-500 uppercase tracking-widest border-b border-border/20 pb-2 mb-3 flex items-center gap-1.5">
+                <span>🎮</span> Detectado en EA Sports
+              </h5>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between items-center bg-muted/20 p-2 rounded-lg border border-border/30">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-muted-foreground uppercase font-black">Club A</span>
+                    <span className="font-bold text-amber-400 text-xs truncate max-w-[150px]">{eaMismatchModal?.receivedLocal}</span>
+                  </div>
+                  <code className="text-[9px] bg-background px-2 py-0.5 rounded font-mono font-bold text-amber-500 border border-border/40">
+                    ID: {eaMismatchModal?.receivedLocalId || 'Sin ID'}
+                  </code>
                 </div>
-                <div className="pt-1.5 border-t border-border/10">
-                  <span className="text-[9px] text-muted-foreground block uppercase font-bold">Club B</span>
-                  <span className="font-bold text-amber-400 truncate block">{eaMismatchModal?.receivedVisitante}</span>
-                  <code className="block text-[10px] text-amber-500/80 font-mono mt-0.5">ID EA: {eaMismatchModal?.receivedVisitanteId}</code>
+
+                <div className="flex justify-between items-center bg-muted/20 p-2 rounded-lg border border-border/30">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-muted-foreground uppercase font-black">Club B</span>
+                    <span className="font-bold text-amber-400 text-xs truncate max-w-[150px]">{eaMismatchModal?.receivedVisitante}</span>
+                  </div>
+                  <code className="text-[9px] bg-background px-2 py-0.5 rounded font-mono font-bold text-amber-500 border border-border/40">
+                    ID: {eaMismatchModal?.receivedVisitanteId || 'Sin ID'}
+                  </code>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end pt-2">
+          {/* Ayuda táctica */}
+          <div className="p-3 bg-muted/30 border border-border/40 rounded-xl text-left">
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              💡 <strong>¿Cómo solucionarlo?</strong> Asegúrate de seleccionar el partido correcto en la lista de encuentros de EA Sports. Si el problema persiste, verifica que los Capitanes hayan configurado los <strong>IDs de Club EA correctos</strong> en la Oficina del Club.
+            </p>
+          </div>
+
+          {/* Acciones */}
+          <div className="flex justify-end pt-2 border-t border-border/20">
             <Button 
               onClick={() => setEaMismatchModal(null)} 
-              className="px-4 py-2 text-xs bg-muted/30 border border-border/60 hover:bg-muted text-foreground font-bold rounded-lg transition-all"
+              className="px-5 h-9 text-xs bg-primary hover:bg-primary/95 text-primary-foreground border-none font-bold rounded-lg shadow-md hover:shadow-primary/20 transition-all font-display uppercase tracking-wider"
             >
               Entendido
             </Button>
           </div>
         </div>
       </Modal>
+
+      {/* Modal de Revisión y Confirmación de Reporte Manual */}
+      {isConfirmModalOpen && selectedConfirmMatch && (
+        <Modal
+          isOpen={isConfirmModalOpen}
+          onClose={() => setIsConfirmModalOpen(false)}
+          title={`🛡️ Revisar y Confirmar Reporte: ${selectedConfirmMatch.local?.nombre} vs ${selectedConfirmMatch.visitante?.nombre}`}
+          maxWidth="max-w-6xl"
+          zIndex="z-[120]"
+        >
+          <div className="space-y-6 text-left">
+            {/* COMPARATIVA DE ESTADÍSTICAS EN TIEMPO REAL */}
+            <div className="space-y-3 p-4 border border-border/40 rounded-xl bg-card">
+              <h3 className="text-xs font-black text-amber-500 uppercase tracking-widest flex items-center gap-1.5 pb-2 border-b border-border/30">
+                <span>📊</span> Comparativa de Estadísticas de Equipo (Actualizado en tiempo real)
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-[10px]">
+                  <thead>
+                    <tr className="border-b border-border/30 bg-muted/30">
+                      <th className="p-2 font-bold text-muted-foreground uppercase text-left">Estadística</th>
+                      <th className="p-2 font-bold text-primary uppercase text-center w-1/3">Local ({selectedConfirmMatch.local?.nombre || 'Local'})</th>
+                      <th className="p-2 font-bold text-destructive uppercase text-center w-1/3">Visitante ({selectedConfirmMatch.visitante?.nombre || 'Visitante'})</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/20 font-mono">
+                    {[
+                      { label: 'Goles a Favor', key: 'goles_favor' },
+                      { label: 'Goles en Contra', key: 'goles_en_contra' },
+                      { label: 'Asistencias', key: 'asistencias' },
+                      { label: 'Tiros', key: 'tiros' },
+                      { label: 'Pases Intentados', key: 'pases_intentados' },
+                      { label: 'Precisión Pases', key: 'precision_pases', suffix: '%' },
+                      { label: 'Entradas Intentadas', key: 'entradas_intentadas' },
+                      { label: 'Entradas Exitosas', key: 'entradas_exitosas' },
+                      { label: 'Atajadas', key: 'atajadas' },
+                      { label: 'T. Amarillas', key: 'tarjetas_amarillas' },
+                      { label: 'T. Rojas', key: 'tarjetas_rojas' },
+                    ].map((row) => {
+                      const valLocal = confirmTeamLocalStats[row.key] !== undefined ? confirmTeamLocalStats[row.key] : '-';
+                      const valVisit = confirmTeamVisitanteStats[row.key] !== undefined ? confirmTeamVisitanteStats[row.key] : '-';
+                      return (
+                        <tr key={row.key || row.scoreKey} className="hover:bg-muted/10">
+                          <td className="p-2 text-foreground font-sans font-bold">{row.label}</td>
+                          <td className="p-2 text-center text-primary font-bold">{valLocal !== '-' ? `${valLocal}${row.suffix || ''}` : '-'}</td>
+                          <td className="p-2 text-center text-destructive font-bold">{valVisit !== '-' ? `${valVisit}${row.suffix || ''}` : '-'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* SECCIÓN EDITOR CON PESTAÑAS */}
+            <div className="space-y-4">
+              <div className="flex bg-muted/20 p-1 rounded-xl border border-border/40">
+                <button
+                  type="button"
+                  onClick={() => setConfirmActiveTab('local')}
+                  className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all ${
+                    confirmActiveTab === 'local'
+                      ? 'bg-primary/10 text-primary border border-primary/20 shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Local: {selectedConfirmMatch.local?.nombre}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmActiveTab('visitante')}
+                  className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all ${
+                    confirmActiveTab === 'visitante'
+                      ? 'bg-destructive/10 text-destructive border border-destructive/20 shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Visitante: {selectedConfirmMatch.visitante?.nombre}
+                </button>
+              </div>
+
+              {confirmActiveTab === 'local' ? (
+                /* VISTA / EDITOR LOCAL */
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in align-top">
+                  {/* COLUMNA IZQUIERDA: REPORTE ORIGINAL CAPITÁN LOCAL */}
+                  <div className="space-y-4 border-r border-border/10 pr-0 lg:pr-6 text-left">
+                    <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest pb-1 border-b border-border/20">
+                      📋 Reporte Original del Capitán Local
+                    </h4>
+                    
+                    <div className="p-3 rounded-xl bg-card border border-border/40 text-center">
+                      <span className="text-[9px] text-muted-foreground uppercase font-black block">Marcador Reportado</span>
+                      <span className="text-base font-extrabold text-primary">
+                        {selectedConfirmMatch.reporte_local_completado && selectedConfirmMatch.reporte_local_stats
+                          ? `${selectedConfirmMatch.reporte_local_stats.goles_local} - ${selectedConfirmMatch.reporte_local_stats.goles_visitante}`
+                          : 'Sin Reporte'}
+                      </span>
+                    </div>
+
+                    {/* Capturas de Pantalla */}
+                    <div className="space-y-2">
+                      <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest block">Evidencias (Fotos)</span>
+                      {selectedConfirmMatch.reporte_local_completado && selectedConfirmMatch.reporte_local_stats?.fotos ? (
+                        <div className="grid grid-cols-3 gap-2">
+                          {['partido', 'jugadores', 'conectados'].map((key) => {
+                            const path = selectedConfirmMatch.reporte_local_stats.fotos[key];
+                            if (!path) return <div key={key} className="h-12 flex items-center justify-center text-[7px] border border-dashed border-border/30 text-muted-foreground rounded bg-muted/5">Sin foto</div>;
+                            return (
+                              <a href={getImageUrl(path)} target="_blank" rel="noopener noreferrer" key={key} className="block group relative">
+                                <img src={getImageUrl(path)} alt={key} className="w-full h-12 object-cover rounded border border-border/30 group-hover:scale-95 transition-transform" />
+                                <span className="absolute bottom-0 inset-x-0 text-[6px] text-center bg-black/60 text-white font-bold py-0.5 rounded-b uppercase truncate">{key}</span>
+                              </a>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-[9px] text-muted-foreground italic">No se subieron capturas.</p>
+                      )}
+                    </div>
+
+                    {/* Plantilla Reportada (Tabla) */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Integrantes Reportados</span>
+                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${selectedConfirmMatch.reporte_local_completado ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                          {selectedConfirmMatch.reporte_local_completado ? 'Reportado' : 'Sin Reporte'}
+                        </span>
+                      </div>
+                      <div className="max-h-52 overflow-y-auto pr-1">
+                        {readOnlyLocalPlayers.length === 0 ? (
+                          <p className="text-[9px] text-muted-foreground italic text-center py-4">Sin datos de jugadores.</p>
+                        ) : (
+                          <div className="overflow-x-auto border border-border/40 rounded-xl bg-card">
+                            <table className="w-full text-left border-collapse text-[9px]">
+                              <thead>
+                                <tr className="border-b border-border/30 bg-muted/30">
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-left">Jugador</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-12">Val.</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-12">Goles</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-12">Asist.</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-8">🟨</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-8">🟥</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border/20 font-mono">
+                                {readOnlyLocalPlayers.map((p, idx) => (
+                                  <tr key={p.jugador_id || idx} className="hover:bg-muted/10">
+                                    <td className="p-2 text-foreground font-sans font-bold truncate max-w-[100px]" title={p.name}>{p.name}</td>
+                                    <td className="p-2 text-center font-bold text-amber-500">{p.valoracion || '6.0'}</td>
+                                    <td className="p-2 text-center text-primary font-bold">{p.goles || 0}</td>
+                                    <td className="p-2 text-center text-emerald-500 font-bold">{p.asistencias || 0}</td>
+                                    <td className="p-2 text-center">{p.yellowCard ? '🟨' : ''}</td>
+                                    <td className="p-2 text-center">{p.redCard ? '🟥' : ''}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* COLUMNA DERECHA: EDITOR OFICIAL LOCAL */}
+                  <div className="space-y-4 text-left">
+                    <h4 className="text-[10px] font-black text-primary uppercase tracking-widest pb-1 border-b border-border/20">
+                      ✏️ Editor de Estadísticas Oficiales (Local)
+                    </h4>
+                    
+                    <div className="grid grid-cols-3 gap-2 bg-card p-3 rounded-xl border border-border/40">
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Goles a Favor</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.goles_favor || 0} onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setConfirmTeamLocalStats(prev => ({ ...prev, goles_favor: val }));
+                          setConfirmScoreLocal(String(val));
+                          setConfirmTeamVisitanteStats(prev => ({ ...prev, goles_en_contra: val }));
+                        }} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Goles en Contra</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.goles_en_contra || 0} onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setConfirmTeamLocalStats(prev => ({ ...prev, goles_en_contra: val }));
+                          setConfirmScoreVisitante(String(val));
+                          setConfirmTeamVisitanteStats(prev => ({ ...prev, goles_favor: val }));
+                        }} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Asistencias</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.asistencias || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, asistencias: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Tiros</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.tiros || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, tiros: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Pases Intentados</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.pases_intentados || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, pases_intentados: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Precisión Pases (%)</label>
+                        <input type="number" min="0" max="100" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.precision_pases || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, precision_pases: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Entradas Intent.</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.entradas_intentadas || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, entradas_intentadas: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Entradas Exit.</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.entradas_exitosas || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, entradas_exitosas: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Atajadas</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.atajadas || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, atajadas: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">T. Amarillas</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.tarjetas_amarillas || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, tarjetas_amarillas: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">T. Rojas</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.tarjetas_rojas || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, tarjetas_rojas: Number(e.target.value)})} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest block">Rendimiento Jugadores Local (Modificable)</span>
+                      <div className="max-h-52 overflow-y-auto pr-1">
+                        {confirmLocalPlayers.length === 0 ? (
+                          <p className="text-[9px] text-muted-foreground italic text-center py-4">Sin datos de jugadores.</p>
+                        ) : (
+                          <div className="overflow-x-auto border border-border/40 rounded-xl bg-card">
+                            <table className="w-full text-left border-collapse text-[10px]">
+                              <thead>
+                                <tr className="border-b border-border/30 bg-muted/30">
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-left">Jugador</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-16">Val.</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-14">Goles</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-14">Asist.</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-10">🟨</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-10">🟥</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border/20">
+                                {confirmLocalPlayers.map((p, idx) => (
+                                  <tr key={p.jugador_id || idx} className="hover:bg-muted/10">
+                                    <td className="p-2 text-foreground font-bold truncate max-w-[100px]" title={p.name}>{p.name || 'Jugador'}</td>
+                                    <td className="p-2 text-center">
+                                      <input type="number" step="0.1" min="0" max="10" className="w-11 h-6 text-center rounded bg-background border border-border/60 font-mono text-[9px] font-bold text-foreground" value={p.valoracion || 6.0} onChange={(e) => { const c = [...confirmLocalPlayers]; c[idx].valoracion = Number(e.target.value); setConfirmLocalPlayers(c); }} title="Val" />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <input type="number" min="0" className="w-10 h-6 text-center rounded bg-background border border-border/60 font-mono text-[9px] font-bold text-foreground" value={p.goles || 0} onChange={(e) => { const c = [...confirmLocalPlayers]; c[idx].goles = Number(e.target.value); setConfirmLocalPlayers(c); }} title="Goles" />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <input type="number" min="0" className="w-10 h-6 text-center rounded bg-background border border-border/60 font-mono text-[9px] font-bold text-foreground" value={p.asistencias || 0} onChange={(e) => { const c = [...confirmLocalPlayers]; c[idx].asistencias = Number(e.target.value); setConfirmLocalPlayers(c); }} title="Asists" />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <input type="checkbox" checked={p.yellowCard || false} onChange={(e) => { const c = [...confirmLocalPlayers]; c[idx].yellowCard = e.target.checked; setConfirmLocalPlayers(c); }} className="w-3.5 h-3.5 rounded border-border/60 text-primary focus:ring-0" />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <input type="checkbox" checked={p.redCard || false} onChange={(e) => { const c = [...confirmLocalPlayers]; c[idx].redCard = e.target.checked; setConfirmLocalPlayers(c); }} className="w-3.5 h-3.5 rounded border-border/60 text-primary focus:ring-0" />
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* VISTA / EDITOR VISITANTE */
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in align-top">
+                  {/* COLUMNA IZQUIERDA: REPORTE ORIGINAL CAPITÁN VISITANTE */}
+                  <div className="space-y-4 border-r border-border/10 pr-0 lg:pr-6 text-left">
+                    <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest pb-1 border-b border-border/20">
+                      📋 Reporte Original del Capitán Visitante
+                    </h4>
+                    
+                    <div className="p-3 rounded-xl bg-card border border-border/40 text-center">
+                      <span className="text-[9px] text-muted-foreground uppercase font-black block">Marcador Reportado</span>
+                      <span className="text-base font-extrabold text-destructive">
+                        {selectedConfirmMatch.reporte_visitante_completado && selectedConfirmMatch.reporte_visitante_stats
+                          ? `${selectedConfirmMatch.reporte_visitante_stats.goles_local} - ${selectedConfirmMatch.reporte_visitante_stats.goles_visitante}`
+                          : 'Sin Reporte'}
+                      </span>
+                    </div>
+
+                    {/* Capturas de Pantalla */}
+                    <div className="space-y-2">
+                      <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest block">Evidencias (Fotos)</span>
+                      {selectedConfirmMatch.reporte_visitante_completado && selectedConfirmMatch.reporte_visitante_stats?.fotos ? (
+                        <div className="grid grid-cols-3 gap-2">
+                          {['partido', 'jugadores', 'conectados'].map((key) => {
+                            const path = selectedConfirmMatch.reporte_visitante_stats.fotos[key];
+                            if (!path) return <div key={key} className="h-12 flex items-center justify-center text-[7px] border border-dashed border-border/30 text-muted-foreground rounded bg-muted/5">Sin foto</div>;
+                            return (
+                              <a href={getImageUrl(path)} target="_blank" rel="noopener noreferrer" key={key} className="block group relative">
+                                <img src={getImageUrl(path)} alt={key} className="w-full h-12 object-cover rounded border border-border/30 group-hover:scale-95 transition-transform" />
+                                <span className="absolute bottom-0 inset-x-0 text-[6px] text-center bg-black/60 text-white font-bold py-0.5 rounded-b uppercase truncate">{key}</span>
+                              </a>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-[9px] text-muted-foreground italic">No se subieron capturas.</p>
+                      )}
+                    </div>
+
+                    {/* Plantilla Reportada (Tabla) */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Integrantes Reportados</span>
+                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${selectedConfirmMatch.reporte_visitante_completado ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                          {selectedConfirmMatch.reporte_visitante_completado ? 'Reportado' : 'Sin Reporte'}
+                        </span>
+                      </div>
+                      <div className="max-h-52 overflow-y-auto pr-1">
+                        {readOnlyVisitantePlayers.length === 0 ? (
+                          <p className="text-[9px] text-muted-foreground italic text-center py-4">Sin datos de jugadores.</p>
+                        ) : (
+                          <div className="overflow-x-auto border border-border/40 rounded-xl bg-card">
+                            <table className="w-full text-left border-collapse text-[9px]">
+                              <thead>
+                                <tr className="border-b border-border/30 bg-muted/30">
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-left">Jugador</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-12">Val.</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-12">Goles</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-12">Asist.</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-8">🟨</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-8">🟥</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border/20 font-mono">
+                                {readOnlyVisitantePlayers.map((p, idx) => (
+                                  <tr key={p.jugador_id || idx} className="hover:bg-muted/10">
+                                    <td className="p-2 text-foreground font-sans font-bold truncate max-w-[100px]" title={p.name}>{p.name}</td>
+                                    <td className="p-2 text-center font-bold text-amber-500">{p.valoracion || '6.0'}</td>
+                                    <td className="p-2 text-center text-primary font-bold">{p.goles || 0}</td>
+                                    <td className="p-2 text-center text-emerald-500 font-bold">{p.asistencias || 0}</td>
+                                    <td className="p-2 text-center">{p.yellowCard ? '🟨' : ''}</td>
+                                    <td className="p-2 text-center">{p.redCard ? '🟥' : ''}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* COLUMNA DERECHA: EDITOR OFICIAL VISITANTE */}
+                  <div className="space-y-4 text-left">
+                    <h4 className="text-[10px] font-black text-destructive uppercase tracking-widest pb-1 border-b border-border/20">
+                      ✏️ Editor de Estadísticas Oficiales (Visitante)
+                    </h4>
+                    
+                    <div className="grid grid-cols-3 gap-2 bg-card p-3 rounded-xl border border-border/40">
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Goles a Favor</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.goles_favor || 0} onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setConfirmTeamVisitanteStats(prev => ({ ...prev, goles_favor: val }));
+                          setConfirmScoreVisitante(String(val));
+                          setConfirmTeamLocalStats(prev => ({ ...prev, goles_en_contra: val }));
+                        }} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Goles en Contra</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.goles_en_contra || 0} onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setConfirmTeamVisitanteStats(prev => ({ ...prev, goles_en_contra: val }));
+                          setConfirmScoreLocal(String(val));
+                          setConfirmTeamLocalStats(prev => ({ ...prev, goles_favor: val }));
+                        }} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Asistencias</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.asistencias || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, asistencias: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Tiros</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.tiros || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, tiros: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Pases Intentados</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.pases_intentados || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, pases_intentados: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Precisión Pases (%)</label>
+                        <input type="number" min="0" max="100" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.precision_pases || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, precision_pases: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Entradas Intent.</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.entradas_intentadas || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, entradas_intentadas: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Entradas Exit.</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.entradas_exitosas || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, entradas_exitosas: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Atajadas</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.atajadas || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, atajadas: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">T. Amarillas</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.tarjetas_amarillas || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, tarjetas_amarillas: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">T. Rojas</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.tarjetas_rojas || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, tarjetas_rojas: Number(e.target.value)})} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest block">Rendimiento Jugadores Visitante (Modificable)</span>
+                      <div className="max-h-52 overflow-y-auto pr-1">
+                        {confirmVisitantePlayers.length === 0 ? (
+                          <p className="text-[9px] text-muted-foreground italic text-center py-4">Sin datos de jugadores.</p>
+                        ) : (
+                          <div className="overflow-x-auto border border-border/40 rounded-xl bg-card">
+                            <table className="w-full text-left border-collapse text-[10px]">
+                              <thead>
+                                <tr className="border-b border-border/30 bg-muted/30">
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-left">Jugador</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-16">Val.</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-14">Goles</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-14">Asist.</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-10">🟨</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-10">🟥</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border/20">
+                                {confirmVisitantePlayers.map((p, idx) => (
+                                  <tr key={p.jugador_id || idx} className="hover:bg-muted/10">
+                                    <td className="p-2 text-foreground font-bold truncate max-w-[100px]" title={p.name}>{p.name || 'Jugador'}</td>
+                                    <td className="p-2 text-center">
+                                      <input type="number" step="0.1" min="0" max="10" className="w-11 h-6 text-center rounded bg-background border border-border/60 font-mono text-[9px] font-bold text-foreground" value={p.valoracion || 6.0} onChange={(e) => { const c = [...confirmVisitantePlayers]; c[idx].valoracion = Number(e.target.value); setConfirmVisitantePlayers(c); }} title="Val" />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <input type="number" min="0" className="w-10 h-6 text-center rounded bg-background border border-border/60 font-mono text-[9px] font-bold text-foreground" value={p.goles || 0} onChange={(e) => { const c = [...confirmVisitantePlayers]; c[idx].goles = Number(e.target.value); setConfirmVisitantePlayers(c); }} title="Goles" />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <input type="number" min="0" className="w-10 h-6 text-center rounded bg-background border border-border/60 font-mono text-[9px] font-bold text-foreground" value={p.asistencias || 0} onChange={(e) => { const c = [...confirmVisitantePlayers]; c[idx].asistencias = Number(e.target.value); setConfirmVisitantePlayers(c); }} title="Asists" />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <input type="checkbox" checked={p.yellowCard || false} onChange={(e) => { const c = [...confirmVisitantePlayers]; c[idx].yellowCard = e.target.checked; setConfirmVisitantePlayers(c); }} className="w-3.5 h-3.5 rounded border-border/60 text-primary focus:ring-0" />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <input type="checkbox" checked={p.redCard || false} onChange={(e) => { const c = [...confirmVisitantePlayers]; c[idx].redCard = e.target.checked; setConfirmVisitantePlayers(c); }} className="w-3.5 h-3.5 rounded border-border/60 text-primary focus:ring-0" />
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* MARCADOR OFICIAL FINAL Y ACCIONES (GLOBAL) */}
+            <div className="border-t border-border/30 pt-4 mt-6 space-y-4 text-left">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-primary font-black uppercase tracking-wider block">Goles Local Oficial</label>
+                    <input type="number" min="0" className="w-20 h-10 text-center text-lg rounded-xl bg-background border border-border/60 font-mono font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary" value={confirmScoreLocal} onChange={(e) => {
+                      const val = e.target.value;
+                      setConfirmScoreLocal(val);
+                      const numVal = val !== '' ? Number(val) : 0;
+                      setConfirmTeamLocalStats(prev => ({ ...prev, goles_favor: numVal }));
+                      setConfirmTeamVisitanteStats(prev => ({ ...prev, goles_en_contra: numVal }));
+                    }} />
+                  </div>
+                  <span className="text-lg font-black font-mono mt-4 text-muted-foreground">-</span>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-destructive font-black uppercase tracking-wider block">Goles Visitante Oficial</label>
+                    <input type="number" min="0" className="w-20 h-10 text-center text-lg rounded-xl bg-background border border-border/60 font-mono font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-destructive" value={confirmScoreVisitante} onChange={(e) => {
+                      const val = e.target.value;
+                      setConfirmScoreVisitante(val);
+                      const numVal = val !== '' ? Number(val) : 0;
+                      setConfirmTeamVisitanteStats(prev => ({ ...prev, goles_favor: numVal }));
+                      setConfirmTeamLocalStats(prev => ({ ...prev, goles_en_contra: numVal }));
+                    }} />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 w-full sm:w-auto justify-end">
+                  <Button onClick={() => setIsConfirmModalOpen(false)} variant="outline" className="h-10 text-[10px]" disabled={confirmProcessing}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleConfirmReportSubmit}
+                    isLoading={confirmProcessing}
+                    className="h-10 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-display font-black uppercase tracking-wider shadow-lg border-none"
+                  >
+                    🛡️ Confirmar Ficha y Cerrar Partido
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      <PageHelp 
+        title="Partidos Ultimate Team (UT)"
+        description="Aquí gestionas y válidas todos los marcadores oficiales de tus torneos de UT (Duplas / 2v2)."
+        steps={[
+          {
+            title: "Reportes Pendientes",
+            description: "Usa la pestaña 'Por Reportar' para ver qué partidos ya se jugaron según el calendario pero nadie ha subido el resultado."
+          },
+          {
+            title: "Ficha / Reportar Manual",
+            description: "Haz clic en 'Ficha / Reportar' para ingresar goles y estadísticas. Puedes hacerlo a mano o sincronizar con la API de EA si los capitanes introdujeron los IDs correctos."
+          },
+          {
+            title: "Verificación de Estadísticas",
+            description: "Antes de aprobar un partido reportado por los capitanes, revisa la pestaña 'Pendientes' para cotejar fotos e información."
+          }
+        ]}
+      />
     </div>
   );
 }
+

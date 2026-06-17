@@ -72,6 +72,9 @@ class CompetenciaController extends Controller
                 'temporada.organizacion',
                 'partidos.local',
                 'partidos.visitante',
+                'campeon',
+                'subcampeon',
+                'tercerLugar',
             ]);
             return ['data' => $competencia];
         });
@@ -92,8 +95,16 @@ class CompetenciaController extends Controller
         return response()->json(new CompetenciaResource($competencia));
     }
 
-    public function destroy(Competencia $competencia): \Illuminate\Http\Response
+    public function destroy(Competencia $competencia): \Illuminate\Http\Response|\Illuminate\Http\JsonResponse
     {
+        $partidosCount = $competencia->partidos()->count();
+
+        if ($partidosCount > 0) {
+            return response()->json([
+                'message' => 'No es posible eliminar esta competencia porque ya tiene partidos registrados. Para borrar la competencia, primero necesitas eliminar todos los partidos asociados.'
+            ], 422);
+        }
+
         Cache::forget('competencia_show_' . $competencia->id);
         $competencia->delete();
         return response()->noContent();

@@ -6,6 +6,7 @@ import { useCompetenciasUt } from '../hooks/useCompetenciasUt';
 import DataTable from '@/components/ui/DataTable';
 import CrudHeader from '@/components/shared/CrudHeader';
 import DeleteModal from '@/components/shared/DeleteModal';
+import PageHelp from '@/components/shared/PageHelp';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
@@ -197,13 +198,32 @@ export default function CompetenciasUtCRUD() {
       />
 
       {/* MODAL: CONFIRMAR ELIMINACIÓN */}
-      <DeleteModal 
-        isOpen={ui.isDeleteModalOpen} 
-        onClose={actions.closeDeleteModal} 
-        onConfirm={actions.executeDelete} 
-        isDeleting={ui.isDeleting} 
-        title="Eliminar Torneo UT" 
-        message={<>¿Seguro que deseas eliminar permanentemente el torneo UT <strong className="text-foreground">{ui.itemToDelete?.nombre}</strong>?</>} 
+      <DeleteModal
+        isOpen={ui.isDeleteModalOpen}
+        onClose={actions.closeDeleteModal}
+        onConfirm={actions.executeDelete}
+        title="Eliminar Competencia UT"
+        message="¿Estás seguro de eliminar esta competencia? Se borrarán inscripciones y partidos vinculados de manera irreversible."
+        isDeleting={ui.isDeleting}
+      />
+
+      <PageHelp 
+        title="Torneos Ultimate Team"
+        description="Gestor oficial para modalidades reducidas (UT 1v1 y Co-op 2v2)."
+        steps={[
+          {
+            title: "Configuración UT",
+            description: "Configura si el campeonato se jugará de forma individual (1v1) o en parejas (2v2) mediante el menú Modalidad."
+          },
+          {
+            title: "Estructuras de Juego",
+            description: "Al igual que en Clubes Pro, puedes establecer Ligas o Copas Eliminatorias. Recuerda definir el cupo máximo para que las inscripciones se bloqueen solas."
+          },
+          {
+            title: "Panel Específico",
+            description: "Utiliza el botón 'Gestionar' en la tabla para acceder al cuadro de la liga, revisar los rosters UT y aprobar a los participantes."
+          }
+        ]}
       />
     </div>
   );

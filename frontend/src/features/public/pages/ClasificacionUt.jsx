@@ -12,19 +12,22 @@ import api from '@/api/axios';
 function computeStandings(partidos, seedTeams = []) {
   const map = {};
 
+  const teams = Array.isArray(seedTeams) ? seedTeams : [];
+  const matches = Array.isArray(partidos) ? partidos : [];
+
   // Pre-seed from teams list so they appear even with 0 results
-  seedTeams.forEach(t => {
+  teams.forEach(t => {
     if (t?.id) map[t.id] = { id: t.id, nombre: t.nombre, logo: t.logo, pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, pts:0, ultimosCinco: [] };
   });
 
   // Seed any teams we encounter in partidos (even upcoming ones)
-  partidos.forEach(p => {
+  matches.forEach(p => {
     if (p.local?.id  && !map[p.local.id])    map[p.local.id]    = { id: p.local.id,    nombre: p.local.nombre,    logo: p.local.logo,    pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, pts:0, ultimosCinco: [] };
     if (p.visitante?.id && !map[p.visitante.id]) map[p.visitante.id] = { id: p.visitante.id, nombre: p.visitante.nombre, logo: p.visitante.logo, pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, pts:0, ultimosCinco: [] };
   });
 
   // Sort matches chronologically to calculate form order correctly
-  const sortedPartidos = [...partidos].sort((a, b) => {
+  const sortedPartidos = [...matches].sort((a, b) => {
     const dateA = a.fecha || '';
     const dateB = b.fecha || '';
     if (dateA !== dateB) return dateA.localeCompare(dateB);
@@ -468,6 +471,33 @@ function PlayoffBracket({ partidos }) {
     return Object.entries(map)
       .sort(([a], [b]) => getRoundWeight(a) - getRoundWeight(b))
       .map(([roundName, roundMatches]) => {
+        const roundNameLower = roundName.toLowerCase();
+        let expectedSingleLegCount = 999;
+        if (roundNameLower.includes('final') && !roundNameLower.includes('semifinal') && !roundNameLower.includes('cuartos')) {
+          expectedSingleLegCount = 1;
+        } else if (roundNameLower.includes('semi')) {
+          expectedSingleLegCount = 2;
+        } else if (roundNameLower.includes('cuarto')) {
+          expectedSingleLegCount = 4;
+        } else if (roundNameLower.includes('octavo') || roundNameLower.includes('16')) {
+          expectedSingleLegCount = 8;
+        } else if (roundNameLower.includes('32')) {
+          expectedSingleLegCount = 16;
+        } else if (roundNameLower.includes('64')) {
+          expectedSingleLegCount = 32;
+        }
+
+        const hasAnySwapped = roundMatches.some((m1, idx1) => {
+          return roundMatches.some((m2, idx2) => {
+            if (idx1 === idx2) return false;
+            return m1.local?.id && m2.local?.id &&
+                   m1.local.id === m2.visitante?.id &&
+                   m1.visitante?.id === m2.local.id;
+          });
+        });
+
+        const isDoubleLeg = hasAnySwapped || (roundMatches.length > expectedSingleLegCount);
+
         const matchups = [];
         const visited = new Set();
 
@@ -487,6 +517,7 @@ function PlayoffBracket({ partidos }) {
             );
 
             const matchTBDAdjacent = (
+              isDoubleLeg &&
               (!current.local && !current.visitante && !candidate.local && !candidate.visitante) &&
               (j === i + 1)
             );
@@ -568,8 +599,8 @@ function PlayoffBracket({ partidos }) {
 
 function CompetenciaSection({ competencia, navigate }) {
   const formato   = (competencia.formato || 'liga').toLowerCase();
-  const isPlayoff = formato === 'playoffs' || formato === 'playoff';
-  const isCopa    = formato === 'copa';
+  const isPlayoff = formato === 'playoffs' || formato === 'playoff' || formato === 'eliminatoria';
+  const isCopa    = formato === 'copa' || (competencia.partidos && competencia.partidos.some(p => p.grupo));
   const isLiga    = !isPlayoff && !isCopa;
 
   const fmtIcon  = isPlayoff ? '🏆' : isCopa ? '🥇' : '🏟️';
@@ -638,9 +669,17 @@ export default function ClasificacionUt() {
           api.get('/organizaciones'),
           api.get('/competencias-ut', { params: { per_page: 100 } })
         ]);
-        setPartidos(partidosRes.data || []);
-        setOrganizacionesList(orgsRes.data?.data || orgsRes.data || []);
-        setCompetenciasList(compsRes.data?.data || compsRes.data || []);
+        const extractData = (res) => {
+          const val = res?.data;
+          if (!val) return [];
+          if (Array.isArray(val)) return val;
+          if (val.data && Array.isArray(val.data)) return val.data;
+          if (val.data?.data && Array.isArray(val.data.data)) return val.data.data;
+          return [];
+        };
+        setPartidos(extractData(partidosRes));
+        setOrganizacionesList(extractData(orgsRes));
+        setCompetenciasList(extractData(compsRes));
       } catch (err) {
         console.error('Error al cargar datos en clasificación UT:', err);
       } finally {

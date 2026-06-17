@@ -5,6 +5,7 @@ import { useJugadores } from '../hooks/useJugadores';
 import DataTable from '@/components/ui/DataTable';
 import CrudHeader from '@/components/shared/CrudHeader';
 import DeleteModal from '@/components/shared/DeleteModal';
+import PageHelp from '@/components/shared/PageHelp';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
@@ -30,11 +31,13 @@ export default function JugadoresCRUD() {
       render: (row) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-display font-bold text-lg shadow-sm shrink-0">
-            {row.name ? row.name.charAt(0).toUpperCase() : 'J'}
+            {(row.gamertag || row.name || '?').charAt(0).toUpperCase()}
           </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-foreground text-sm">{row.name}</span>
-            <span className="text-xs text-muted-foreground">{row.email}</span>
+          <div className="flex flex-col min-w-0">
+            <span className="font-bold text-foreground text-sm flex items-center gap-1.5 truncate">
+              <span>🎮</span> {row.gamertag || 'SIN GAMERTAG'}
+            </span>
+            <span className="text-xs text-muted-foreground truncate">{row.name} • {row.email}</span>
           </div>
         </div>
       )
@@ -141,9 +144,28 @@ export default function JugadoresCRUD() {
         title="Eliminar Registro de Jugador"
         message={
           <>
-            ¿Estás seguro de que deseas eliminar a <strong className="text-foreground">{ui.jugadorToDelete?.name}</strong>? Se perderá su historial de inscripciones inmediatas en tus competencias activas.
+            ¿Estás seguro de que deseas eliminar a <strong className="text-foreground">{ui.jugadorToDelete?.gamertag || ui.jugadorToDelete?.name}</strong>? Se perderá su historial de inscripciones inmediatas en tus competencias activas.
           </>
         }
+      />
+
+      <PageHelp 
+        title="Directorio de Jugadores"
+        description="Todos los usuarios registrados que aspiran a jugar tus torneos caen aquí."
+        steps={[
+          {
+            title: "Estados (Baneos)",
+            description: "Usa la pestaña de 'Suspendidos' para revisar a los jugadores que rompieron reglas (uso de trampas, toxicidad). Desde 'Editar' puedes cambiar su estado."
+          },
+          {
+            title: "Revisar Gamertags",
+            description: "Es vital que los jugadores usen su ID real de consola para la integración de estadísticas con EA Sports."
+          },
+          {
+            title: "Gestión Directa",
+            description: "En caso de emergencia, puedes registrar a un jugador manualmente usando su correo si él no sabe cómo crear su cuenta."
+          }
+        ]}
       />
     </div>
   );

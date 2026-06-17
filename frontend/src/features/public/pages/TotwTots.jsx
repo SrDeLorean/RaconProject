@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/api/axios';
-import totsTemplateImg from '@/assets/images/cartas/tots.png';
-import totwTemplateImg from '@/assets/images/cartas/totw.png';
 import Badge from '@/components/ui/Badge';
-import TacticVisualizer3D from './TacticVisualizer3D';
 import PlayerCard, { getFUTStats, getFlagUrl, translatePosition } from '@/components/ui/PlayerCard';
 import Spinner from '@/components/ui/Spinner';
+
+// Lazy-load heavy 3D component + large PNG assets — they only download when user
+// switches to the 3D pitch view, saving ~4.5MB + entire Three.js bundle on initial load
+const TacticVisualizer3D = lazy(() => import('./TacticVisualizer3D'));
 
 export default function TotwTots() {
   const navigate = useNavigate();
@@ -706,8 +707,17 @@ export default function TotwTots() {
             {/* Main Visual Block (Tactic Pitch or FUT Card Grid) */}
             <div className="w-full">
               {viewMode === 'pitch' ? (
-                // 3D Pitch view (Floating 3D cards)
-                <TacticVisualizer3D players={players} activeTab={activeTab} customColor={hasCompColor ? activeColor : null} />
+                // 3D Pitch view — loaded lazily to avoid Three.js bundle on initial page load
+                <Suspense fallback={
+                  <div className="flex items-center justify-center h-[500px] text-muted-foreground">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                      <span className="text-xs font-condensed tracking-widest uppercase">Cargando Vista 3D...</span>
+                    </div>
+                  </div>
+                }>
+                  <TacticVisualizer3D players={players} activeTab={activeTab} customColor={hasCompColor ? activeColor : null} />
+                </Suspense>
               ) : (
                 // 3D Card grid view (Hover-tilt interactive gallery in tactical 1-4-3-3 layout)
                 <div className="space-y-6">

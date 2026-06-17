@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import api from '@/api/axios';
 import Alert from '@/components/shared/Alert';
+import PageHelp from '@/components/shared/PageHelp';
 
 const ResumenJugadorTab = lazy(() => import('./components/tabs/ResumenJugadorTab'));
 const CalendarioJugadorTab = lazy(() => import('./components/tabs/CalendarioJugadorTab'));
@@ -206,6 +207,7 @@ export default function DashboardJugador() {
                     profileData={profileData} 
                     solicitudes={solicitudes} 
                     navigate={navigate} 
+                    onTabChange={setActiveTab}
                   />
                 )}
                 {activeTab === 'ofertas' && (
@@ -230,6 +232,29 @@ export default function DashboardJugador() {
 
         </div>
       )}
+
+      <PageHelp 
+        title="Oficina del Jugador"
+        description="Tu panel central de control como jugador. Desde aquí gestionas tu perfil, ofertas de fichaje recibidas, revisas tus estadísticas competitivas y visualizas tu calendario de encuentros."
+        steps={[
+          {
+            title: "Pestaña Resumen",
+            description: "Muestra avisos críticos, como campos incompletos en tu perfil (plataforma o nacionalidad) o alertas de contrato pendientes."
+          },
+          {
+            title: "Pestaña Mis Ofertas",
+            description: "Revisa propuestas de contratos enviadas por clubes competitivos. Puedes aceptar o rechazar ofertas en tiempo real."
+          },
+          {
+            title: "Pestaña Mi Rendimiento",
+            description: "Desglosa tus estadísticas históricas de juego, tales como goles, asistencias, promedio de valoración y telemetría de partidos."
+          },
+          {
+            title: "Pestañas de Calendario",
+            description: "Consulta fechas, rivales y horarios de tus próximos encuentros, tanto en formato de Clubes Pro 11v11 como en Ultimate Team."
+          }
+        ]}
+      />
     </div>
   );
 }

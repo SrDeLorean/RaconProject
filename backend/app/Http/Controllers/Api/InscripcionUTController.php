@@ -53,6 +53,12 @@ class InscripcionUTController extends Controller
         $pivot = DB::table('competencia_equipo_ut')->where('equipo_ut_id', $id)->first();
         
         if ($pivot) {
+            $competenciaUt = \App\Models\CompetenciaUt::find($pivot->competencia_ut_id);
+            if ($competenciaUt && $competenciaUt->partidos()->exists()) {
+                return response()->json([
+                    'message' => 'No se puede dar de baja directamente porque el torneo ya tiene un calendario generado. Utiliza las opciones de WO o Reemplazo.'
+                ], 422);
+            }
             Cache::forget('competencia_ut_show_' . $pivot->competencia_ut_id);
         }
 

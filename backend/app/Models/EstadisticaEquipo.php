@@ -26,6 +26,7 @@ class EstadisticaEquipo extends Model
         'entradas_exitosas',
         'tasa_exito_entradas',
         'tarjetas_rojas',
+        'tarjetas_amarillas',
         'goles_contra_agregado',
         'atajadas',
         'atajadas_buena_colocacion',

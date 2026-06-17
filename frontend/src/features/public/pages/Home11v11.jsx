@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import useScrollAnimations from '@/hooks/useScrollAnimations';
 
@@ -8,6 +8,28 @@ const Badge = ({ children, className }) => <span className={`inline-block rounde
 export default function Home11v11() {
   useScrollAnimations();
   const [liveMatches, setLiveMatches] = useState([]);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Memoize particles so random positions don't recalculate on every re-render
+  const particles = useMemo(() => (
+    [...Array(30)].map((_, i) => ({
+      id: i,
+      width: Math.random() * 4 + 2,
+      height: Math.random() * 4 + 2,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      duration: Math.random() * 3 + 2,
+      delay: Math.random() * 2,
+    }))
+  ), []); // Empty deps: stable across all renders
 
   useEffect(() => {
     // Simulando carga de partidos en vivo para el HUD
@@ -32,39 +54,44 @@ export default function Home11v11() {
       </div>
 
       {/* Resplandores y Partículas */}
-      <div className="absolute inset-0 z-0 opacity-40 pointer-events-none overflow-hidden">
-        {[...Array(30)].map((_, i) => (
-          <div 
-            key={i} 
-            className="absolute bg-red-500/80 rounded-full animate-ping"
-            style={{
-              width: Math.random() * 4 + 2 + 'px',
-              height: Math.random() * 4 + 2 + 'px',
-              top: Math.random() * 100 + '%',
-              left: Math.random() * 100 + '%',
-              animationDuration: Math.random() * 3 + 2 + 's',
-              animationDelay: Math.random() * 2 + 's',
-              boxShadow: '0 0 10px 2px rgba(232,0,29,0.8)'
-            }}
-          />
-        ))}
-      </div>
-      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vh] bg-red-600/20 rounded-full blur-[150px] pointer-events-none z-0 animate-pulse" />
-      <div className="absolute bottom-[10%] right-[-10%] w-[60vw] h-[60vh] bg-red-700/20 rounded-full blur-[180px] pointer-events-none z-0 animate-pulse" style={{ animationDelay: '4s' }} />
+      {isDesktop && (
+        <div className="absolute inset-0 z-0 opacity-40 pointer-events-none overflow-hidden">
+          {particles.map((p) => (
+            <div 
+              key={p.id} 
+              className="absolute bg-red-500/80 rounded-full animate-ping will-change-transform"
+              style={{
+                width: p.width + 'px',
+                height: p.height + 'px',
+                top: p.top + '%',
+                left: p.left + '%',
+                animationDuration: p.duration + 's',
+                animationDelay: p.delay + 's',
+                boxShadow: '0 0 10px 2px rgba(232,0,29,0.8)'
+              }}
+            />
+          ))}
+        </div>
+      )}
+      {/* Large blur orbs: promoted to own GPU layer via will-change to avoid main-thread compositing */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vh] bg-red-600/20 rounded-full blur-[150px] pointer-events-none z-0 will-change-transform transform-gpu" />
+      <div className="absolute bottom-[10%] right-[-10%] w-[60vw] h-[60vh] bg-red-700/20 rounded-full blur-[180px] pointer-events-none z-0 will-change-transform transform-gpu" style={{ animationDelay: '4s' }} />
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,0,0,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,0,0,0.05)_1px,transparent_1px)] bg-[size:60px_60px] pointer-events-none z-0 opacity-70" />
 
       {/* ── 1. HERO SECTION ── */}
       <section className="relative min-h-[90vh] flex flex-col justify-center items-center px-6 text-center animate-drum-roll pt-20 overflow-hidden">
         {/* Background Video Cinematográfico */}
         <div className="absolute inset-0 z-0">
-          <iframe 
-            className="w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh] absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-35 mix-blend-screen grayscale-[20%] pointer-events-none"
-            src="https://www.youtube.com/embed/XhP3Xh4LMA8?autoplay=1&mute=1&controls=0&loop=1&playlist=XhP3Xh4LMA8" 
-            title="EA FC Trailer" 
-            frameBorder="0" 
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-            allowFullScreen>
-          </iframe>
+          {isDesktop && (
+            <iframe 
+              className="w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh] absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-35 mix-blend-screen grayscale-[20%] pointer-events-none"
+              src="https://www.youtube.com/embed/XhP3Xh4LMA8?autoplay=1&mute=1&controls=0&loop=1&playlist=XhP3Xh4LMA8" 
+              title="EA FC Trailer" 
+              frameBorder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowFullScreen>
+            </iframe>
+          )}
           <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/50 to-background z-10" />
         </div>
 
@@ -79,10 +106,10 @@ export default function Home11v11() {
           La plataforma definitiva de EA FC 26. No más excusas. Arma tu escuadra, domina la táctica y demuestra quién manda en el campo de batalla virtual.
         </h2>
         <div className="flex flex-col sm:flex-row gap-6 mt-4">
-          <Link to="/register" className="btn-action-primary px-12 py-4 text-lg">
+          <Link to="/registro" className="btn-action-primary px-12 py-4 text-lg">
             INSCRIBIR MI CLUB
           </Link>
-          <Link to="/contact" className="glass-card-hover px-10 py-4 text-foreground font-bold uppercase tracking-widest rounded-md text-sm flex items-center justify-center border border-red-500/30">
+          <Link to="/equipos" className="glass-card-hover px-10 py-4 text-foreground font-bold uppercase tracking-widest rounded-md text-sm flex items-center justify-center border border-red-500/30">
             BUSCAR EQUIPO
           </Link>
         </div>
@@ -102,10 +129,10 @@ export default function Home11v11() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
           {['PS5', 'XBOX SERIES X|S', 'PC', 'PS4'].map((plat, idx) => (
-            <div key={idx} className="glass-card-hover p-8 text-center neon-glow" style={{ animationDelay: `${idx * 0.1}s` }}>
+            <Link key={idx} to="/organizaciones?tipo=11v11" className="glass-card-hover p-8 text-center neon-glow block cursor-pointer hover:border-red-500/50 transition-colors duration-300" style={{ animationDelay: `${idx * 0.1}s` }}>
               <h3 className="text-3xl font-display font-black text-red-500">{plat}</h3>
               <p className="text-xs text-muted-foreground mt-2 uppercase tracking-widest">Divisiones Activas</p>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
@@ -126,6 +153,7 @@ export default function Home11v11() {
                   <div>
                     <h4 className="text-xl font-bold uppercase tracking-wider mb-2">TELEMETRÍA EN VIVO</h4>
                     <p className="text-muted-foreground font-sans text-sm">Olvídate de capturas de pantalla mediocres. Nuestro sistema actualiza Tablas de Posiciones, Goleadores y Asistencias en tiempo real.</p>
+                    <Link to="/clasificacion" className="inline-block mt-2 text-xs font-bold text-red-500 hover:text-red-400 transition-colors uppercase tracking-wider">Ver Clasificación →</Link>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -135,6 +163,7 @@ export default function Home11v11() {
                   <div>
                     <h4 className="text-xl font-bold uppercase tracking-wider mb-2">ANÁLISIS POR POSICIÓN</h4>
                     <p className="text-muted-foreground font-sans text-sm">Filtra stats avanzadas por GK, DEF, MED y DEL. Demuestra tu valor en el mercado con datos duros: atajadas, pases clave y ratio de conversión.</p>
+                    <Link to="/datos" className="inline-block mt-2 text-xs font-bold text-red-500 hover:text-red-400 transition-colors uppercase tracking-wider">Ver Estadísticas Avanzadas →</Link>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -144,14 +173,15 @@ export default function Home11v11() {
                   <div>
                     <h4 className="text-xl font-bold uppercase tracking-wider mb-2">MERCADO ACTIVO</h4>
                     <p className="text-muted-foreground font-sans text-sm">¿Eres agente libre? Publica tu perfil. ¿Capitán? Haz ofertas formales a las promesas de la liga y roba los talentos del rival.</p>
+                    <Link to="/traspasos" className="inline-block mt-2 text-xs font-bold text-red-500 hover:text-red-400 transition-colors uppercase tracking-wider">Ver Mercado de Traspasos →</Link>
                   </div>
                 </div>
               </div>
             </div>
             
-            <div className="relative animate-scanline group">
+            <Link to="/totw-tots" className="relative animate-scanline group block cursor-pointer">
                <div className="absolute inset-0 bg-red-600/10 blur-3xl rounded-full group-hover:bg-red-600/20 transition-all duration-700" />
-               <div className="relative bg-card border border-red-500/30 p-8 rounded-2xl shadow-[0_0_50px_rgba(232,0,29,0.2)] transform group-hover:scale-105 transition-transform duration-500">
+               <div className="relative bg-card border border-red-500/30 p-8 rounded-2xl shadow-[0_0_50px_rgba(232,0,29,0.2)] transform group-hover:scale-105 transition-transform duration-500 hover:border-red-500/50">
                   <div className="flex justify-between items-center border-b border-red-500/20 pb-4 mb-4">
                     <span className="font-condensed text-red-500 tracking-widest text-sm">TOP DELANTERO - JORNADA 14</span>
                     <span className="animate-pulse bg-red-500 w-3 h-3 rounded-full"></span>
@@ -168,7 +198,7 @@ export default function Home11v11() {
                     </div>
                   </div>
                </div>
-            </div>
+            </Link>
           </div>
         </div>
       </section>
@@ -200,15 +230,15 @@ export default function Home11v11() {
               </h2>
               <p className="text-muted-foreground font-condensed tracking-widest mt-2 text-sm">HUD TÁCTICO ACTIVO // MONITOREANDO SERVIDORES</p>
             </div>
-            <div className="live-match-flash px-4 py-1 rounded bg-red-600/20 border border-red-500 text-red-500 font-condensed font-bold mt-4 md:mt-0 flex items-center gap-2 shadow-[0_0_15px_rgba(232,0,29,0.5)]">
+            <Link to="/partidos" className="live-match-flash px-4 py-1 rounded bg-red-600/20 border border-red-500 text-red-500 font-condensed font-bold mt-4 md:mt-0 flex items-center gap-2 shadow-[0_0_15px_rgba(232,0,29,0.5)] hover:bg-red-600/35 transition-colors cursor-pointer">
               <span className="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
               LIVE MATCHES
-            </div>
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {liveMatches.length > 0 ? liveMatches.map((match) => (
-              <div key={match.id} className="glass-card-hover p-6 flex justify-between items-center border border-red-500/30 bg-background/80 relative overflow-hidden">
+              <Link key={match.id} to={`/partidos/${match.id}`} className="glass-card-hover p-6 flex justify-between items-center border border-red-500/30 bg-background/80 relative overflow-hidden block cursor-pointer hover:border-red-500/50 transition-colors duration-300">
                 <div className="absolute top-0 left-0 w-1 h-full bg-red-500" />
                 <div className="text-center w-[40%]">
                   <span className="font-display text-2xl text-foreground truncate block">{match.home}</span>
@@ -222,7 +252,7 @@ export default function Home11v11() {
                 <div className="text-center w-[40%]">
                   <span className="font-display text-2xl text-foreground truncate block">{match.away}</span>
                 </div>
-              </div>
+              </Link>
             )) : (
               <div className="col-span-1 md:col-span-2 text-center py-16 border border-dashed border-red-500/30 bg-red-600/5">
                 <span className="animate-pulse text-red-500 font-condensed tracking-widest text-lg">ESTABLECIENDO CONEXIÓN CON EL SERVIDOR...</span>
@@ -242,7 +272,7 @@ export default function Home11v11() {
           <p className="text-muted-foreground font-sans max-w-2xl mx-auto mb-10 text-lg">
             La gloria no se regala, se gana en la cancha. Reúne a tu escuadra, ajusta tus tácticas y prepárate para la guerra. Si no estás dispuesto a sudar la camiseta, no te molestes en entrar.
           </p>
-          <Link to="/register" className="btn-action-primary px-16 py-5 text-xl mx-auto inline-flex shadow-[0_0_40px_rgba(232,0,29,0.6)]">
+          <Link to="/registro" className="btn-action-primary px-16 py-5 text-xl mx-auto inline-flex shadow-[0_0_40px_rgba(232,0,29,0.6)]">
             ACEPTAR EL RETO
           </Link>
         </div>

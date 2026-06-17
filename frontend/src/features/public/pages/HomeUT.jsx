@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import useScrollAnimations from '@/hooks/useScrollAnimations';
 
@@ -8,6 +8,28 @@ const Badge = ({ children, className }) => <span className={`inline-block rounde
 export default function HomeUT() {
   useScrollAnimations();
   const [liveMatches, setLiveMatches] = useState([]);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+
+  // Memoize particles: Math.random() solo se llama UNA vez en el montaje, no en cada re-render
+  const particles = useMemo(() => (
+    [...Array(30)].map((_, i) => ({
+      id: i,
+      width: Math.random() * 4 + 2,
+      height: Math.random() * 4 + 2,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      duration: Math.random() * 3 + 2,
+      delay: Math.random() * 2,
+    }))
+  ), []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     // Simulando carga de partidos en vivo para el HUD (formato 1v1)
@@ -32,39 +54,44 @@ export default function HomeUT() {
       </div>
 
       {/* Resplandores y Partículas */}
-      <div className="absolute inset-0 z-0 opacity-40 pointer-events-none overflow-hidden">
-        {[...Array(30)].map((_, i) => (
-          <div 
-            key={i} 
-            className="absolute bg-red-500/80 rounded-full animate-ping"
-            style={{
-              width: Math.random() * 4 + 2 + 'px',
-              height: Math.random() * 4 + 2 + 'px',
-              top: Math.random() * 100 + '%',
-              left: Math.random() * 100 + '%',
-              animationDuration: Math.random() * 3 + 2 + 's',
-              animationDelay: Math.random() * 2 + 's',
-              boxShadow: '0 0 10px 2px rgba(232,0,29,0.8)'
-            }}
-          />
-        ))}
-      </div>
-      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vh] bg-red-600/20 rounded-full blur-[150px] pointer-events-none z-0 animate-pulse" />
-      <div className="absolute bottom-[10%] right-[-10%] w-[60vw] h-[60vh] bg-red-700/20 rounded-full blur-[180px] pointer-events-none z-0 animate-pulse" style={{ animationDelay: '4s' }} />
+      {isDesktop && (
+        <div className="absolute inset-0 z-0 opacity-40 pointer-events-none overflow-hidden">
+          {particles.map((p) => (
+            <div 
+              key={p.id} 
+              className="absolute bg-red-500/80 rounded-full animate-ping will-change-transform"
+              style={{
+                width: p.width + 'px',
+                height: p.height + 'px',
+                top: p.top + '%',
+                left: p.left + '%',
+                animationDuration: p.duration + 's',
+                animationDelay: p.delay + 's',
+                boxShadow: '0 0 10px 2px rgba(232,0,29,0.8)'
+              }}
+            />
+          ))}
+        </div>
+      )}
+      {/* Blur orbs: promovidos a layer GPU separado */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vh] bg-red-600/20 rounded-full blur-[150px] pointer-events-none z-0 will-change-transform transform-gpu" />
+      <div className="absolute bottom-[10%] right-[-10%] w-[60vw] h-[60vh] bg-red-700/20 rounded-full blur-[180px] pointer-events-none z-0 will-change-transform transform-gpu" style={{ animationDelay: '4s' }} />
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,0,0,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,0,0,0.05)_1px,transparent_1px)] bg-[size:60px_60px] pointer-events-none z-0 opacity-70" />
 
       {/* ── 1. HERO SECTION ── */}
       <section className="relative min-h-[90vh] flex flex-col justify-center items-center px-6 text-center animate-drum-roll pt-20 overflow-hidden">
         {/* Background Video Cinematográfico */}
         <div className="absolute inset-0 z-0">
-          <iframe 
-            className="w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh] absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-30 mix-blend-screen grayscale-[10%] pointer-events-none"
-            src="https://www.youtube.com/embed/XhP3Xh4LMA8?autoplay=1&mute=1&controls=0&loop=1&playlist=XhP3Xh4LMA8" 
-            title="EA FC Trailer" 
-            frameBorder="0" 
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-            allowFullScreen>
-          </iframe>
+          {isDesktop && (
+            <iframe 
+              className="w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh] absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-30 mix-blend-screen grayscale-[10%] pointer-events-none"
+              src="https://www.youtube.com/embed/XhP3Xh4LMA8?autoplay=1&mute=1&controls=0&loop=1&playlist=XhP3Xh4LMA8" 
+              title="EA FC Trailer" 
+              frameBorder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowFullScreen>
+            </iframe>
+          )}
           <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/50 to-background z-10" />
         </div>
 
@@ -79,10 +106,10 @@ export default function HomeUT() {
           ¿Crees que tienes la mejor plantilla? Pon tu habilidad a prueba en torneos 1v1 y Dúos. Destroza el Meta, sube de rango y asegura tu lugar en FUT Champions.
         </h2>
         <div className="flex flex-col sm:flex-row gap-6 mt-4">
-          <Link to="/register" className="btn-action-primary px-12 py-4 text-lg shadow-[0_0_20px_rgba(232,0,29,0.4)]">
+          <Link to="/registro" className="btn-action-primary px-12 py-4 text-lg shadow-[0_0_20px_rgba(232,0,29,0.4)]">
             ENTRAR AL DRAFT
           </Link>
-          <Link to="/contact" className="glass-card-hover px-10 py-4 text-foreground font-bold uppercase tracking-widest rounded-md text-sm flex items-center justify-center border border-red-500/30">
+          <Link to="/clasificacion-ut" className="glass-card-hover px-10 py-4 text-foreground font-bold uppercase tracking-widest rounded-md text-sm flex items-center justify-center border border-red-500/30">
             VER RÁNKING GLOBAL
           </Link>
         </div>
@@ -102,10 +129,10 @@ export default function HomeUT() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
           {['PS5', 'XBOX SERIES X|S', 'PC', 'CROSSPLAY'].map((plat, idx) => (
-            <div key={idx} className="glass-card-hover p-8 text-center neon-glow" style={{ animationDelay: `${idx * 0.1}s` }}>
+            <Link key={idx} to="/organizaciones?tipo=ut" className="glass-card-hover p-8 text-center neon-glow block cursor-pointer hover:border-red-500/50 transition-colors duration-300" style={{ animationDelay: `${idx * 0.1}s` }}>
               <h3 className="text-3xl font-display font-black text-red-500">{plat}</h3>
               <p className="text-xs text-muted-foreground mt-2 uppercase tracking-widest">Ligas Competitivas</p>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
@@ -126,6 +153,7 @@ export default function HomeUT() {
                   <div>
                     <h4 className="text-xl font-bold uppercase tracking-wider mb-2">MMR DE COMPETICIÓN</h4>
                     <p className="text-muted-foreground font-sans text-sm">Nuestro sistema de Elo te empareja con rivales de tu nivel. Sube tu MMR aplastando a la competencia y alcanza el Rango Élite.</p>
+                    <Link to="/clasificacion-ut" className="inline-block mt-2 text-xs font-bold text-red-500 hover:text-red-400 transition-colors uppercase tracking-wider">Ver Clasificación UT →</Link>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -135,6 +163,7 @@ export default function HomeUT() {
                   <div>
                     <h4 className="text-xl font-bold uppercase tracking-wider mb-2">REGISTRO HISTÓRICO</h4>
                     <p className="text-muted-foreground font-sans text-sm">Guarda un registro detallado de tus Victorias/Derrotas, racha de partidos y promedio de goles. Construye un currículum que imponga respeto.</p>
+                    <Link to="/datos-ut" className="inline-block mt-2 text-xs font-bold text-red-500 hover:text-red-400 transition-colors uppercase tracking-wider">Ver Base de Datos →</Link>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -144,14 +173,15 @@ export default function HomeUT() {
                   <div>
                     <h4 className="text-xl font-bold uppercase tracking-wider mb-2">RECOMPENSAS Y GLORIA</h4>
                     <p className="text-muted-foreground font-sans text-sm">Gana torneos relámpago y ligas de temporada para desbloquear premios exclusivos, insignias de perfil y el reconocimiento de toda la comunidad.</p>
+                    <Link to="/infografia-ut" className="inline-block mt-2 text-xs font-bold text-red-500 hover:text-red-400 transition-colors uppercase tracking-wider">Ver Infografía de Logros →</Link>
                   </div>
                 </div>
               </div>
             </div>
             
-            <div className="relative animate-scanline group perspective-1000">
+            <Link to="/jugadores-ut" className="relative animate-scanline group perspective-1000 block cursor-pointer">
                <div className="absolute inset-0 bg-red-600/10 blur-3xl rounded-full group-hover:bg-red-600/20 transition-all duration-700" />
-               <div className="relative w-full max-w-[350px] mx-auto bg-gradient-to-b from-card to-background border-2 border-red-500/30 p-8 rounded-t-[30px] rounded-b-[40%] shadow-[0_0_50px_rgba(232,0,29,0.3)] transform group-hover:scale-105 group-hover:rotate-y-6 transition-all duration-500 overflow-hidden text-center">
+               <div className="relative w-full max-w-[350px] mx-auto bg-gradient-to-b from-card to-background border-2 border-red-500/30 p-8 rounded-t-[30px] rounded-b-[40%] shadow-[0_0_50px_rgba(232,0,29,0.3)] transform group-hover:scale-105 group-hover:rotate-y-6 transition-all duration-500 overflow-hidden text-center hover:border-red-500/50">
                   <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none" />
                   <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-2xl pointer-events-none" />
                   
@@ -174,7 +204,7 @@ export default function HomeUT() {
                     <div className="flex justify-between"><span>WR</span><span className="font-bold text-red-500">92%</span></div>
                   </div>
                </div>
-            </div>
+            </Link>
           </div>
         </div>
       </section>
@@ -204,15 +234,15 @@ export default function HomeUT() {
               </h2>
               <p className="text-muted-foreground font-condensed tracking-widest mt-2 text-sm">HUD COMPETITIVO // PARTIDOS 1V1 EN CURSO</p>
             </div>
-            <div className="live-match-flash px-4 py-1 rounded bg-red-600/20 border border-red-500 text-red-500 font-condensed font-bold mt-4 md:mt-0 flex items-center gap-2 shadow-[0_0_15px_rgba(232,0,29,0.5)]">
+            <Link to="/partidos-ut" className="live-match-flash px-4 py-1 rounded bg-red-600/20 border border-red-500 text-red-500 font-condensed font-bold mt-4 md:mt-0 flex items-center gap-2 shadow-[0_0_15px_rgba(232,0,29,0.5)] hover:bg-red-600/35 transition-colors cursor-pointer">
               <span className="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
               LIVE MATCHES
-            </div>
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {liveMatches.length > 0 ? liveMatches.map((match) => (
-              <div key={match.id} className="glass-card-hover p-6 flex justify-between items-center border border-red-500/30 bg-background/80 relative overflow-hidden">
+              <Link key={match.id} to={`/partidos-ut/${match.id}`} className="glass-card-hover p-6 flex justify-between items-center border border-red-500/30 bg-background/80 relative overflow-hidden block cursor-pointer hover:border-red-500/50 transition-colors duration-300">
                 <div className="absolute top-0 left-0 w-1 h-full bg-red-500" />
                 <div className="text-center w-[40%]">
                   <span className="font-display text-xl md:text-2xl text-foreground truncate block">{match.home}</span>
@@ -226,7 +256,7 @@ export default function HomeUT() {
                 <div className="text-center w-[40%]">
                   <span className="font-display text-xl md:text-2xl text-foreground truncate block">{match.away}</span>
                 </div>
-              </div>
+              </Link>
             )) : (
               <div className="col-span-1 md:col-span-2 text-center py-16 border border-dashed border-red-500/30 bg-red-600/5">
                 <span className="animate-pulse text-red-500 font-condensed tracking-widest text-lg">BUSCANDO OPONENTES EN EL SERVIDOR...</span>
@@ -246,7 +276,7 @@ export default function HomeUT() {
           <p className="text-muted-foreground font-sans max-w-2xl mx-auto mb-10 text-lg">
             Basta de jugar contra la IA o en Divisiones sin sentido. Mídete contra los mejores de la comunidad, escala el Ránking Global y reclama tu corona.
           </p>
-          <Link to="/register" className="btn-action-primary px-16 py-5 text-xl mx-auto inline-flex shadow-[0_0_40px_rgba(232,0,29,0.6)]">
+          <Link to="/registro" className="btn-action-primary px-16 py-5 text-xl mx-auto inline-flex shadow-[0_0_40px_rgba(232,0,29,0.6)]">
             REGISTRARME Y PELEAR
           </Link>
         </div>

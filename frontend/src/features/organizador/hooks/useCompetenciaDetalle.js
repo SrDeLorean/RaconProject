@@ -100,13 +100,55 @@ export const useCompetenciaDetalle = (competenciaId) => {
       fetchInscritos();
       fetchDisponibles();
     } catch (error) {
-      triggerNotification('error', 'No se pudo dar de baja al club.');
+      triggerNotification('error', error.response?.data?.message || 'No se pudo dar de baja al club.');
+      throw error;
+    }
+  };
+
+  const darWOEquipo = async (equipoId) => {
+    try {
+      await api.post(`/competencias/${competenciaId}/equipos/${equipoId}/wo`);
+      triggerNotification('success', 'Se ha registrado Walkover para todos los partidos del club.');
+      await fetchCompetenciaInfo();
+      await fetchInscritos();
+    } catch (error) {
+      triggerNotification('error', error.response?.data?.message || 'Error al aplicar Walkover.');
+    }
+  };
+
+  const reemplazarEquipo = async (equipoId, nuevoEquipoId) => {
+    try {
+      await api.post(`/competencias/${competenciaId}/equipos/${equipoId}/reemplazar`, {
+        nuevo_equipo_id: nuevoEquipoId
+      });
+      triggerNotification('success', 'El club ha sido reemplazado en la competencia.');
+      await fetchCompetenciaInfo();
+      await fetchInscritos();
+      await fetchDisponibles();
+    } catch (error) {
+      triggerNotification('error', error.response?.data?.message || 'Error al reemplazar el club.');
+    }
+  };
+
+  const finalizarCompetencia = async (podioData) => {
+    try {
+      await api.put(`/competencias/${competenciaId}`, {
+        ...competencia,
+        estado: 'finalizada',
+        campeon_id: podioData.campeon_id,
+        subcampeon_id: podioData.subcampeon_id,
+        tercer_lugar_id: podioData.tercer_lugar_id
+      });
+      triggerNotification('success', 'División finalizada oficialmente. ¡Podio registrado!');
+      await fetchCompetenciaInfo();
+    } catch (error) {
+      triggerNotification('error', 'Error al finalizar la división.');
     }
   };
 
   return {
     data: { competencia, equiposInscritos, equiposDisponibles, searchTerm },
     ui: { isFetchingInfo, isFetchingEquipos, isSearching, notification },
-    actions: { setSearchTerm, asignarEquipo, cambiarEstado, removerEquipo, setNotification }
+    actions: { setSearchTerm, asignarEquipo, cambiarEstado, removerEquipo, darWOEquipo, reemplazarEquipo, setNotification, finalizarCompetencia, fetchCompetenciaInfo }
   };
 };

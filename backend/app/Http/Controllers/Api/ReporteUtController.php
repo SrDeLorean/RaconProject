@@ -150,6 +150,18 @@ class ReporteUtController extends Controller
                         'reason' => 'El jugador no pertenece a la plantilla del equipo UT.'
                     ];
                 }
+
+                // Verificar conflicto de ID EA antes de auto-asignación
+                if (empty($systemUser->id_ea)) {
+                    $conflictUser = User::where('id_ea', $playername)->first();
+                    if ($conflictUser) {
+                        $warningPlayers[] = [
+                            'playername' => $playername,
+                            'club' => $clubName,
+                            'reason' => "Conflicto de ID de EA: El ID de EA '{$playername}' ya está registrado por el jugador '{$conflictUser->name}' (Gamertag: {$conflictUser->gamertag})."
+                        ];
+                    }
+                }
             }
         };
 
@@ -186,6 +198,13 @@ class ReporteUtController extends Controller
                     $estado = 'no_existe_sistema';
                 } else {
                     if (empty($user->id_ea)) {
+                        $conflictUser = User::where('id_ea', $playername)->first();
+                        if ($conflictUser) {
+                            return response()->json([
+                                'success' => false,
+                                'message' => "Conflicto de ID de EA: El ID de EA '{$playername}' ya está registrado por el jugador '{$conflictUser->name}' (Gamertag: {$conflictUser->gamertag}). Por favor, verifica la configuración de IDs en el sistema."
+                            ], 422);
+                        }
                         $user->id_ea = $playername;
                         $user->save();
                     }
@@ -262,8 +281,15 @@ class ReporteUtController extends Controller
             }
         };
 
-        $procesarJugadoresUt($players[$clubLocalId], $partido->local);
-        $procesarJugadoresUt($players[$clubVisitanteId], $partido->visitante);
+        $result = $procesarJugadoresUt($players[$clubLocalId], $partido->local);
+        if ($result instanceof JsonResponse) {
+            return $result;
+        }
+
+        $result = $procesarJugadoresUt($players[$clubVisitanteId], $partido->visitante);
+        if ($result instanceof JsonResponse) {
+            return $result;
+        }
 
         // Procesar logs para los integrantes que no jugaron
         $allowedLocalUsers = collect([$partido->local->capitan, $partido->local->companero])->filter()->values();
@@ -355,4 +381,340 @@ class ReporteUtController extends Controller
             'goles_visitante' => $partido->goles_visitante,
         ]);
     }
+
+    /**
+     * Enviar reporte manual por parte de un capitán en UT.
+     */
+    public function submitManualReport(Request $request, $id): JsonResponse
+    {
+        $partido = PartidoUt::with(['local', 'visitante', 'competencia'])->findOrFail($id);
+        $user = Auth::user();
+
+        $isOrganizerOrAdmin = in_array($user->role, ['administrador', 'organizador']);
+        $isHomeCaptain = $partido->local && $partido->local->id_capitan == $user->id;
+        $isAwayCaptain = $partido->visitante && $partido->visitante->id_capitan == $user->id;
+
+        if (!$isOrganizerOrAdmin && !$isHomeCaptain && !$isAwayCaptain) {
+            return response()->json(['message' => 'No tienes permiso para reportar este partido.'], 403);
+        }
+
+        if ($partido->reporte_confirmado) {
+            return response()->json(['message' => 'Este partido ya ha sido confirmado y cerrado por el organizador.'], 422);
+        }
+
+        $data = $request->validate([
+            'goles_local'     => ['required', 'integer', 'min:0'],
+            'goles_visitante' => ['required', 'integer', 'min:0'],
+            'fotos'           => ['required', 'array'],
+            'fotos.partido'   => ['nullable', 'string'],
+            'fotos.jugadores' => ['nullable', 'string'],
+            'fotos.conectados'=> ['nullable', 'string'],
+            'team_stats'      => ['required', 'array'],
+            'player_stats'    => ['required', 'array'],
+            'side'            => ['nullable', 'string', 'in:local,visitante'],
+        ]);
+
+        // Si es empate, se exige que las 3 fotos estén presentes
+        $isEmpate = (int)$data['goles_local'] === (int)$data['goles_visitante'];
+        if ($isEmpate) {
+            if (empty($data['fotos']['partido']) || empty($data['fotos']['jugadores']) || empty($data['fotos']['conectados'])) {
+                return response()->json(['message' => 'Para reportar un empate es obligatorio subir las 3 fotos (Estadísticas del partido, Estadísticas del jugador, y Jugadores conectados).'], 422);
+            }
+        }
+
+        // Determinar el lado (local/visitante) del reporte
+        $side = $data['side'] ?? null;
+        if (!$side) {
+            if ($isHomeCaptain) {
+                $side = 'local';
+            } elseif ($isAwayCaptain) {
+                $side = 'visitante';
+            }
+        }
+
+        if (!$side) {
+            return response()->json(['message' => 'Debes especificar el lado del reporte (local/visitante).'], 422);
+        }
+
+        $reportData = [
+            'goles_local' => $data['goles_local'],
+            'goles_visitante' => $data['goles_visitante'],
+            'fotos' => $data['fotos'],
+            'team_stats' => $data['team_stats'],
+            'player_stats' => $data['player_stats'],
+            'submitted_by' => $user->id,
+            'submitted_at' => now()->toDateTimeString(),
+        ];
+
+        if ($side === 'local') {
+            $partido->reporte_local_stats = $reportData;
+            $partido->reporte_local_completado = true;
+        } else {
+            $partido->reporte_visitante_stats = $reportData;
+            $partido->reporte_visitante_completado = true;
+        }
+
+        $partido->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Reporte manual unificado enviado con éxito. Pendiente de revisión por el organizador.',
+            'partido' => $partido
+        ]);
+    }
+
+    /**
+     * Confirmar y consolidar reporte manual por parte de un organizador en UT.
+     */
+    public function confirmManualReport(Request $request, $id): JsonResponse
+    {
+        $partido = PartidoUt::with(['local', 'visitante', 'competencia'])->findOrFail($id);
+        $user = Auth::user();
+        $isOrganizerOrAdmin = in_array($user->role, ['administrador', 'organizador']);
+
+        if (!$isOrganizerOrAdmin) {
+            return response()->json(['message' => 'No tienes permiso para confirmar este partido.'], 403);
+        }
+
+        if ($partido->reporte_confirmado) {
+            return response()->json(['message' => 'Este partido ya ha sido confirmado y cerrado anteriormente.'], 422);
+        }
+
+        $data = $request->validate([
+            'goles_local'     => ['required', 'integer', 'min:0'],
+            'goles_visitante' => ['required', 'integer', 'min:0'],
+            'local_stats'     => ['required', 'array'],
+            'local_stats.team_stats' => ['required', 'array'],
+            'local_stats.player_stats' => ['required', 'array'],
+            'visitante_stats' => ['required', 'array'],
+            'visitante_stats.team_stats' => ['required', 'array'],
+            'visitante_stats.player_stats' => ['required', 'array'],
+        ]);
+
+        // Validar coherencia de estadísticas de plantilla Local en backend
+        $localGoalsSum = collect($data['local_stats']['player_stats'])->sum('goles');
+        $localAssistsSum = collect($data['local_stats']['player_stats'])->sum('asistencias');
+        $localTeamGoals = (int)($data['local_stats']['team_stats']['goles_favor'] ?? 0);
+        $localTeamAssists = (int)($data['local_stats']['team_stats']['asistencias'] ?? 0);
+
+        if ($localGoalsSum !== $localTeamGoals) {
+            return response()->json(['message' => "La suma de goles de los jugadores locales ({$localGoalsSum}) no coincide con los Goles a Favor del club local ({$localTeamGoals})."], 422);
+        }
+        if ($localAssistsSum !== $localTeamAssists) {
+            return response()->json(['message' => "La suma de asistencias de los jugadores locales ({$localAssistsSum}) no coincide con las Asistencias del club local ({$localTeamAssists})."], 422);
+        }
+
+        // Validar coherencia de estadísticas de plantilla Visitante en backend
+        $visitanteGoalsSum = collect($data['visitante_stats']['player_stats'])->sum('goles');
+        $visitanteAssistsSum = collect($data['visitante_stats']['player_stats'])->sum('asistencias');
+        $visitanteTeamGoals = (int)($data['visitante_stats']['team_stats']['goles_favor'] ?? 0);
+        $visitanteTeamAssists = (int)($data['visitante_stats']['team_stats']['asistencias'] ?? 0);
+
+        if ($visitanteGoalsSum !== $visitanteTeamGoals) {
+            return response()->json(['message' => "La suma de goles de los jugadores visitantes ({$visitanteGoalsSum}) no coincide con los Goles a Favor del club visitante ({$visitanteTeamGoals})."], 422);
+        }
+        if ($visitanteAssistsSum !== $visitanteTeamAssists) {
+            return response()->json(['message' => "La suma de asistencias de los jugadores visitantes ({$visitanteAssistsSum}) no coincide con las Asistencias del club visitante ({$visitanteTeamAssists})."], 422);
+        }
+
+        DB::transaction(function() use ($partido, $data) {
+            // 1. Eliminar estadísticas previas
+            EstadisticaEquipoUt::where('partido_ut_id', $partido->id)->delete();
+            EstadisticaJugadorUt::where('partido_ut_id', $partido->id)->delete();
+            EstadisticaJugadorUtLog::where('partido_ut_id', $partido->id)->delete();
+
+            // 2. Procesar Equipo Local
+            $localTeamStats = $data['local_stats']['team_stats'];
+            $localPlayerStats = $data['local_stats']['player_stats'];
+            
+            $pasesIntentadosLocal = (int)($localTeamStats['pases_intentados'] ?? 0);
+            $precisionPasesLocal = (float)($localTeamStats['precision_pases'] ?? 0);
+            $pasesCompletadosLocal = round($pasesIntentadosLocal * ($precisionPasesLocal / 100));
+
+            $entradasIntentadasLocal = (int)($localTeamStats['entradas_intentadas'] ?? 0);
+            $entradasExitosasLocal = (int)($localTeamStats['entradas_exitosas'] ?? 0);
+            $tasaEntradasLocal = $entradasIntentadasLocal > 0 ? round(($entradasExitosasLocal / $entradasIntentadasLocal) * 100, 2) : 0;
+
+            $avgRatingLocal = 0;
+            if (count($localPlayerStats) > 0) {
+                $avgRatingLocal = collect($localPlayerStats)->avg('valoracion') ?? 0;
+            }
+
+            EstadisticaEquipoUt::create([
+                'equipo_ut_id' => $partido->equipo_ut_local_id,
+                'partido_ut_id' => $partido->id,
+                'competencia_ut_id' => $partido->competencia_ut_id,
+                'goles_favor' => (int)($localTeamStats['goles_favor'] ?? 0),
+                'goles_en_contra' => (int)($localTeamStats['goles_en_contra'] ?? 0),
+                'asistencias' => (int)($localTeamStats['asistencias'] ?? 0),
+                'tiros' => (int)($localTeamStats['tiros'] ?? 0),
+                'pases_intentados' => $pasesIntentadosLocal,
+                'pases_completados' => $pasesCompletadosLocal,
+                'precision_pases' => $precisionPasesLocal,
+                'entradas_intentadas' => $entradasIntentadasLocal,
+                'entradas_exitosas' => $entradasExitosasLocal,
+                'tasa_exito_entradas' => $tasaEntradasLocal,
+                'tarjetas_rojas' => (int)($localTeamStats['tarjetas_rojas'] ?? 0),
+                'tarjetas_amarillas' => (int)($localTeamStats['tarjetas_amarillas'] ?? 0),
+                'valla_invicta_global' => (int)($localTeamStats['goles_en_contra'] ?? 0) === 0 ? 1 : 0,
+                'valoracion_agregada' => $avgRatingLocal,
+                'procesado' => true
+            ]);
+
+            // 3. Procesar Equipo Visitante
+            $visitTeamStats = $data['visitante_stats']['team_stats'];
+            $visitPlayerStats = $data['visitante_stats']['player_stats'];
+            
+            $pasesIntentadosVisit = (int)($visitTeamStats['pases_intentados'] ?? 0);
+            $precisionPasesVisit = (float)($visitTeamStats['precision_pases'] ?? 0);
+            $pasesCompletadosVisit = round($pasesIntentadosVisit * ($precisionPasesVisit / 100));
+
+            $entradasIntentadasVisit = (int)($visitTeamStats['entradas_intentadas'] ?? 0);
+            $entradasExitosasVisit = (int)($visitTeamStats['entradas_exitosas'] ?? 0);
+            $tasaEntradasVisit = $entradasIntentadasVisit > 0 ? round(($entradasExitosasVisit / $entradasIntentadasVisit) * 100, 2) : 0;
+
+            $avgRatingVisit = 0;
+            if (count($visitPlayerStats) > 0) {
+                $avgRatingVisit = collect($visitPlayerStats)->avg('valoracion') ?? 0;
+            }
+
+            EstadisticaEquipoUt::create([
+                'equipo_ut_id' => $partido->equipo_ut_visitante_id,
+                'partido_ut_id' => $partido->id,
+                'competencia_ut_id' => $partido->competencia_ut_id,
+                'goles_favor' => (int)($visitTeamStats['goles_favor'] ?? 0),
+                'goles_en_contra' => (int)($visitTeamStats['goles_en_contra'] ?? 0),
+                'asistencias' => (int)($visitTeamStats['asistencias'] ?? 0),
+                'tiros' => (int)($visitTeamStats['tiros'] ?? 0),
+                'pases_intentados' => $pasesIntentadosVisit,
+                'pases_completados' => $pasesCompletadosVisit,
+                'precision_pases' => $precisionPasesVisit,
+                'entradas_intentadas' => $entradasIntentadasVisit,
+                'entradas_exitosas' => $entradasExitosasVisit,
+                'tasa_exito_entradas' => $tasaEntradasVisit,
+                'tarjetas_rojas' => (int)($visitTeamStats['tarjetas_rojas'] ?? 0),
+                'tarjetas_amarillas' => (int)($visitTeamStats['tarjetas_amarillas'] ?? 0),
+                'valla_invicta_global' => (int)($visitTeamStats['goles_en_contra'] ?? 0) === 0 ? 1 : 0,
+                'valoracion_agregada' => $avgRatingVisit,
+                'procesado' => true
+            ]);
+
+            // 4. Guardar Estadísticas de Jugadores Locales y Registrar Logs
+            $jugadoresJugoIds = [];
+            foreach ($localPlayerStats as $p) {
+                $userId = $p['jugador_id'];
+                $jugadoresJugoIds[] = $userId;
+
+                $user = User::find($userId);
+                if ($user) {
+                    EstadisticaJugadorUt::create([
+                        'jugador_id' => $user->id,
+                        'equipo_ut_id' => $partido->equipo_ut_local_id,
+                        'partido_ut_id' => $partido->id,
+                        'competencia_ut_id' => $partido->competencia_ut_id,
+                        'posicion' => $user->posicion ?? 'MC',
+                        'valoracion' => (float)($p['valoracion'] ?? 6.0),
+                        'goles' => (int)($p['goles'] ?? 0),
+                        'asistencias' => (int)($p['asistencias'] ?? 0),
+                        'pases_completados' => (int)($p['pases'] ?? 0),
+                        'pases_intentados' => (int)($p['pases'] ?? 0),
+                        'precision_pases' => (int)($p['pases'] ?? 0) > 0 ? 100 : 0,
+                        'tarjetas_rojas' => !empty($p['redCard']) ? 1 : 0,
+                        'tarjetas_amarillas' => !empty($p['yellowCard']) ? 1 : 0,
+                    ]);
+
+                    EstadisticaJugadorUtLog::create([
+                        'playername' => $user->gamertag ?: $user->name,
+                        'partido_ut_id' => $partido->id,
+                        'jugador_id' => $user->id,
+                        'equipo_ut_id' => $partido->equipo_ut_local_id,
+                        'competencia_ut_id' => $partido->competencia_ut_id,
+                        'jugo' => true,
+                        'procesado' => true,
+                        'estado' => 'ok'
+                    ]);
+                }
+            }
+
+            // 5. Guardar Estadísticas de Jugadores Visitantes y Registrar Logs
+            foreach ($visitPlayerStats as $p) {
+                $userId = $p['jugador_id'];
+                $jugadoresJugoIds[] = $userId;
+
+                $user = User::find($userId);
+                if ($user) {
+                    EstadisticaJugadorUt::create([
+                        'jugador_id' => $user->id,
+                        'equipo_ut_id' => $partido->equipo_ut_visitante_id,
+                        'partido_ut_id' => $partido->id,
+                        'competencia_ut_id' => $partido->competencia_ut_id,
+                        'posicion' => $user->posicion ?? 'MC',
+                        'valoracion' => (float)($p['valoracion'] ?? 6.0),
+                        'goles' => (int)($p['goles'] ?? 0),
+                        'asistencias' => (int)($p['asistencias'] ?? 0),
+                        'pases_completados' => (int)($p['pases'] ?? 0),
+                        'pases_intentados' => (int)($p['pases'] ?? 0),
+                        'precision_pases' => (int)($p['pases'] ?? 0) > 0 ? 100 : 0,
+                        'tarjetas_rojas' => !empty($p['redCard']) ? 1 : 0,
+                        'tarjetas_amarillas' => !empty($p['yellowCard']) ? 1 : 0,
+                    ]);
+
+                    EstadisticaJugadorUtLog::create([
+                        'playername' => $user->gamertag ?: $user->name,
+                        'partido_ut_id' => $partido->id,
+                        'jugador_id' => $user->id,
+                        'equipo_ut_id' => $partido->equipo_ut_visitante_id,
+                        'competencia_ut_id' => $partido->competencia_ut_id,
+                        'jugo' => true,
+                        'procesado' => true,
+                        'estado' => 'ok'
+                    ]);
+                }
+            }
+
+            // 6. Roster Logs para los que no jugaron
+            $rosterUsers = collect([
+                $partido->local?->id_capitan,
+                $partido->local?->id_companero,
+                $partido->visitante?->id_capitan,
+                $partido->visitante?->id_companero
+            ])->filter()->unique()->toArray();
+
+            $jugadoresEquipo = User::whereIn('id', $rosterUsers)->get();
+            foreach ($jugadoresEquipo as $jugador) {
+                if (!in_array($jugador->id, $jugadoresJugoIds)) {
+                    $teamId = ($partido->local && ($partido->local->id_capitan == $jugador->id || $partido->local->id_companero == $jugador->id)) 
+                        ? $partido->equipo_ut_local_id 
+                        : $partido->equipo_ut_visitante_id;
+
+                    EstadisticaJugadorUtLog::create([
+                        'playername' => $jugador->gamertag ?: $jugador->name,
+                        'partido_ut_id' => $partido->id,
+                        'jugador_id' => $jugador->id,
+                        'equipo_ut_id' => $teamId,
+                        'competencia_ut_id' => $partido->competencia_ut_id,
+                        'jugo' => false,
+                        'procesado' => false,
+                        'estado' => 'no_jugo'
+                    ]);
+                }
+            }
+
+            // 7. Actualizar el partido
+            $partido->goles_local = $data['goles_local'];
+            $partido->goles_visitante = $data['goles_visitante'];
+            $partido->reporte_confirmado = true;
+            $partido->reporte_local_completado = true;
+            $partido->reporte_visitante_completado = true;
+            $partido->save();
+        });
+
+        Cache::forget('competencia_ut_show_' . $partido->competencia_ut_id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Partido de UT confirmado y estadísticas unificadas guardadas exitosamente.'
+        ]);
+    }
 }
+

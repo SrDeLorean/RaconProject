@@ -6,6 +6,7 @@ import { useTemporadas } from '../hooks/useTemporadas';
 import DataTable from '@/components/ui/DataTable';
 import CrudHeader from '@/components/shared/CrudHeader';
 import DeleteModal from '@/components/shared/DeleteModal';
+import PageHelp from '@/components/shared/PageHelp';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
@@ -163,6 +164,25 @@ export default function TemporadasCRUD() {
             ¿Confirmas que deseas archivar la <strong className="text-foreground">{ui.itemToDelete?.nombre}</strong>? Las ligas asociadas pasarán al archivo histórico de la plataforma de forma inmediata.
           </>
         }
+      />
+
+      <PageHelp 
+        title="Gestión de Temporadas"
+        description="La temporada es el marco temporal principal que agrupa múltiples competiciones. Define ciclos (ej. Temporada Invierno 2026) para mantener el ecosistema de eSports ordenado."
+        steps={[
+          {
+            title: "Crear Temporada",
+            description: "Haz clic en el botón superior para inicializar un nuevo ciclo. Solo necesitas un título y asignar a qué Organización/Liga pertenece."
+          },
+          {
+            title: "Control de Ciclo",
+            description: "El estado activo ('Activo' / 'Inactivo') determina si los torneos y fichajes de esta temporada son visibles como la campaña actual. Al terminar el año, desactiva la temporada vieja."
+          },
+          {
+            title: "Acceso y Edición",
+            description: "La tabla central muestra tus ciclos existentes. Desde ahí puedes cambiar nombres, pausar una temporada o auditarla con facilidad."
+          }
+        ]}
       />
     </div>
   );

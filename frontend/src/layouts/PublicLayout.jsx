@@ -43,12 +43,20 @@ export default function PublicLayout() {
 
   // 4. EFECTO: Detecta el scroll para volver la barra superior de "cristal" + scroll-to-top
   useEffect(() => {
+    let rafId = null;
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-      setShowScrollTop(window.scrollY > 400);
+      if (rafId) return; // Throttle via RAF
+      rafId = requestAnimationFrame(() => {
+        setIsScrolled(window.scrollY > 20);
+        setShowScrollTop(window.scrollY > 400);
+        rafId = null;
+      });
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   const scrollToTop = () => {
@@ -119,10 +127,10 @@ export default function PublicLayout() {
       {/* NAVBAR (BARRA DE NAVEGACIÓN PÚBLICA STICKY GLASSMORPHISM)                   */}
       {/* ========================================================================= */}
       <header 
-        className={`fixed top-0 inset-x-0 z-50 perspective-navbar transition-all duration-500 ${
+        className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 border-b ${
           isScrolled 
-            ? 'bg-background/80 backdrop-blur-xl py-3 glow-neon-navbar' 
-            : 'bg-transparent py-5'
+            ? 'bg-background/95 border-border/40 backdrop-blur-2xl py-3 shadow-[0_4px_30px_rgba(0,0,0,0.15)] glow-neon-navbar' 
+            : 'bg-transparent border-transparent py-5'
         }`}
       >
         <div className="max-w-[90rem] mx-auto px-6 lg:px-10 flex items-center justify-between gap-4">
@@ -141,7 +149,7 @@ export default function PublicLayout() {
           {/* Central Block: Desktop Links & Dropdowns */}
           <nav 
             key={formatMode}
-            className="hidden lg:flex items-center justify-center gap-1 xl:gap-2 animate-drum-roll"
+            className="hidden lg:flex items-center justify-center gap-1 xl:gap-2 animate-drum-roll perspective-navbar"
           >
             {/* Inicio */}
             <Link 
@@ -518,16 +526,16 @@ export default function PublicLayout() {
       {/* ========================================================================= */}
       {/* Backdrop Blur */}
       <div 
-        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-500 lg:hidden ${
-          isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        className={`fixed inset-0 z-40 bg-black/60 transition-opacity duration-300 lg:hidden transform-gpu will-change-opacity ${
+          isMobileMenuOpen ? 'opacity-100 pointer-events-auto visible' : 'opacity-0 pointer-events-none invisible'
         }`}
         onClick={() => setIsMobileMenuOpen(false)}
       />
 
       {/* Drawer */}
       <div 
-        className={`fixed top-0 right-0 bottom-0 z-50 w-[85vw] max-w-[360px] bg-background/95 backdrop-blur-xl border-l border-border/30 flex flex-col px-6 py-10 transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] lg:hidden overflow-y-auto custom-scrollbar shadow-[0_0_50px_rgba(0,0,0,0.8)] ${
-          isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`fixed top-0 right-0 bottom-0 z-50 w-[85vw] max-w-[360px] bg-card border-l border-border/30 flex flex-col px-6 py-10 transition-transform duration-300 ease-in-out lg:hidden overflow-y-auto custom-scrollbar shadow-[0_0_50px_rgba(0,0,0,0.8)] transform-gpu will-change-transform ${
+          isMobileMenuOpen ? 'translate-x-0 pointer-events-auto visible' : 'translate-x-full pointer-events-none invisible'
         }`}
       >
         <div className="flex justify-between items-center mb-10 w-full">
@@ -799,7 +807,7 @@ export default function PublicLayout() {
       {/* ÁREA DE CONTENIDO (Main Content)                                          */}
       {/* ========================================================================= */}
       <main className="flex-1 relative z-10 flex flex-col">
-        <div key={location.pathname + formatMode} className="flex-1 flex flex-col animate-fade-in">
+        <div className="flex-1 flex flex-col animate-fade-in">
           <Outlet />
         </div>
       </main>

@@ -38,4 +38,17 @@ class TemporadaRequest extends FormRequest
             'activa'         => ['boolean'],
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'nombre.required' => 'El nombre de la temporada es obligatorio.',
+            'nombre.unique' => 'Ya existe una temporada con este nombre dentro de tu organización.',
+            'slug.required' => 'El slug de la temporada es obligatorio.',
+            'slug.unique' => 'El slug generado ya se encuentra registrado por otra temporada.',
+            'estado_mercado.required' => 'El estado del mercado es obligatorio.',
+            'estado_mercado.in' => 'El estado del mercado seleccionado no es válido.',
+            'fecha_fin.after_or_equal' => 'La fecha de fin de la temporada debe ser igual o posterior a la fecha de inicio.',
+        ];
+    }
 }

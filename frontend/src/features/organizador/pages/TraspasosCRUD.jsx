@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
+import PageHelp from '@/components/shared/PageHelp';
 import api from '@/api/axios';
 
 export default function TraspasosCRUD() {
@@ -320,7 +321,10 @@ export default function TraspasosCRUD() {
                 </span>
                 <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
                   {selectedTraspaso.jugador.historial_fichajes.map((hist, idx) => {
-                    const isBaja = !hist.equipo && hist.equipoOrigen;
+                    // Si el equipo destino es nulo o igual a 0, significa que fue una baja/eliminación del equipo origen.
+                    const isBaja = !hist.equipo_id && hist.equipo_origen_id;
+                    const dateObj = new Date(hist.updated_at || hist.created_at);
+                    
                     return (
                       <div key={idx} className="bg-background/80 border border-border/30 rounded-lg p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px]">
                         <div className="flex flex-col">
@@ -328,12 +332,15 @@ export default function TraspasosCRUD() {
                             {isBaja ? hist.equipoOrigen?.nombre : hist.equipo?.nombre || 'Desconocido'}
                           </span>
                           <span className={`font-semibold ${isBaja ? 'text-destructive' : 'text-emerald-500'}`}>
-                            {isBaja ? 'Baja (Desvinculación)' : 'Alta (Fichaje)'}
+                            {isBaja ? '🔴 Baja (Eliminado)' : '🟢 Alta (Fichado)'}
                           </span>
                         </div>
                         <div className="flex flex-col sm:items-end text-[9px] font-mono text-muted-foreground">
-                          <span>Org: {hist.organizacion?.nombre || 'General'}</span>
-                          <span>{new Date(hist.updated_at || hist.created_at).toLocaleDateString()}</span>
+                          <span>Liga/Org: {hist.organizacion?.nombre || 'General'}</span>
+                          <span className={`font-bold mt-0.5 px-1.5 py-0.5 rounded ${isBaja ? 'bg-destructive/10 text-destructive' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                            {isBaja ? 'Fecha Baja: ' : 'Fecha Fichaje: '}
+                            {dateObj.toLocaleDateString()}
+                          </span>
                         </div>
                       </div>
                     );
@@ -396,6 +403,24 @@ export default function TraspasosCRUD() {
         )}
       </Modal>
 
+      <PageHelp 
+        title="Mercado de Fichajes"
+        description="Esta es la aduana de tu ecosistema. Todo jugador que quiera entrar o salir de un club pasa por aquí."
+        steps={[
+          {
+            title: "Cola de Aprobación",
+            description: "En la pestaña 'Pendientes Admin' están los fichajes que ya aceptó el capitán pero necesitan tu validación para hacerse oficiales."
+          },
+          {
+            title: "Historial de Traspasos",
+            description: "Haz clic en el ícono de 'Tomar Decisión' para ver los últimos movimientos del jugador (¿Salta mucho de equipo? ¿Es problemático?)."
+          },
+          {
+            title: "Rechazar Fichajes",
+            description: "Si decides rechazar una petición, el sistema te pedirá que escribas el motivo (ej. 'Jugador sancionado'). Esa nota le llegará directamente al club."
+          }
+        ]}
+      />
     </div>
   );
 }

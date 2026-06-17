@@ -26,6 +26,7 @@ class EstadisticaEquipoUt extends Model
         'entradas_exitosas',
         'tasa_exito_entradas',
         'tarjetas_rojas',
+        'tarjetas_amarillas',
         'valla_invicta_global',
         'valoracion_agregada',
         'segundos_jugados_agregado',

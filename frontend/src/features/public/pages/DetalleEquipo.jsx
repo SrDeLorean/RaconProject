@@ -368,16 +368,16 @@ export default function DetalleEquipo() {
                                     />
                                   ) : (
                                     <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-xs shadow-inner uppercase shrink-0">
-                                      {p.name.charAt(0)}
+                                      {(p.gamertag || p.name || '?').charAt(0)}
                                     </div>
                                   )}
                                 </div>
                                 <div className="min-w-0">
                                   <h4 className="font-display font-bold text-sm text-foreground truncate group-hover:text-primary transition-colors duration-300">
-                                    {p.name}
-                                  </h4>
-                                  <span className="text-[9px] text-muted-foreground font-mono font-bold uppercase block mt-0.5 truncate">
                                     🎮 {p.gamertag || 'EA ID'}
+                                  </h4>
+                                  <span className="text-[10px] text-muted-foreground font-sans block mt-0.5 truncate">
+                                    {p.name}
                                   </span>
                                 </div>
                               </div>
@@ -525,17 +525,17 @@ export default function DetalleEquipo() {
                                   />
                                 ) : (
                                   <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-xs shadow-inner uppercase shrink-0">
-                                    {userF.name?.charAt(0) || 'P'}
+                                    {(userF.gamertag || userF.name || '?').charAt(0)}
                                   </div>
                                 )}
                               </div>
                               <div className="min-w-0">
                                 <Link to={`/jugadores/${userF.id}`} className="font-display font-black text-sm text-foreground hover:text-primary transition-colors uppercase tracking-wide truncate block">
-                                  {userF.name || 'Competidor'}
+                                  🎮 {userF.gamertag || 'EA ID'}
                                 </Link>
                                 <div className="flex items-center gap-2 mt-0.5">
-                                  <span className="text-[10px] text-primary/70 font-mono font-bold">
-                                    🎮 {userF.gamertag || 'EA ID'}
+                                  <span className="text-[10px] text-muted-foreground font-sans font-bold">
+                                    {userF.name || 'Competidor'}
                                   </span>
                                   {userF.posicion && (
                                     <span className={`text-[8px] font-mono px-1.5 py-0.2 rounded border ${posStyles.posColor}`}>
@@ -742,16 +742,16 @@ export default function DetalleEquipo() {
                                     <img src={getImageUrl(g.foto)} alt={g.name} className="w-full h-full object-cover" />
                                   ) : (
                                     <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-[10px] sm:text-xs uppercase shrink-0">
-                                      {g.name?.charAt(0) || 'P'}
+                                      {(g.gamertag || g.name || '?').charAt(0)}
                                     </div>
                                   )}
                                 </div>
                                 <div className="min-w-0">
                                   <Link to={`/jugadores/${g.id}`} className="font-display font-bold text-[11px] sm:text-xs text-foreground hover:text-primary transition-colors truncate block">
-                                    {g.name}
-                                  </Link>
-                                  <span className="text-[8px] sm:text-[9px] text-muted-foreground font-mono block truncate mt-0.5">
                                     🎮 {g.gamertag || 'EA ID'}
+                                  </Link>
+                                  <span className="text-[8px] sm:text-[9px] text-muted-foreground font-sans block truncate mt-0.5">
+                                    {g.name}
                                   </span>
                                 </div>
                               </div>
@@ -801,16 +801,16 @@ export default function DetalleEquipo() {
                                     <img src={getImageUrl(a.foto)} alt={a.name} className="w-full h-full object-cover" />
                                   ) : (
                                     <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-[10px] sm:text-xs uppercase shrink-0">
-                                      {a.name?.charAt(0) || 'P'}
+                                      {(a.gamertag || a.name || '?').charAt(0)}
                                     </div>
                                   )}
                                 </div>
                                 <div className="min-w-0">
                                   <Link to={`/jugadores/${a.id}`} className="font-display font-bold text-[11px] sm:text-xs text-foreground hover:text-primary transition-colors truncate block">
-                                    {a.name}
-                                  </Link>
-                                  <span className="text-[8px] sm:text-[9px] text-muted-foreground font-mono block truncate mt-0.5">
                                     🎮 {a.gamertag || 'EA ID'}
+                                  </Link>
+                                  <span className="text-[8px] sm:text-[9px] text-muted-foreground font-sans block truncate mt-0.5">
+                                    {a.name}
                                   </span>
                                 </div>
                               </div>
@@ -864,16 +864,16 @@ export default function DetalleEquipo() {
                                     <img src={getImageUrl(r.foto)} alt={r.name} className="w-full h-full object-cover" />
                                   ) : (
                                     <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-[10px] sm:text-xs uppercase shrink-0">
-                                      {r.name?.charAt(0) || 'P'}
+                                      {(r.gamertag || r.name || '?').charAt(0)}
                                     </div>
                                   )}
                                 </div>
                                 <div className="min-w-0">
                                   <Link to={`/jugadores/${r.id}`} className="font-display font-bold text-[11px] sm:text-xs text-foreground hover:text-primary transition-colors truncate block">
-                                    {r.name}
-                                  </Link>
-                                  <span className="text-[8px] sm:text-[9px] text-muted-foreground font-mono block truncate mt-0.5">
                                     🎮 {r.gamertag || 'EA ID'}
+                                  </Link>
+                                  <span className="text-[8px] sm:text-[9px] text-muted-foreground font-sans block truncate mt-0.5">
+                                    {r.name}
                                   </span>
                                 </div>
                               </div>
@@ -922,16 +922,16 @@ export default function DetalleEquipo() {
                                     <img src={getImageUrl(d.foto)} alt={d.name} className="w-full h-full object-cover" />
                                   ) : (
                                     <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-[10px] sm:text-xs uppercase shrink-0">
-                                      {d.name?.charAt(0) || 'P'}
+                                      {(d.gamertag || d.name || '?').charAt(0)}
                                     </div>
                                   )}
                                 </div>
                                 <div className="min-w-0">
                                   <Link to={`/jugadores/${d.id}`} className="font-display font-bold text-[11px] sm:text-xs text-foreground hover:text-primary transition-colors truncate block">
-                                    {d.name}
-                                  </Link>
-                                  <span className="text-[8px] sm:text-[9px] text-muted-foreground font-mono block truncate mt-0.5">
                                     🎮 {d.gamertag || 'EA ID'}
+                                  </Link>
+                                  <span className="text-[8px] sm:text-[9px] text-muted-foreground font-sans block truncate mt-0.5">
+                                    {d.name}
                                   </span>
                                 </div>
                               </div>
@@ -980,16 +980,16 @@ export default function DetalleEquipo() {
                                     <img src={getImageUrl(m.foto)} alt={m.name} className="w-full h-full object-cover" />
                                   ) : (
                                     <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-[10px] sm:text-xs uppercase shrink-0">
-                                      {m.name?.charAt(0) || 'P'}
+                                      {(m.gamertag || m.name || '?').charAt(0)}
                                     </div>
                                   )}
                                 </div>
                                 <div className="min-w-0">
                                   <Link to={`/jugadores/${m.id}`} className="font-display font-bold text-[11px] sm:text-xs text-foreground hover:text-primary transition-colors truncate block">
-                                    {m.name}
-                                  </Link>
-                                  <span className="text-[8px] sm:text-[9px] text-muted-foreground font-mono block truncate mt-0.5">
                                     🎮 {m.gamertag || 'EA ID'}
+                                  </Link>
+                                  <span className="text-[8px] sm:text-[9px] text-muted-foreground font-sans block truncate mt-0.5">
+                                    {m.name}
                                   </span>
                                 </div>
                               </div>

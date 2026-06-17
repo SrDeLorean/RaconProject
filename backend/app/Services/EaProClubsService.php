@@ -156,20 +156,28 @@ class EaProClubsService
                 ];
             }
 
-            // Generar discrepancia de ID EA y Gamertag
-            if ($visitUsers->isNotEmpty()) {
-                $firstVisitUser = $visitUsers[0];
-                if (!empty($firstVisitUser->id_ea) && !empty($firstVisitUser->gamertag)) {
-                    $firstVisitUser->id_ea = 'EA_ID_mismatch_123';
-                    $firstVisitUser->save();
+            // Generar discrepancia de ID EA y Gamertag de forma segura y sin duplicaciones
+            try {
+                if ($visitUsers->isNotEmpty()) {
+                    $firstVisitUser = $visitUsers[0];
+                    if (!empty($firstVisitUser->id_ea) && !empty($firstVisitUser->gamertag)) {
+                        $mismatchId = 'EA_ID_mismatch_' . $firstVisitUser->id;
+                        $existsConflict = User::where('id_ea', $mismatchId)->where('id', '!=', $firstVisitUser->id)->exists();
+                        if (!$existsConflict) {
+                            $firstVisitUser->id_ea = $mismatchId;
+                            $firstVisitUser->save();
+                        }
+                    }
                 }
-            }
 
-            // Vaciar el gamertag de uno para probar alerta de gamertag vacío
-            if ($localUsers->count() >= 2) {
-                $secondLocalUser = $localUsers[1];
-                $secondLocalUser->gamertag = '';
-                $secondLocalUser->save();
+                // Vaciar el gamertag de uno para probar alerta de gamertag vacío
+                if ($localUsers->count() >= 2) {
+                    $secondLocalUser = $localUsers[1];
+                    $secondLocalUser->gamertag = '';
+                    $secondLocalUser->save();
+                }
+            } catch (\Throwable $t) {
+                Log::warning('Mock data generator failed to mutate users: ' . $t->getMessage());
             }
 
             $mockMatches[] = [

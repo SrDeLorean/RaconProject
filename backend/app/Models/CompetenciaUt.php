@@ -16,7 +16,8 @@ class CompetenciaUt extends Model
         'temporada_id', 'nombre', 'slug', 'descripcion', 'reglas',
         'logo', 'banner', 'color_tema', 'tipo', 'formato', 'plataforma', 'prize_pool',
         'entry_fee', 'max_participantes', 'es_publico', 'estado',
-        'fecha_inicio_inscripciones', 'fecha_fin_inscripciones', 'fecha_inicio_competencia'
+        'fecha_inicio_inscripciones', 'fecha_fin_inscripciones', 'fecha_inicio_competencia',
+        'campeon_id', 'subcampeon_id', 'tercer_lugar_id', 'config'
     ];
 
     protected $casts = [
@@ -26,11 +27,76 @@ class CompetenciaUt extends Model
         'fecha_inicio_inscripciones' => 'datetime',
         'fecha_fin_inscripciones' => 'datetime',
         'fecha_inicio_competencia' => 'datetime',
+        'config' => 'array'
     ];
+
+    protected $appends = ['top_stats'];
+
+    public function getTopStatsAttribute()
+    {
+        if ($this->estado !== 'finalizada') {
+            return [
+                'goleadores' => [],
+                'asistentes' => [],
+                'mvps' => []
+            ];
+        }
+
+        $goleadores = \DB::table('estadisticas_jugadores_ut')
+            ->join('users', 'estadisticas_jugadores_ut.jugador_id', '=', 'users.id')
+            ->join('equipos_ut', 'estadisticas_jugadores_ut.equipo_ut_id', '=', 'equipos_ut.id')
+            ->where('estadisticas_jugadores_ut.competencia_ut_id', $this->id)
+            ->selectRaw('users.id, users.name, users.gamertag, users.foto, equipos_ut.nombre as equipo_nombre, sum(estadisticas_jugadores_ut.goles) as total')
+            ->groupBy('users.id', 'users.name', 'users.gamertag', 'users.foto', 'equipos_ut.nombre')
+            ->orderByDesc('total')
+            ->limit(3)
+            ->get();
+
+        $asistentes = \DB::table('estadisticas_jugadores_ut')
+            ->join('users', 'estadisticas_jugadores_ut.jugador_id', '=', 'users.id')
+            ->join('equipos_ut', 'estadisticas_jugadores_ut.equipo_ut_id', '=', 'equipos_ut.id')
+            ->where('estadisticas_jugadores_ut.competencia_ut_id', $this->id)
+            ->selectRaw('users.id, users.name, users.gamertag, users.foto, equipos_ut.nombre as equipo_nombre, sum(estadisticas_jugadores_ut.asistencias) as total')
+            ->groupBy('users.id', 'users.name', 'users.gamertag', 'users.foto', 'equipos_ut.nombre')
+            ->orderByDesc('total')
+            ->limit(3)
+            ->get();
+
+        $mvps = \DB::table('estadisticas_jugadores_ut')
+            ->join('users', 'estadisticas_jugadores_ut.jugador_id', '=', 'users.id')
+            ->join('equipos_ut', 'estadisticas_jugadores_ut.equipo_ut_id', '=', 'equipos_ut.id')
+            ->where('estadisticas_jugadores_ut.competencia_ut_id', $this->id)
+            ->selectRaw('users.id, users.name, users.gamertag, users.foto, equipos_ut.nombre as equipo_nombre, avg(estadisticas_jugadores_ut.valoracion) as total')
+            ->groupBy('users.id', 'users.name', 'users.gamertag', 'users.foto', 'equipos_ut.nombre')
+            ->orderByDesc('total')
+            ->limit(3)
+            ->get();
+
+        return [
+            'goleadores' => $goleadores,
+            'asistentes' => $asistentes,
+            'mvps' => $mvps
+        ];
+    }
 
     public function temporada()
     {
         return $this->belongsTo(Temporada::class);
+    }
+
+    public function campeon()
+    {
+        return $this->belongsTo(EquipoUt::class, 'campeon_id');
+    }
+
+    public function subcampeon()
+    {
+        return $this->belongsTo(EquipoUt::class, 'subcampeon_id');
+    }
+
+    public function tercerLugar()
+    {
+        return $this->belongsTo(EquipoUt::class, 'tercer_lugar_id');
     }
 
     public function equipos()

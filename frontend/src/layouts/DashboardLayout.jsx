@@ -13,7 +13,7 @@ export default function DashboardLayout({ menuItems = [], profile }) {
   
   // isSidebarOpen en Desktop significa "Expandido (true) o Minimizado (false)"
   // isSidebarOpen en Móvil significa "Visible (true) o Fuera de pantalla (false)"
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   
   const location = useLocation();
@@ -72,7 +72,7 @@ export default function DashboardLayout({ menuItems = [], profile }) {
       {/* ========================================================================= */}
       <aside className={`
         glass-sidebar fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border/50
-        transition-all duration-300 ease-in-out bg-card/50 backdrop-blur-xl
+        transition-all duration-300 ease-in-out bg-card lg:bg-card/50 lg:backdrop-blur-xl transform-gpu will-change-transform
         ${isSidebarOpen ? 'w-72 translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-20'}
       `}>
         
@@ -144,7 +144,7 @@ export default function DashboardLayout({ menuItems = [], profile }) {
       {/* OVERLAY MÓVIL (Solo se muestra en pantallas < lg si isSidebarOpen es true) */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/60 lg:hidden transform-gpu will-change-opacity transition-opacity duration-300"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -153,7 +153,7 @@ export default function DashboardLayout({ menuItems = [], profile }) {
       {/* 2. CONTENEDOR PRINCIPAL DERECHO (TOPBAR + CONTENIDO)                      */}
       {/* ========================================================================= */}
       <div className={`
-        flex-1 flex flex-col h-screen min-w-0 transition-all duration-300 ease-in-out relative
+        flex-1 flex flex-col h-screen min-w-0 transition-all duration-300 ease-in-out relative transform-gpu will-change-[padding]
         ${isSidebarOpen ? 'lg:pl-72' : 'lg:pl-20'}
       `}>
         

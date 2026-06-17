@@ -6,8 +6,54 @@ import App from "./App.jsx";
 
 // ⚡ RESOLUCIÓN DINÁMICA DE IMÁGENES Y MEDIA: Evita rutas hardcodeadas a localhost:8000
 // y construye las URLs utilizando el baseURL de la API (soporta local, XAMPP y producción cPanel).
-window.mediaUrl = (path) => {
-  if (!path) return '';
+window.mediaUrl = (path, fallbackType) => {
+  const isDefault = !path || 
+                    path === 'default.png' || 
+                    path === '/default.png' || 
+                    path.includes('default-user.png') || 
+                    path.includes('default-org-logo') || 
+                    path.includes('default-org-banner') || 
+                    path.includes('default-team-logo') || 
+                    path.includes('default-team-banner');
+
+  if (isDefault) {
+    if (fallbackType === 'user' || fallbackType === 'usuario') {
+      return '/images/users/default-user.png';
+    }
+    if (fallbackType === 'org_logo' || fallbackType === 'organizacion_logo') {
+      return '/images/default-org-logo.svg';
+    }
+    if (fallbackType === 'org_banner' || fallbackType === 'organizacion_banner') {
+      return '/images/default-org-banner.svg';
+    }
+    if (fallbackType === 'team_logo' || fallbackType === 'equipo_logo') {
+      return '/images/default-team-logo.svg';
+    }
+    if (fallbackType === 'team_banner' || fallbackType === 'equipo_banner') {
+      return '/images/default-team-banner.svg';
+    }
+    
+    // Auto-detect based on path keywords if fallbackType is not provided
+    if (path) {
+      if (path.includes('default-user.png') || path.includes('users')) {
+        return '/images/users/default-user.png';
+      }
+      if (path.includes('default-org-logo')) {
+        return '/images/default-org-logo.svg';
+      }
+      if (path.includes('default-org-banner')) {
+        return '/images/default-org-banner.svg';
+      }
+      if (path.includes('default-team-logo') || path === 'default.png' || path === '/default.png') {
+        return '/images/default-team-logo.svg';
+      }
+      if (path.includes('default-team-banner')) {
+        return '/images/default-team-banner.svg';
+      }
+    }
+    return '';
+  }
+
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
   
   // Limpiar /api al final de la URL base (incluyendo subcarpetas como /api/public/api)
@@ -16,6 +62,22 @@ window.mediaUrl = (path) => {
   
   const safePath = path.startsWith('/') ? path : '/' + path;
   return `${cleanBase}${safePath}`;
+};
+
+// ⚡ SOPORTE DE IMÁGENES DEFECTIVAS (CLIENT-SIDE): Reemplaza la fuente de las imágenes rotas (404) dinámicamente
+window.handleImageError = (e, fallbackType) => {
+  e.target.onerror = null; // Evitar bucles infinitos
+  if (fallbackType === 'user' || fallbackType === 'usuario') {
+    e.target.src = '/images/users/default-user.png';
+  } else if (fallbackType === 'org_logo' || fallbackType === 'organizacion_logo') {
+    e.target.src = '/images/default-org-logo.svg';
+  } else if (fallbackType === 'org_banner' || fallbackType === 'organizacion_banner') {
+    e.target.src = '/images/default-org-banner.svg';
+  } else if (fallbackType === 'team_logo' || fallbackType === 'equipo_logo') {
+    e.target.src = '/images/default-team-logo.svg';
+  } else if (fallbackType === 'team_banner' || fallbackType === 'equipo_banner') {
+    e.target.src = '/images/default-team-banner.svg';
+  }
 };
 
 // ⚡ RECUPERACIÓN AUTOMÁTICA DE BUNDLES: Detecta fallas en la importación de módulos JS (por cambios de hash en cPanel)

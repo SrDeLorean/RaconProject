@@ -588,12 +588,12 @@ export default function DetalleJugador() {
                 </Badge>
               </div>
               
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold uppercase tracking-tight text-foreground text-glow-primary mt-1 truncate">
-                {user.name}
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-black uppercase tracking-tight text-foreground text-glow-primary mt-1 truncate">
+                🎮 {user.gamertag || 'SIN GAMERTAG'}
               </h1>
               
-              <span className="text-xs text-primary/90 font-mono block">
-                🎮 EA ID: <span className="text-foreground font-semibold">{user.gamertag || 'N/A'}</span>
+              <span className="text-sm text-muted-foreground block">
+                Nombre: <span className="text-foreground font-semibold">{user.name}</span>
               </span>
             </div>
 

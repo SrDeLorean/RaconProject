@@ -354,7 +354,7 @@ export default function MiPerfil() {
             <div className="w-full h-full bg-card rounded-xl flex items-center justify-center text-4xl md:text-5xl font-display font-black text-foreground overflow-hidden">
               {formData.foto ? (
                 <img 
-                  src={formData.foto.startsWith('http') ? formData.foto : `${api.defaults.baseURL?.replace(/\/api$/, '') || 'http://localhost:8000'}${formData.foto}`} 
+                  src={typeof window.mediaUrl === 'function' ? window.mediaUrl(formData.foto, 'user') : formData.foto} 
                   alt="Avatar" 
                   className="w-full h-full object-cover"
                 />
@@ -433,6 +433,15 @@ export default function MiPerfil() {
                     onChange={(url) => setFormData({ ...formData, foto: url })}
                     folder="usuarios"
                   />
+                  {formData.role === 'jugador' && (
+                    <div className="mt-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl p-3.5 text-xs flex items-start gap-2.5 leading-relaxed shadow-sm">
+                      <span className="text-sm">⚠️</span>
+                      <div>
+                        <span className="font-bold text-amber-300 block mb-0.5">Consejo para tu Ficha de Jugador:</span>
+                        Se recomienda utilizar una **imagen sin fondo (PNG transparente)**. De lo contrario, tu foto se verá con fondo/recuadro en la carta de estadísticas de la competición.
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

@@ -324,21 +324,21 @@ export default function Jugadores() {
                                       src={jugador.foto.startsWith('http') ? jugador.foto : (typeof window.mediaUrl === 'function' ? window.mediaUrl(jugador.foto) : window.mediaUrl(jugador.foto))} 
                                       alt={jugador.name} 
                                       className="w-full h-full object-cover"
-                                      onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; e.target.parentElement.innerHTML = `<div class="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-base shadow-inner uppercase">${jugador.name?.charAt(0)}</div>`; }}
+                                      onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; e.target.parentElement.innerHTML = `<div class="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-base shadow-inner uppercase">${(jugador.gamertag || jugador.name || '?').charAt(0)}</div>`; }}
                                     />
                                   ) : (
                                     <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-base shadow-inner uppercase">
-                                      {jugador.name?.charAt(0)}
+                                      {(jugador.gamertag || jugador.name || '?').charAt(0)}
                                     </div>
                                   )}
                                 </div>
                                 
                                 <div className="min-w-0 flex-1">
                                   <h3 className="font-display font-black text-base text-foreground tracking-wide truncate group-hover:text-primary transition-colors duration-300">
-                                    {jugador.name}
+                                    🎮 {jugador.gamertag || 'SIN GAMERTAG'}
                                   </h3>
-                                  <span className={`text-[10px] font-bold font-mono uppercase block truncate tracking-wide ${posStyles.accentText}`}>
-                                    🎮 {jugador.gamertag || 'SIN EA ID'}
+                                  <span className="text-[10px] font-bold font-sans text-muted-foreground uppercase block truncate tracking-wide">
+                                    {jugador.name}
                                   </span>
                                 </div>
                               </div>

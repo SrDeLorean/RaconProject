@@ -22,7 +22,14 @@ export default function Traspasos() {
       setLoading(true);
       try {
         const response = await api.get('/traspasos/aprobados');
-        setTraspasos(response.data?.data || response.data || []);
+        const val = response?.data;
+        let rawTraspasos = [];
+        if (val) {
+          if (Array.isArray(val)) rawTraspasos = val;
+          else if (val.data && Array.isArray(val.data)) rawTraspasos = val.data;
+          else if (val.data?.data && Array.isArray(val.data.data)) rawTraspasos = val.data.data;
+        }
+        setTraspasos(rawTraspasos);
       } catch (error) {
         console.error("Error al obtener la lista de traspasos:", error);
       } finally {

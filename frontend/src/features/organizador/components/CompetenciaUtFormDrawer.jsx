@@ -99,6 +99,100 @@ export default function CompetenciaUtFormDrawer({
           </div>
         </div>
 
+        {/* CONFIGURACIÓN AVANZADA DE FASES */}
+        {(formData.formato === 'copa' || formData.formato === 'liga' || formData.formato === 'eliminatoria') && (
+          <div className="space-y-4 bg-muted/20 p-4 rounded-lg border border-border/40">
+            <h3 className="text-xs font-bold text-primary uppercase tracking-widest border-b border-border/50 pb-1.5">Fases y Playoffs Dinámicos</h3>
+            
+            {formData.formato === 'copa' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Select 
+                  label="Cantidad de Grupos" 
+                  value={formData.config?.cantidad_grupos || 1} 
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    config: { ...(formData.config || {}), cantidad_grupos: parseInt(e.target.value) } 
+                  })} 
+                  disabled={isSaving} 
+                  options={[
+                    { value: 1, label: '1 Grupo (Liga Única)' },
+                    { value: 2, label: '2 Grupos' },
+                    { value: 4, label: '4 Grupos' },
+                    { value: 8, label: '8 Grupos' }
+                  ]}
+                />
+                <Select 
+                  label="Clasificados por Grupo" 
+                  value={formData.config?.clasificados_por_grupo || 2} 
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    config: { ...(formData.config || {}), clasificados_por_grupo: parseInt(e.target.value) } 
+                  })} 
+                  disabled={isSaving} 
+                  options={[
+                    { value: 1, label: 'Top 1 (Solo el primero)' },
+                    { value: 2, label: 'Top 2 Clasifican' },
+                    { value: 3, label: 'Top 3 Clasifican' },
+                    { value: 4, label: 'Top 4 Clasifican' }
+                  ]}
+                />
+              </div>
+            )}
+
+            {formData.formato === 'liga' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Select 
+                  label="Clasificados a Playoffs" 
+                  value={formData.config?.clasificados_por_grupo || 0} 
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    config: { ...(formData.config || {}), clasificados_por_grupo: parseInt(e.target.value) } 
+                  })} 
+                  disabled={isSaving} 
+                  options={[
+                    { value: 0, label: 'Sin Playoffs (Solo liga)' },
+                    { value: 2, label: 'Top 2 (Final)' },
+                    { value: 4, label: 'Top 4 (Semifinales)' },
+                    { value: 8, label: 'Top 8 (Cuartos)' }
+                  ]}
+                />
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select 
+                label="Modalidad de Playoffs" 
+                value={formData.config?.modo_playoff || 'doble'} 
+                onChange={(e) => setFormData({ 
+                  ...formData, 
+                  config: { ...(formData.config || {}), modo_playoff: e.target.value } 
+                })} 
+                disabled={isSaving} 
+                options={[
+                  { value: 'simple', label: 'Solo Ida (Partido único)' },
+                  { value: 'doble', label: 'Ida y Vuelta (Doble partido)' }
+                ]}
+              />
+              <div className="flex items-center gap-2 mt-6">
+                <input
+                  id="auto_avanzar_fase_ut"
+                  type="checkbox"
+                  className="w-4 h-4 rounded text-primary focus:ring-primary border-border bg-background"
+                  checked={!!formData.config?.auto_avanzar_fase}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    config: { ...(formData.config || {}), auto_avanzar_fase: e.target.checked } 
+                  })}
+                  disabled={isSaving}
+                />
+                <label htmlFor="auto_avanzar_fase_ut" className="text-sm font-medium text-foreground cursor-pointer select-none">
+                  Auto-avanzar Fase Automático
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* FECHAS */}
         <div className="space-y-4">
           <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest border-b border-border/50 pb-1.5">Calendario del Torneo</h3>

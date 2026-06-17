@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="100%" height="100%">
+  <!-- Gradient Definition -->
+  <defs>
+    <linearGradient id="bg-team-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0c071d" />
+      <stop offset="100%" stop-color="#02000a" />
+    </linearGradient>
+    <linearGradient id="neon-team-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.1" />
+      <stop offset="50%" stop-color="#ec4899" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="400" fill="url(#bg-team-grad)" />
+
+  <!-- Hexagonal / Grid Tech pattern overlay -->
+  <rect width="1200" height="400" fill="url(#neon-team-grad)" />
+
+  <!-- Cyber Grid Lines -->
+  <g stroke="#2d124d" stroke-width="0.5" opacity="0.6">
+    <!-- Vertical lines -->
+    <line x1="100" y1="0" x2="100" y2="400" />
+    <line x1="200" y1="0" x2="200" y2="400" />
+    <line x1="300" y1="0" x2="300" y2="400" />
+    <line x1="400" y1="0" x2="400" y2="400" />
+    <line x1="500" y1="0" x2="500" y2="400" />
+    <line x1="600" y1="0" x2="600" y2="400" />
+    <line x1="700" y1="0" x2="700" y2="400" />
+    <line x1="800" y1="0" x2="800" y2="400" />
+    <line x1="900" y1="0" x2="900" y2="400" />
+    <line x1="1000" y1="0" x2="1000" y2="400" />
+    <line x1="1100" y1="0" x2="1100" y2="400" />
+    <!-- Horizontal lines -->
+    <line x1="0" y1="50" x2="1200" y2="50" />
+    <line x1="0" y1="100" x2="1200" y2="100" />
+    <line x1="0" y1="150" x2="1200" y2="150" />
+    <line x1="0" y1="200" x2="1200" y2="200" />
+    <line x1="0" y1="250" x2="1200" y2="250" />
+    <line x1="0" y1="300" x2="1200" y2="300" />
+    <line x1="0" y1="350" x2="1200" y2="350" />
+  </g>
+
+  <!-- Cyber Diagonal Neon Accents -->
+  <path d="M-100 400 L300 0" stroke="#8b5cf6" stroke-width="4" opacity="0.3" />
+  <path d="M-50 400 L350 0" stroke="#ec4899" stroke-width="1.5" opacity="0.4" />
+  
+  <path d="M900 400 L1300 0" stroke="#3b82f6" stroke-width="4" opacity="0.3" />
+  <path d="M850 400 L1250 0" stroke="#8b5cf6" stroke-width="1.5" opacity="0.4" />
+
+  <!-- Center Text / Design -->
+  <g transform="translate(600, 200)" text-anchor="middle">
+    <!-- Outer Glow Orbit -->
+    <circle cx="0" cy="0" r="110" fill="none" stroke="#ec4899" stroke-width="1" stroke-dasharray="10 15" opacity="0.2" />
+    <circle cx="0" cy="0" r="95" fill="none" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="5 10" opacity="0.3" />
+
+    <!-- Text Background Glow -->
+    <rect x="-250" y="-40" width="500" height="80" rx="15" fill="#090514" fill-opacity="0.8" stroke="#ec4899" stroke-width="2" stroke-dasharray="250 150" />
+    
+    <text font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="28" fill="#ffffff" letter-spacing="8" y="8">RACON ESPORTS</text>
+    <text font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="10" fill="#ec4899" letter-spacing="4" y="25">EQUIPO OFICIAL DEL CIRCUITO</text>
+  </g>
+</svg>

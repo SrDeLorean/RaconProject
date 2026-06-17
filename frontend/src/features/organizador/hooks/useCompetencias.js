@@ -45,7 +45,13 @@ export const useCompetencias = () => {
     estado: 'borrador',
     fecha_inicio_inscripciones: '',
     fecha_fin_inscripciones: '',
-    fecha_inicio_competencia: ''
+    fecha_inicio_competencia: '',
+    config: {
+      cantidad_grupos: 1,
+      clasificados_por_grupo: 2,
+      modo_playoff: 'doble',
+      auto_avanzar_fase: false
+    }
   };
 
   const [formData, setFormData] = useState(defaultForm);
@@ -167,7 +173,13 @@ export const useCompetencias = () => {
           estado: competencia.estado || 'borrador',
           fecha_inicio_inscripciones: formatDateTime(competencia.fecha_inicio_inscripciones),
           fecha_fin_inscripciones: formatDateTime(competencia.fecha_fin_inscripciones),
-          fecha_inicio_competencia: formatDateTime(competencia.fecha_inicio_competencia)
+          fecha_inicio_competencia: formatDateTime(competencia.fecha_inicio_competencia),
+          config: competencia.config || {
+            cantidad_grupos: 1,
+            clasificados_por_grupo: 2,
+            modo_playoff: 'doble',
+            auto_avanzar_fase: false
+          }
         }
       : defaultForm
     );

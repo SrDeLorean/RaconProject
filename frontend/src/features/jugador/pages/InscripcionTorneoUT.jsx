@@ -6,6 +6,7 @@ import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Alert from '@/components/shared/Alert';
+import PageHelp from '@/components/shared/PageHelp';
 
 export default function InscripcionTorneoUT() {
   const { id } = useParams();
@@ -281,6 +282,25 @@ export default function InscripcionTorneoUT() {
 
         </Card>
       </div>
+
+      <PageHelp 
+        title="Inscripción en Torneo UT"
+        description="Esta pantalla te guía en el proceso de registro para un torneo oficial de Ultimate Team en el sistema."
+        steps={[
+          {
+            title: "EA Club ID",
+            description: "Introduce opcionalmente tu ID de club virtual de EA. Al configurarlo, el sistema podrá vincular tus partidos de Ultimate Team desde las bases de datos de EA de forma automatizada."
+          },
+          {
+            title: "Seleccionar Compañero (2vs2)",
+            description: "Si el formato del torneo es 2vs2, aparecerá un buscador. Escribe el nombre o gamertag de tu compañero y elígelo del listado. Es obligatorio seleccionarlo para enviar la inscripción."
+          },
+          {
+            title: "Confirmar Inscripción",
+            description: "Haz clic en 'Confirmar Inscripción' para procesar tu registro. Serás redirigido a la sección 'Mis Equipos' una vez completado."
+          }
+        ]}
+      />
     </div>
   );
 }

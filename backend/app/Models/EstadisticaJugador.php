@@ -23,6 +23,7 @@ class EstadisticaJugador extends Model
         'asistencias',
         'tiros',
         'tarjetas_rojas',
+        'tarjetas_amarillas',
         'jugador_partido',
         'resultado_usuario',
         'precision_tiro',

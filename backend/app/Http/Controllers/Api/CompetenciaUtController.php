@@ -82,6 +82,9 @@ class CompetenciaUtController extends Controller
                 'partidos.visitante.capitan:id,name,gamertag',
                 'partidos.visitante.companero:id,name,gamertag',
                 'partidos.estadisticasJugadores.jugador:id,name,gamertag',
+                'campeon',
+                'subcampeon',
+                'tercerLugar',
             ])->findOrFail($id);
             return ['data' => $competencia];
         });
@@ -110,6 +113,10 @@ class CompetenciaUtController extends Controller
             'fecha_inicio_inscripciones' => 'nullable|date',
             'fecha_fin_inscripciones' => 'nullable|date',
             'fecha_inicio_competencia' => 'nullable|date',
+            'campeon_id' => 'nullable|exists:equipos_ut,id',
+            'subcampeon_id' => 'nullable|exists:equipos_ut,id',
+            'tercer_lugar_id' => 'nullable|exists:equipos_ut,id',
+            'config' => 'nullable|array',
         ]);
 
         $data['slug'] = Str::slug($data['nombre']) . '-' . uniqid();
@@ -144,6 +151,10 @@ class CompetenciaUtController extends Controller
             'fecha_inicio_inscripciones' => 'nullable|date',
             'fecha_fin_inscripciones' => 'nullable|date',
             'fecha_inicio_competencia' => 'nullable|date',
+            'campeon_id' => 'nullable|exists:equipos_ut,id',
+            'subcampeon_id' => 'nullable|exists:equipos_ut,id',
+            'tercer_lugar_id' => 'nullable|exists:equipos_ut,id',
+            'config' => 'nullable|array',
         ]);
 
         if ($competencia->nombre !== $data['nombre']) {
@@ -159,6 +170,15 @@ class CompetenciaUtController extends Controller
     public function destroy($id): JsonResponse
     {
         $competencia = CompetenciaUt::findOrFail($id);
+
+        $partidosCount = $competencia->partidos()->count();
+
+        if ($partidosCount > 0) {
+            return response()->json([
+                'message' => 'No es posible eliminar esta competencia porque ya tiene partidos registrados. Para borrar la competencia, primero necesitas eliminar todos los partidos asociados.'
+            ], 422);
+        }
+
         Cache::forget('competencia_ut_show_' . $competencia->id);
         $competencia->delete();
 
@@ -192,14 +212,18 @@ class CompetenciaUtController extends Controller
             return response()->json(['message' => 'Debes seleccionar un compañero para la modalidad 2vs2.'], 422);
         }
 
-        // Autogenerar nombre de equipo basado en gamertag/nombre
-        $capitanName = $user->gamertag ?: $user->name;
-        $nombreEquipo = $capitanName;
+        // Usar el nombre de equipo proporcionado, o autogenerar basado en gamertag/nombre
+        $nombreEquipo = $validated['nombre_equipo'] ?? null;
         
-        if ($competencia->tipo === '2vs2' && !empty($validated['id_companero'])) {
-            $companero = \App\Models\User::find($validated['id_companero']);
-            $companeroName = $companero ? ($companero->gamertag ?: $companero->name) : 'Dúo';
-            $nombreEquipo = $capitanName . ' / ' . $companeroName;
+        if (empty($nombreEquipo)) {
+            $capitanName = $user->gamertag ?: $user->name;
+            $nombreEquipo = $capitanName;
+            
+            if ($competencia->tipo === '2vs2' && !empty($validated['id_companero'])) {
+                $companero = \App\Models\User::find($validated['id_companero']);
+                $companeroName = $companero ? ($companero->gamertag ?: $companero->name) : 'Dúo';
+                $nombreEquipo = $capitanName . ' / ' . $companeroName;
+            }
         }
 
         // Verificar si ya está inscrito el capitán
@@ -262,5 +286,143 @@ class CompetenciaUtController extends Controller
             'message' => 'Inscripción realizada exitosamente.',
             'equipo' => $equipoUt
         ], 201);
+    }
+
+    /**
+     * Dar Walkover (WO) a todos los partidos de un equipo UT en la competencia.
+     */
+    public function darWO($id, $equipo_ut_id)
+    {
+        $competenciaUt = CompetenciaUt::findOrFail($id);
+
+        $partidos = \App\Models\PartidoUt::where('competencia_ut_id', $competenciaUt->id)
+            ->where(function ($q) use ($equipo_ut_id) {
+                $q->where('equipo_ut_local_id', $equipo_ut_id)
+                  ->orWhere('equipo_ut_visitante_id', $equipo_ut_id);
+            })
+            ->get();
+
+        foreach ($partidos as $partido) {
+            if ($partido->equipo_ut_local_id == $equipo_ut_id) {
+                $partido->goles_local = 0;
+                $partido->goles_visitante = 3;
+            } else {
+                $partido->goles_local = 3;
+                $partido->goles_visitante = 0;
+            }
+
+            $stats = $partido->stats ?? [];
+            $stats['is_wo'] = true;
+            $stats['wo_team_id'] = (int) $equipo_ut_id;
+            $partido->stats = $stats;
+            
+            $partido->reporte_confirmado = true;
+            $partido->save();
+        }
+
+        Cache::forget('competencia_ut_show_' . $competenciaUt->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Se ha aplicado Walkover (WO) a todos los partidos del participante en este torneo.'
+        ]);
+    }
+
+    /**
+     * Reemplazar un equipo UT por otro (creado con capitán y demás datos) en el calendario/fixture.
+     */
+    public function reemplazar(Request $request, $id, $equipo_ut_id)
+    {
+        $competenciaUt = CompetenciaUt::findOrFail($id);
+
+        $validated = $request->validate([
+            'user_id_manual' => 'required|exists:users,id',
+            'nombre_equipo' => 'required|string|max:255',
+            'club_id_ea' => 'nullable|string|max:50',
+            'id_companero' => 'nullable|exists:users,id',
+        ]);
+
+        // Verificar si el nuevo capitán ya está inscrito
+        $newCaptainId = $validated['user_id_manual'];
+        $alreadyRegistered = DB::table('competencia_equipo_ut')
+            ->join('equipos_ut', 'competencia_equipo_ut.equipo_ut_id', '=', 'equipos_ut.id')
+            ->where('competencia_equipo_ut.competencia_ut_id', $competenciaUt->id)
+            ->where(function ($q) use ($newCaptainId) {
+                $q->where('equipos_ut.id_capitan', $newCaptainId)
+                  ->orWhere('equipos_ut.id_companero', $newCaptainId);
+            })
+            ->exists();
+
+        if ($alreadyRegistered) {
+            return response()->json(['message' => 'El nuevo participante ya se encuentra inscrito en este torneo.'], 422);
+        }
+
+        // Verificar si el compañero ya está inscrito
+        if ($competenciaUt->tipo === '2vs2' && !empty($validated['id_companero'])) {
+            if ($validated['id_companero'] == $newCaptainId) {
+                return response()->json(['message' => 'No puedes seleccionar al mismo usuario como capitán y compañero.'], 422);
+            }
+
+            $partnerRegistered = DB::table('competencia_equipo_ut')
+                ->join('equipos_ut', 'competencia_equipo_ut.equipo_ut_id', '=', 'equipos_ut.id')
+                ->where('competencia_equipo_ut.competencia_ut_id', $competenciaUt->id)
+                ->where(function ($q) use ($validated) {
+                    $q->where('equipos_ut.id_capitan', $validated['id_companero'])
+                      ->orWhere('equipos_ut.id_companero', $validated['id_companero']);
+                })
+                ->exists();
+
+            if ($partnerRegistered) {
+                return response()->json(['message' => 'El compañero seleccionado ya está inscrito en este torneo.'], 422);
+            }
+        }
+
+        // Crear el nuevo equipo UT
+        $nuevoEquipoUt = EquipoUt::create([
+            'nombre' => $validated['nombre_equipo'],
+            'club_id_ea' => $validated['club_id_ea'] ?? null,
+            'plataforma' => $competenciaUt->plataforma,
+            'id_capitan' => $newCaptainId,
+            'id_companero' => $competenciaUt->tipo === '2vs2' ? $validated['id_companero'] : null,
+            'estado' => true,
+        ]);
+
+        // Asociar nuevo equipo pivot
+        $competenciaUt->equipos()->attach($nuevoEquipoUt->id, ['estado_inscripcion' => 'aprobado']);
+
+        // Desasociar el viejo
+        $competenciaUt->equipos()->detach($equipo_ut_id);
+
+        // Actualizar partidos (tanto jugados como pendientes)
+        \App\Models\PartidoUt::where('competencia_ut_id', $competenciaUt->id)
+            ->where('equipo_ut_local_id', $equipo_ut_id)
+            ->update(['equipo_ut_local_id' => $nuevoEquipoUt->id]);
+
+        \App\Models\PartidoUt::where('competencia_ut_id', $competenciaUt->id)
+            ->where('equipo_ut_visitante_id', $equipo_ut_id)
+            ->update(['equipo_ut_visitante_id' => $nuevoEquipoUt->id]);
+
+        // Actualizar estadísticas de equipo UT
+        \App\Models\EstadisticaEquipoUt::where('competencia_ut_id', $competenciaUt->id)
+            ->where('equipo_ut_id', $equipo_ut_id)
+            ->update(['equipo_ut_id' => $nuevoEquipoUt->id]);
+
+        // Actualizar estadísticas de jugadores UT
+        \App\Models\EstadisticaJugadorUt::where('competencia_ut_id', $competenciaUt->id)
+            ->where('equipo_ut_id', $equipo_ut_id)
+            ->update(['equipo_ut_id' => $nuevoEquipoUt->id]);
+
+        // Eliminar el viejo equipo UT ya que fue completamente reemplazado y sus partidos reasignados
+        $viejoEquipo = EquipoUt::find($equipo_ut_id);
+        if ($viejoEquipo) {
+            $viejoEquipo->delete();
+        }
+
+        Cache::forget('competencia_ut_show_' . $competenciaUt->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'El participante ha sido reemplazado correctamente en el calendario y el torneo.'
+        ]);
     }
 }

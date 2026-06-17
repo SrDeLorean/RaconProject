@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import api from '@/api/axios';
 import Alert from '@/components/shared/Alert';
 import Button from '@/components/ui/Button';
+import PageHelp from '@/components/shared/PageHelp';
 
 export default function MisEquiposInscritos() {
   const { user } = useAuthStore();
@@ -207,6 +208,33 @@ export default function MisEquiposInscritos() {
           </div>
         </div>
       )}
+
+      <PageHelp 
+        title="Mis Clubes y Contratos"
+        description="Esta sección muestra un historial y estatus en tiempo real de todos los contratos competitivos activos o en trámite que tienes en las organizaciones."
+        steps={[
+          {
+            title: "Fichas de Contratos",
+            description: "Cada tarjeta detalla las siglas de tu equipo, el logo de la organización reguladora, tu número de dorsal y tu posición preferida de juego."
+          },
+          {
+            title: "Estados del Fichaje",
+            description: "• Activo/Aprobado: Eres miembro oficial.\n• Pendiente Admin: Esperando que los directores de la liga aprueben tu ficha.\n• Pendiente: Falta alguna firma de directivos."
+          },
+          {
+            title: "Líderes de Escuadra",
+            description: "Muestra el nombre, gamertag y contacto del Capitán a cargo del roster. Coordina directamente con él para entrenamientos y tácticas."
+          },
+          {
+            title: "Torneos Inscritos",
+            description: "Visualiza de forma directa qué competencias oficiales está disputando tu club en la organización actualmente."
+          },
+          {
+            title: "Acceso a la Sede",
+            description: "Haz clic en 'Ver Sede del Club' para revisar en profundidad la ficha total del equipo, incluyendo a todos tus compañeros y el calendario general."
+          }
+        ]}
+      />
     </div>
   );
 }

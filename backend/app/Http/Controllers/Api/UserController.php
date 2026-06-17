@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\Equipo;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class UserController extends Controller
 {
@@ -160,10 +161,19 @@ class UserController extends Controller
     {
         $validated = $request->validated();
 
+        // 🔥 Fallback preventivo si no suben foto al crearlo
+        if (empty($validated['foto'])) {
+            $validated['foto'] = 'images/users/default-user.png';
+        }
+
         // Si no tienes configurado 'password' => 'hashed' en tu modelo, actívalo aquí:
         // $validated['password'] = bcrypt($validated['password']);
 
         $user = User::create($validated);
+
+        // 🔥 Activar la verificación del correo por defecto cuando es creado por Admin/Organizador
+        $user->email_verified_at = now();
+        $user->save();
 
         return response()->json(new UserResource($user));
     }
@@ -596,11 +606,25 @@ class UserController extends Controller
         return response()->json($user);
     }
 
-    public function destroy($user): Response
+    public function destroy($user): Response|JsonResponse
     {
         if (!$user instanceof User || !$user->exists) {
             $userId = request()->route('usuario') ?? request()->route('user');
             $user = User::findOrFail($userId);
+        }
+
+        // Verificar si el usuario es dueño de una organización activa
+        if ($user->organizacion()->exists()) {
+            return response()->json([
+                'message' => 'No es posible eliminar a este usuario porque es propietario de una organización activa. Debes reasignar o eliminar la organización primero.'
+            ], 422);
+        }
+
+        // Verificar si el usuario es capitán de algún equipo UT
+        if ($user->equiposUtCapitan()->exists()) {
+            return response()->json([
+                'message' => 'No es posible eliminar a este usuario porque es capitán de un equipo de Ultimate Team. Debes reasignar la capitanía del equipo antes de proceder.'
+            ], 422);
         }
 
         // Esto ejecutará un Soft Delete automático si configuraste el trait SoftDeletes en el modelo User
@@ -614,10 +638,14 @@ class UserController extends Controller
      */
     public function totwTots(Request $request): JsonResponse
     {
-        $orgId = $request->query('organizacion_id');
-        $tempId = $request->query('temporada_id');
-        $compId = $request->query('competencia_id');
-        $tab = $request->query('active_tab', 'totw'); // 'totw' o 'tots'
+        $orgId  = $request->query('organizacion_id', 'todas');
+        $tempId = $request->query('temporada_id', 'todas');
+        $compId = $request->query('competencia_id', 'todas');
+        $tab    = $request->query('active_tab', 'totw');
+
+        // Cache por 5 minutos — el TOTW cambia por jornada, raramente más rápido que eso
+        $cacheKey = "totw_tots_{$tab}_org{$orgId}_temp{$tempId}_comp{$compId}";
+        $selected = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($orgId, $tempId, $compId, $tab) {
 
         $query = DB::table('estadisticas_jugadores')
             ->join('users', 'estadisticas_jugadores.jugador_id', '=', 'users.id')
@@ -782,6 +810,9 @@ class UserController extends Controller
             $p['rating'] = (int)round(80 + ($promedio * 1.8));
             return $p;
         }, $selected);
+
+        return $selected;
+        }); // fin Cache::remember
 
         return response()->json($selected);
     }
@@ -1201,7 +1232,7 @@ class UserController extends Controller
             ->where('estado', 'pendiente_admin')
             ->count();
 
-        // AUDIT 1: Rosters / Equipos (Plantillas vacías o sin capitán)
+        // AUDIT 1: Rosters / Equipos (Plantillas vacías o sin capitán) - OPTIMIZED: NO MORE N+1 QUERIES
         $teamsInOrgs = \App\Models\OrganizacionEquipoUsuario::whereIn('organizacion_id', $misOrganizacionesIds)
             ->pluck('equipo_id')
             ->unique()
@@ -1218,29 +1249,44 @@ class UserController extends Controller
         $allEquiposIds = array_unique(array_merge($teamsInOrgs, $teamsInCompetencias));
         $equipos = \App\Models\Equipo::whereIn('id', $allEquiposIds)->get();
 
+        // Pre-fetch all roster counts grouped by equipo and organizacion in a single query
+        $rosterCounts = \App\Models\OrganizacionEquipoUsuario::whereIn('equipo_id', $allEquiposIds)
+            ->whereIn('organizacion_id', $misOrganizacionesIds)
+            ->select('equipo_id', 'organizacion_id', \DB::raw('count(*) as count'))
+            ->groupBy('equipo_id', 'organizacion_id')
+            ->get()
+            ->groupBy('equipo_id');
+
+        // Pre-fetch fallback organization associations from competition rosters in a single query
+        $compTeamOrgs = \DB::table('competencia_equipo')
+            ->join('competencias', 'competencia_equipo.competencia_id', '=', 'competencias.id')
+            ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
+            ->whereIn('competencia_equipo.equipo_id', $allEquiposIds)
+            ->whereIn('temporadas.organizacion_id', $misOrganizacionesIds)
+            ->select('competencia_equipo.equipo_id', 'temporadas.organizacion_id')
+            ->distinct()
+            ->get()
+            ->groupBy('equipo_id');
+
+        // Pre-fetch all organization names in a single query
+        $organizacionesNames = \App\Models\Organizacion::whereIn('id', $misOrganizacionesIds)
+            ->pluck('nombre', 'id')
+            ->toArray();
+
         $equiposWarnings = [];
         foreach ($equipos as $equipo) {
-            $orgsOfTeam = \App\Models\OrganizacionEquipoUsuario::where('equipo_id', $equipo->id)
-                ->whereIn('organizacion_id', $misOrganizacionesIds)
-                ->pluck('organizacion_id')
-                ->unique()
-                ->toArray();
+            $teamRosters = $rosterCounts->get($equipo->id) ?: collect();
+            $orgsOfTeam = $teamRosters->pluck('organizacion_id')->toArray();
             
             if (empty($orgsOfTeam)) {
-                $orgsOfTeam = \App\Models\Competencia::whereIn('id', function($q) use ($equipo) {
-                    $q->select('competencia_id')->from('competencia_equipo')->where('equipo_id', $equipo->id);
-                })->whereHas('temporada', function($q) use ($misOrganizacionesIds) {
-                    $q->whereIn('organizacion_id', $misOrganizacionesIds);
-                })->get()->map(function($comp) {
-                    return $comp->temporada?->organizacion_id;
-                })->filter()->unique()->toArray();
+                $teamCompOrgs = $compTeamOrgs->get($equipo->id) ?: collect();
+                $orgsOfTeam = $teamCompOrgs->pluck('organizacion_id')->toArray();
             }
 
             foreach ($orgsOfTeam as $orgId) {
-                $rosterCount = \App\Models\OrganizacionEquipoUsuario::where('equipo_id', $equipo->id)
-                    ->where('organizacion_id', $orgId)
-                    ->count();
-                $orgName = \App\Models\Organizacion::where('id', $orgId)->value('nombre') ?? 'Organización';
+                $rosterRecord = $teamRosters->firstWhere('organizacion_id', $orgId);
+                $rosterCount = $rosterRecord ? $rosterRecord->count : 0;
+                $orgName = $organizacionesNames[$orgId] ?? 'Organización';
                 
                 if ($rosterCount == 0) {
                     $equiposWarnings[] = [
@@ -1357,15 +1403,16 @@ class UserController extends Controller
                 ];
             });
 
-        // AUDIT 6: Competencias (Configuración de divisiones)
+        // AUDIT 6: Competencias (Configuración de divisiones) - OPTIMIZED: NO MORE N+1 QUERIES
         $competenciasWarn = \App\Models\Competencia::with('temporada.organizacion')
+            ->withCount(['equipos', 'partidos'])
             ->whereHas('temporada', function($q) use ($misOrganizacionesIds) {
                 $q->whereIn('organizacion_id', $misOrganizacionesIds);
             })
             ->get()
             ->map(function($comp) {
-                $equiposCount = $comp->equipos()->count();
-                $partidosCount = $comp->partidos()->count();
+                $equiposCount = $comp->equipos_count;
+                $partidosCount = $comp->partidos_count;
                 $warnings = [];
 
                 if ($equiposCount === 0) {
@@ -1434,17 +1481,17 @@ class UserController extends Controller
      */
     public function publicStats(Request $request): JsonResponse
     {
-        $totalJugadores = \App\Models\User::where('role', 'jugador')->count();
-        $totalEquipos = \App\Models\Equipo::count();
-        $totalCompetencias = \App\Models\Competencia::count();
-        $totalPartidos = \App\Models\Partido::count();
+        // Cache por 15 minutos — estos conteos cambian rara vez y se consultan en cada carga de la landing page
+        $stats = Cache::remember('public_stats_global', now()->addMinutes(15), function () {
+            return [
+                'jugadores'    => \App\Models\User::where('role', 'jugador')->count(),
+                'equipos'      => \App\Models\Equipo::count(),
+                'competencias' => \App\Models\Competencia::count(),
+                'partidos'     => \App\Models\Partido::count(),
+            ];
+        });
 
-        return response()->json([
-            'jugadores' => $totalJugadores,
-            'equipos' => $totalEquipos,
-            'competencias' => $totalCompetencias,
-            'partidos' => $totalPartidos
-        ]);
+        return response()->json($stats);
     }
 
     /**

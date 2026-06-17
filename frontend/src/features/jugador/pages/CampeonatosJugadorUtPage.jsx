@@ -8,6 +8,8 @@ import Card from '@/components/shared/Card';
 import Spinner from '@/components/ui/Spinner';
 import Alert from '@/components/shared/Alert';
 import PartidosUt from '@/features/public/pages/PartidosUt';
+import PageHelp from '@/components/shared/PageHelp';
+import ImageUploader from '@/components/ui/ImageUploader';
 
 // ─── Helpers de Formato y Posiciones UT ──────────────────────────────────────────
 
@@ -30,7 +32,9 @@ function computeUtStandings(partidos, equipos) {
     if (p.goles_local == null || p.goles_visitante == null) return;
     const gl = p.goles_local, gv = p.goles_visitante;
     const lid = p.equipo_ut_local_id, vid = p.equipo_ut_visitante_id;
-    if (!map[lid] || !map[vid]) return;
+    
+    if (!lid || !vid || !map[lid] || !map[vid]) return;
+    
     map[lid].pj++; map[vid].pj++;
     map[lid].gf += gl; map[lid].gc += gv;
     map[vid].gf += gv; map[vid].gc += gl;
@@ -94,6 +98,25 @@ export default function CampeonatosJugadorUtPage() {
   const [playerStats, setPlayerStats] = useState([]);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState(null);
+
+  // Manual report images and stats
+  const [fotoPartido, setFotoPartido] = useState('');
+  const [fotoJugadores, setFotoJugadores] = useState('');
+  const [fotoConectados, setFotoConectados] = useState('');
+
+  const [teamManualStats, setTeamManualStats] = useState({
+    goles_favor: 0,
+    goles_en_contra: 0,
+    asistencias: 0,
+    tiros: 0,
+    pases_intentados: 0,
+    precision_pases: 0,
+    entradas_intentadas: 0,
+    entradas_exitosas: 0,
+    tarjetas_rojas: 0,
+    tarjetas_amarillas: 0,
+    atajadas: 0
+  });
 
   const getImageUrl = (path) => {
     if (!path) return null;
@@ -164,65 +187,150 @@ export default function CampeonatosJugadorUtPage() {
 
   const openReportModal = (match) => {
     setSelectedReportMatch(match);
-    setStatsScoreA(0);
-    setStatsScoreB(0);
+    setStatsScoreA(match.goles_local !== null ? String(match.goles_local) : '');
+    setStatsScoreB(match.goles_visitante !== null ? String(match.goles_visitante) : '');
+    setFotoPartido('');
+    setFotoJugadores('');
+    setFotoConectados('');
     setReportError(null);
 
-    const activePlayers = [];
-    if (match.local?.id_capitan) {
-      activePlayers.push({
-        id: match.local.id_capitan,
-        name: `${match.local.capitan?.gamertag || match.local.capitan?.name || 'Capitán Local'} (${match.local.nombre})`,
-        goals: 0,
-        posicion: 'DEL'
-      });
-    }
-    if (match.local?.id_companero) {
-      activePlayers.push({
-        id: match.local.id_companero,
-        name: `${match.local.companero?.gamertag || match.local.companero?.name || 'Compañero Local'} (${match.local.nombre})`,
-        goals: 0,
-        posicion: 'DEL'
-      });
-    }
+    // Identificar si el usuario pertenece al equipo local o visitante de UT
+    const isLocal = match.local?.id_capitan === user.id || match.local?.id_companero === user.id;
+    const existingReport = isLocal ? match.reporte_local_stats : match.reporte_visitante_stats;
 
-    if (match.visitante?.id_capitan) {
-      activePlayers.push({
-        id: match.visitante.id_capitan,
-        name: `${match.visitante.capitan?.gamertag || match.visitante.capitan?.name || 'Capitán Visitante'} (${match.visitante.nombre})`,
-        goals: 0,
-        posicion: 'DEL'
+    if (existingReport) {
+      setStatsScoreA(String(existingReport.goles_local || 0));
+      setStatsScoreB(String(existingReport.goles_visitante || 0));
+      if (existingReport.fotos) {
+        setFotoPartido(existingReport.fotos.partido || '');
+        setFotoJugadores(existingReport.fotos.jugadores || '');
+        setFotoConectados(existingReport.fotos.conectados || '');
+      }
+      if (existingReport.team_stats) {
+        setTeamManualStats({
+          goles_favor: existingReport.team_stats.goles_favor || 0,
+          goles_en_contra: existingReport.team_stats.goles_en_contra || 0,
+          asistencias: existingReport.team_stats.asistencias || 0,
+          tiros: existingReport.team_stats.tiros || 0,
+          pases_intentados: existingReport.team_stats.pases_intentados || 0,
+          precision_pases: existingReport.team_stats.precision_pases || 0,
+          entradas_intentadas: existingReport.team_stats.entradas_intentadas || 0,
+          entradas_exitosas: existingReport.team_stats.entradas_exitosas || 0,
+          tarjetas_rojas: existingReport.team_stats.tarjetas_rojas || 0,
+          tarjetas_amarillas: existingReport.team_stats.tarjetas_amarillas || 0,
+          atajadas: existingReport.team_stats.atajadas || 0
+        });
+      }
+      if (existingReport.player_stats) {
+        setPlayerStats(existingReport.player_stats);
+      }
+    } else {
+      setTeamManualStats({
+        goles_favor: 0,
+        goles_en_contra: 0,
+        asistencias: 0,
+        tiros: 0,
+        pases_intentados: 0,
+        precision_pases: 0,
+        entradas_intentadas: 0,
+        entradas_exitosas: 0,
+        tarjetas_rojas: 0,
+        tarjetas_amarillas: 0,
+        atajadas: 0
       });
-    }
-    if (match.visitante?.id_companero) {
-      activePlayers.push({
-        id: match.visitante.id_companero,
-        name: `${match.visitante.companero?.gamertag || match.visitante.companero?.name || 'Compañero Visitante'} (${match.visitante.nombre})`,
-        goals: 0,
-        posicion: 'DEL'
-      });
-    }
 
-    setPlayerStats(activePlayers);
+      // Cargar lista de jugadores que participan en UT (máximo 2 por escuadra)
+      const activePlayers = [];
+      if (isLocal) {
+        if (match.local?.id_capitan) {
+          activePlayers.push({
+            jugador_id: match.local.id_capitan,
+            name: `${match.local.capitan?.gamertag || match.local.capitan?.name || 'Capitán Local'} (${match.local.nombre})`,
+            valoracion: 6.0,
+            goles: 0,
+            asistencias: 0,
+            pases: 0,
+            yellowCard: false,
+            redCard: false
+          });
+        }
+        if (match.local?.id_companero) {
+          activePlayers.push({
+            jugador_id: match.local.id_companero,
+            name: `${match.local.companero?.gamertag || match.local.companero?.name || 'Compañero Local'} (${match.local.nombre})`,
+            valoracion: 6.0,
+            goles: 0,
+            asistencias: 0,
+            pases: 0,
+            yellowCard: false,
+            redCard: false
+          });
+        }
+      } else {
+        if (match.visitante?.id_capitan) {
+          activePlayers.push({
+            jugador_id: match.visitante.id_capitan,
+            name: `${match.visitante.capitan?.gamertag || match.visitante.capitan?.name || 'Capitán Visitante'} (${match.visitante.nombre})`,
+            valoracion: 6.0,
+            goles: 0,
+            asistencias: 0,
+            pases: 0,
+            yellowCard: false,
+            redCard: false
+          });
+        }
+        if (match.visitante?.id_companero) {
+          activePlayers.push({
+            jugador_id: match.visitante.id_companero,
+            name: `${match.visitante.companero?.gamertag || match.visitante.companero?.name || 'Compañero Visitante'} (${match.visitante.nombre})`,
+            valoracion: 6.0,
+            goles: 0,
+            asistencias: 0,
+            pases: 0,
+            yellowCard: false,
+            redCard: false
+          });
+        }
+      }
+
+      setPlayerStats(activePlayers);
+    }
   };
 
   const handleSaveReport = async () => {
+    if (statsScoreA === '' || statsScoreB === '') {
+      alert("⚠️ Por favor ingresa los goles del partido.");
+      return;
+    }
+
+    const isEmpate = Number(statsScoreA) === Number(statsScoreB);
+    if (isEmpate) {
+      if (!fotoPartido || !fotoJugadores || !fotoConectados) {
+        alert("⚠️ Para reportar un empate es obligatorio subir las 3 fotos (Estadísticas del partido, Estadísticas del jugador, y Jugadores conectados).");
+        return;
+      }
+    }
+
     setReportLoading(true);
     setReportError(null);
 
     try {
+      const isLocal = selectedReportMatch.local?.id_capitan === user.id || selectedReportMatch.local?.id_companero === user.id;
       const payload = {
         goles_local: Number(statsScoreA),
         goles_visitante: Number(statsScoreB),
-        stats: {
-          teamA: { shots: 10, possession: 50, corners: 4, fouls: 5 },
-          teamB: { shots: 10, possession: 50, corners: 4, fouls: 5 },
-          players: playerStats
-        }
+        fotos: {
+          partido: fotoPartido,
+          jugadores: fotoJugadores,
+          conectados: fotoConectados
+        },
+        team_stats: teamManualStats,
+        player_stats: playerStats,
+        side: isLocal ? 'local' : 'visitante'
       };
 
-      await api.put(`/partidos-ut/${selectedReportMatch.id}`, payload);
-      alert('🎉 ¡Partido reportado con éxito!');
+      await api.post(`/partidos-ut/${selectedReportMatch.id}/manual-report`, payload);
+      alert('🎉 ¡Reporte manual unificado enviado con éxito! Pendiente de confirmación del organizador.');
       setSelectedReportMatch(null);
       fetchTorneoDetalle(selectedTorneoId);
     } catch (err) {
@@ -240,7 +348,7 @@ export default function CampeonatosJugadorUtPage() {
   const formato = (selectedTorneo?.formato || 'liga').toLowerCase();
   
   const isPlayoff = formato === 'playoffs' || formato === 'playoff' || formato === 'eliminatoria';
-  const isCopa = formato === 'copa';
+  const isCopa = formato === 'copa' || partidos.some(p => p.grupo);
   const isLiga = !isPlayoff && !isCopa;
 
   // 1. Calendario de Liga
@@ -278,6 +386,33 @@ export default function CampeonatosJugadorUtPage() {
     return Object.entries(map)
       .sort(([a], [b]) => getRoundWeight(a) - getRoundWeight(b))
       .map(([roundName, roundMatches]) => {
+        const roundNameLower = roundName.toLowerCase();
+        let expectedSingleLegCount = 999;
+        if (roundNameLower.includes('final') && !roundNameLower.includes('semifinal') && !roundNameLower.includes('cuartos')) {
+          expectedSingleLegCount = 1;
+        } else if (roundNameLower.includes('semi')) {
+          expectedSingleLegCount = 2;
+        } else if (roundNameLower.includes('cuarto')) {
+          expectedSingleLegCount = 4;
+        } else if (roundNameLower.includes('octavo') || roundNameLower.includes('16')) {
+          expectedSingleLegCount = 8;
+        } else if (roundNameLower.includes('32')) {
+          expectedSingleLegCount = 16;
+        } else if (roundNameLower.includes('64')) {
+          expectedSingleLegCount = 32;
+        }
+
+        const hasAnySwapped = roundMatches.some((m1, idx1) => {
+          return roundMatches.some((m2, idx2) => {
+            if (idx1 === idx2) return false;
+            return m1.local?.id && m2.local?.id &&
+                   m1.local.id === m2.visitante?.id &&
+                   m1.visitante?.id === m2.local.id;
+          });
+        });
+
+        const isDoubleLeg = hasAnySwapped || (roundMatches.length > expectedSingleLegCount);
+
         const matchups = [];
         const visited = new Set();
 
@@ -297,6 +432,7 @@ export default function CampeonatosJugadorUtPage() {
             );
 
             const matchTBDAdjacent = (
+              isDoubleLeg &&
               (!current.local && !current.visitante && !candidate.local && !candidate.visitante) &&
               (j === i + 1)
             );
@@ -579,6 +715,18 @@ export default function CampeonatosJugadorUtPage() {
                           })
                         ) : (
                           <p className="text-center text-sm text-muted-foreground italic">Fase de grupos sin datos suficientes.</p>
+                        )}
+
+                        {knockoutPartidos.length > 0 && (
+                          <>
+                            <hr className="border-border/40 my-8" />
+                            <div className="space-y-6">
+                              <h4 className="text-sm font-bold text-foreground uppercase tracking-widest border-b border-border/20 pb-2 flex items-center gap-2">
+                                🏆 Cuadro Eliminatorio (Playoffs)
+                              </h4>
+                              <PlayoffLlave matches={knockoutPartidos} />
+                            </div>
+                          </>
                         )}
                       </div>
                     )}
@@ -905,122 +1053,260 @@ export default function CampeonatosJugadorUtPage() {
       {/* ========================================================================= */}
       {/* MODAL: REPORTE MANUAL DE GOLES DE JUGADOR                                  */}
       {/* ========================================================================= */}
-      {selectedReportMatch && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
-          <div className="w-full max-w-xl bg-card border border-border/50 shadow-2xl rounded-3xl p-6 space-y-6 max-h-[90vh] overflow-y-auto relative animate-scale-up text-left">
-            
-            <div className="border-b border-border/20 pb-3 flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-display font-black text-foreground uppercase tracking-wide flex items-center gap-2">
-                  🎮 Reportar Resultado UT
-                </h3>
-                <p className="text-[10px] text-muted-foreground mt-0.5">Ingresa los goles del partido y los goles individuales.</p>
-              </div>
-              <button 
-                onClick={() => setSelectedReportMatch(null)}
-                className="text-muted-foreground hover:text-foreground text-sm font-bold uppercase transition-colors"
-              >
-                ✕
-              </button>
-            </div>
+      {selectedReportMatch && (() => {
+        const isLocal = selectedReportMatch.local?.id_capitan === user.id || selectedReportMatch.local?.id_companero === user.id;
+        const myTeamName = isLocal ? selectedReportMatch.local?.nombre : selectedReportMatch.visitante?.nombre;
+        const isEmpate = statsScoreA !== '' && statsScoreB !== '' && Number(statsScoreA) === Number(statsScoreB);
 
-            {reportError && (
-              <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 text-xs text-destructive font-bold">
-                ⚠️ {reportError}
+        return (
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[150] overflow-y-auto flex justify-center p-4 sm:p-10">
+            <div className="w-full max-w-xl bg-card border border-border/50 shadow-2xl rounded-3xl p-6 space-y-6 my-auto relative animate-scale-up text-left">
+              
+              <div className="border-b border-border/20 pb-3 flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-display font-black text-foreground uppercase tracking-wide flex items-center gap-2">
+                    🎮 Reportar Resultado UT
+                  </h3>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Ingresa los goles del partido, estadísticas y capturas de pantalla.</p>
+                </div>
+                <button 
+                  onClick={() => setSelectedReportMatch(null)}
+                  className="text-muted-foreground hover:text-foreground text-sm font-bold uppercase transition-colors"
+                >
+                  ✕
+                </button>
               </div>
-            )}
 
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4 bg-muted/10 p-4 rounded-xl border border-border/40">
-                {/* Local */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-black text-primary uppercase truncate">{selectedReportMatch.local?.nombre || 'Local'}</h4>
-                  <div className="space-y-1">
-                    <label className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Goles Local</label>
-                    <input 
-                      type="number" 
-                      min="0"
-                      value={statsScoreA} 
-                      onChange={(e) => setStatsScoreA(Math.max(0, Number(e.target.value)))}
-                      className="w-full h-10 px-3 bg-background border border-border/60 rounded-xl text-center font-mono font-bold text-foreground text-lg focus:outline-none focus:border-primary"
-                    />
+              {reportError && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 text-xs text-destructive font-bold">
+                  ⚠️ {reportError}
+                </div>
+              )}
+
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4 bg-muted/10 p-4 rounded-xl border border-border/40">
+                  {/* Local */}
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-black text-primary uppercase truncate">{selectedReportMatch.local?.nombre || 'Local'}</h4>
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Goles Local</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        value={statsScoreA} 
+                        onChange={(e) => setStatsScoreA(e.target.value)}
+                        className="w-full h-10 px-3 bg-background border border-border/60 rounded-xl text-center font-mono font-bold text-foreground text-lg focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Visitante */}
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-black text-destructive uppercase truncate">{selectedReportMatch.visitante?.nombre || 'Visitante'}</h4>
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Goles Visitante</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        value={statsScoreB} 
+                        onChange={(e) => setStatsScoreB(e.target.value)}
+                        className="w-full h-10 px-3 bg-background border border-border/60 rounded-xl text-center font-mono font-bold text-foreground text-lg focus:outline-none focus:border-primary"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Visitante */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-black text-destructive uppercase truncate">{selectedReportMatch.visitante?.nombre || 'Visitante'}</h4>
-                  <div className="space-y-1">
-                    <label className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Goles Visitante</label>
-                    <input 
-                      type="number" 
-                      min="0"
-                      value={statsScoreB} 
-                      onChange={(e) => setStatsScoreB(Math.max(0, Number(e.target.value)))}
-                      className="w-full h-10 px-3 bg-background border border-border/60 rounded-xl text-center font-mono font-bold text-foreground text-lg focus:outline-none focus:border-primary"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Estadísticas de Jugadores */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-foreground uppercase tracking-widest">Goles por Jugador (Capitanes y Parejas)</h4>
-                {playerStats.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">No hay jugadores configurados en estos equipos para reportar.</p>
-                ) : (
-                  <div className="space-y-2 border border-border/40 rounded-2xl overflow-hidden bg-muted/10 p-2">
-                    {playerStats.map((p, idx) => (
-                      <div key={p.id} className="flex justify-between items-center p-3 border-b border-border/20 last:border-0 gap-3 text-xs">
-                        <span className="font-bold text-foreground truncate">{p.name}</span>
-                        <div className="flex items-center gap-2">
-                          <label className="text-[9px] font-black text-muted-foreground uppercase tracking-wider">Goles:</label>
-                          <input 
-                            type="number" 
-                            min="0"
-                            value={p.goals} 
-                            onChange={(e) => {
-                              const clone = [...playerStats];
-                              clone[idx].goals = Math.max(0, Number(e.target.value));
-                              setPlayerStats(clone);
-                            }}
-                            className="w-12 h-8 rounded-lg bg-background border border-border/60 text-center font-mono font-bold text-foreground" 
-                          />
-                        </div>
-                      </div>
-                    ))}
+                {/* Alerta de Empate / Obligación Manual */}
+                {isEmpate && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 p-4 rounded-xl text-xs space-y-1 animate-pulse">
+                    <p className="font-bold flex items-center gap-1.5 text-amber-300">
+                      ⚠️ Empate Detectado - Reporte Manual Requerido
+                    </p>
+                    <p className="leading-relaxed text-[11px] text-muted-foreground">
+                      Debido a que el encuentro finalizó en empate, el sistema exige que realices un reporte manual detallado.
+                      **Es obligatorio subir las 3 capturas del juego** (Estadísticas del partido, Estadísticas de jugadores, y Jugadores conectados).
+                    </p>
                   </div>
                 )}
-              </div>
 
-              <div className="flex gap-2 justify-end pt-3">
-                <button 
-                  onClick={() => setSelectedReportMatch(null)} 
-                  className="px-5 py-2.5 rounded-xl border border-border/40 text-xs font-bold uppercase hover:bg-muted/10 transition-colors"
-                  disabled={reportLoading}
-                >
-                  Cancelar
-                </button>
-                <button 
-                  onClick={handleSaveReport} 
-                  className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black uppercase hover:shadow-[0_0_15px_rgba(232,0,29,0.4)] transition-all cursor-pointer flex items-center gap-1.5"
-                  disabled={reportLoading}
-                >
-                  {reportLoading ? (
-                    <>
-                      <span className="animate-spin rounded-full h-3.5 w-3.5 border-t-2 border-primary-foreground border-r-2"></span>
-                      Procesando...
-                    </>
+                {/* Subida de Fotos */}
+                {isEmpate && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border border-border/40 p-4 rounded-xl bg-muted/10">
+                    <div className="space-y-1.5">
+                      <ImageUploader 
+                        label="Estadísticas Partido *" 
+                        value={fotoPartido} 
+                        onChange={setFotoPartido}
+                        folder="reportes"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <ImageUploader 
+                        label="Valoraciones Plantilla *" 
+                        value={fotoJugadores} 
+                        onChange={setFotoJugadores}
+                        folder="reportes"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <ImageUploader 
+                        label="Jugadores Conectados *" 
+                        value={fotoConectados} 
+                        onChange={setFotoConectados}
+                        folder="reportes"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Estadísticas de Equipo */}
+                {isEmpate && (
+                  <div className="space-y-2 border-t border-border/30 pt-3">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Estadísticas del Club ({myTeamName})</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Goles a Favor</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground" value={teamManualStats.goles_favor} onChange={(e) => setTeamManualStats({...teamManualStats, goles_favor: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Goles en Contra</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground" value={teamManualStats.goles_en_contra} onChange={(e) => setTeamManualStats({...teamManualStats, goles_en_contra: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Asistencias</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground" value={teamManualStats.asistencias} onChange={(e) => setTeamManualStats({...teamManualStats, asistencias: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Tiros</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground" value={teamManualStats.tiros} onChange={(e) => setTeamManualStats({...teamManualStats, tiros: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Pases Intentados</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground" value={teamManualStats.pases_intentados} onChange={(e) => setTeamManualStats({...teamManualStats, pases_intentados: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Precisión de Pases (%)</label>
+                        <input type="number" min="0" max="100" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground" value={teamManualStats.precision_pases} onChange={(e) => setTeamManualStats({...teamManualStats, precision_pases: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Entradas Intentadas</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground" value={teamManualStats.entradas_intentadas} onChange={(e) => setTeamManualStats({...teamManualStats, entradas_intentadas: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Entradas Exitosas</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground" value={teamManualStats.entradas_exitosas} onChange={(e) => setTeamManualStats({...teamManualStats, entradas_exitosas: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Tarjetas Rojas</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground" value={teamManualStats.tarjetas_rojas} onChange={(e) => setTeamManualStats({...teamManualStats, tarjetas_rojas: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Tarjetas Amarillas</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground" value={teamManualStats.tarjetas_amarillas} onChange={(e) => setTeamManualStats({...teamManualStats, tarjetas_amarillas: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-muted-foreground">Atajadas</label>
+                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground" value={teamManualStats.atajadas} onChange={(e) => setTeamManualStats({...teamManualStats, atajadas: Number(e.target.value)})} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Estadísticas de Jugadores */}
+                <div className="space-y-3 border-t border-border/30 pt-3">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">Rendimiento de Plantilla ({myTeamName})</h4>
+                  {playerStats.length === 0 ? (
+                    <p className="text-[10px] text-muted-foreground text-center py-4">No hay jugadores registrados en el roster.</p>
                   ) : (
-                    'Guardar Reporte'
+                    <div className="max-h-48 overflow-y-auto border border-border/40 rounded-xl bg-muted/5 divide-y divide-border/20 pr-1">
+                      {playerStats.map((p, idx) => (
+                        <div key={p.jugador_id || idx} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-2.5 gap-2 text-[11px] font-semibold">
+                          <span className="text-foreground font-bold truncate w-24 text-left">{p.name}</span>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex items-center gap-1">
+                              <span className="text-[8px] uppercase text-muted-foreground">Val:</span>
+                              <input type="number" min="0" max="10" step="0.1" value={p.valoracion} onChange={(e) => { const c = [...playerStats]; c[idx].valoracion = Number(e.target.value); setPlayerStats(c); }} className="w-11 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold text-foreground" />
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-[8px] uppercase text-muted-foreground">Goles:</span>
+                              <input type="number" min="0" value={p.goles} onChange={(e) => { const c = [...playerStats]; c[idx].goles = Number(e.target.value); setPlayerStats(c); }} className="w-9 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold text-foreground" />
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-[8px] uppercase text-muted-foreground">Asists:</span>
+                              <input type="number" min="0" value={p.asistencias} onChange={(e) => { const c = [...playerStats]; c[idx].asistencias = Number(e.target.value); setPlayerStats(c); }} className="w-9 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold text-foreground" />
+                            </div>
+                            <div className="flex gap-2">
+                              <label className="flex items-center gap-1 cursor-pointer">
+                                <input type="checkbox" checked={p.yellowCard} onChange={(e) => { const c = [...playerStats]; c[idx].yellowCard = e.target.checked; setPlayerStats(c); }} className="w-3.5 h-3.5 rounded border-border/60 text-primary" />
+                                <span className="text-[8px] font-black text-amber-500">🟨</span>
+                              </label>
+                              <label className="flex items-center gap-1 cursor-pointer">
+                                <input type="checkbox" checked={p.redCard} onChange={(e) => { const c = [...playerStats]; c[idx].redCard = e.target.checked; setPlayerStats(c); }} className="w-3.5 h-3.5 rounded border-border/60 text-primary" />
+                                <span className="text-[8px] font-black text-destructive">🟥</span>
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                </button>
+                </div>
+
+                <div className="flex gap-2 justify-end pt-3">
+                  <button 
+                    onClick={() => setSelectedReportMatch(null)} 
+                    className="px-5 py-2.5 rounded-xl border border-border/40 text-xs font-bold uppercase hover:bg-muted/10 transition-colors text-foreground"
+                    disabled={reportLoading}
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={handleSaveReport} 
+                    className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black uppercase hover:shadow-[0_0_15px_rgba(232,0,29,0.4)] transition-all cursor-pointer flex items-center gap-1.5"
+                    disabled={reportLoading}
+                  >
+                    {reportLoading ? (
+                      <>
+                        <span className="animate-spin rounded-full h-3.5 w-3.5 border-t-2 border-primary-foreground border-r-2"></span>
+                        Procesando...
+                      </>
+                    ) : (
+                      'Guardar Reporte'
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
+      <PageHelp 
+        title="Campeonatos de Ultimate Team"
+        description="El centro de operaciones para torneos de Ultimate Team en formatos 1v1 y 2v2. Desde aquí puedes inscribirte, revisar cruces y brackets, ver clasificaciones y reportar marcadores."
+        steps={[
+          {
+            title: "Buscar e Inscribirse",
+            description: "En la pestaña 'Disponibles' verás campeonatos abiertos. Haz clic en 'Inscribirse' para rellenar tus datos y los de tu compañero si es formato 2v2."
+          },
+          {
+            title: "Clasificación por Grupos",
+            description: "Si el torneo tiene fase de grupos, puedes revisar la tabla de posiciones en tiempo real. Se actualiza automáticamente tras cada partido aprobado."
+          },
+          {
+            title: "Árbol de Brackets (Playoffs)",
+            description: "Visualiza la fase de eliminación directa (Octavos, Cuartos, Semis, Final). Revisa contra quién te toca competir en la ronda actual."
+          },
+          {
+            title: "Reportar Resultados (Capitanes)",
+            description: "Si eres capitán y tienes un partido pendiente, pulsa 'Reportar'. Ingresa los goles de ambos lados, la valoración de tus jugadores y adjunta una captura nítida de la pantalla de resultados."
+          },
+          {
+            title: "Goleadores y Valoraciones",
+            description: "Revisa la tabla de máximos anotadores y los jugadores con mejor puntaje de rendimiento individual dentro de este torneo."
+          }
+        ]}
+      />
     </div>
   );
 }
@@ -1108,6 +1394,33 @@ function PlayoffLlave({ matches }) {
     return Object.entries(map)
       .sort(([a], [b]) => getRoundWeight(a) - getRoundWeight(b))
       .map(([roundName, roundMatches]) => {
+        const roundNameLower = roundName.toLowerCase();
+        let expectedSingleLegCount = 999;
+        if (roundNameLower.includes('final') && !roundNameLower.includes('semifinal') && !roundNameLower.includes('cuartos')) {
+          expectedSingleLegCount = 1;
+        } else if (roundNameLower.includes('semi')) {
+          expectedSingleLegCount = 2;
+        } else if (roundNameLower.includes('cuarto')) {
+          expectedSingleLegCount = 4;
+        } else if (roundNameLower.includes('octavo') || roundNameLower.includes('16')) {
+          expectedSingleLegCount = 8;
+        } else if (roundNameLower.includes('32')) {
+          expectedSingleLegCount = 16;
+        } else if (roundNameLower.includes('64')) {
+          expectedSingleLegCount = 32;
+        }
+
+        const hasAnySwapped = roundMatches.some((m1, idx1) => {
+          return roundMatches.some((m2, idx2) => {
+            if (idx1 === idx2) return false;
+            return m1.local?.id && m2.local?.id &&
+                   m1.local.id === m2.visitante?.id &&
+                   m1.visitante?.id === m2.local.id;
+          });
+        });
+
+        const isDoubleLeg = hasAnySwapped || (roundMatches.length > expectedSingleLegCount);
+
         const matchups = [];
         const visited = new Set();
 
@@ -1127,6 +1440,7 @@ function PlayoffLlave({ matches }) {
             );
 
             const matchTBDAdjacent = (
+              isDoubleLeg &&
               (!current.local && !current.visitante && !candidate.local && !candidate.visitante) &&
               (j === i + 1)
             );

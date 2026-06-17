@@ -50,6 +50,15 @@ export default function UsuarioFormDrawer({
             onChange={(url) => setFormData({ ...formData, foto: url })}
             folder="usuarios"
           />
+          {formData.role === 'jugador' && (
+            <div className="mt-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl p-3.5 text-xs flex items-start gap-2.5 leading-relaxed shadow-sm">
+              <span className="text-sm">⚠️</span>
+              <div>
+                <span className="font-bold text-amber-300 block mb-0.5">Consejo para tu Ficha de Jugador:</span>
+                Se recomienda utilizar una **imagen sin fondo (PNG transparente)**. De lo contrario, tu foto se verá con fondo/recuadro en la carta de estadísticas de la competición.
+              </div>
+            </div>
+          )}
         </div>
 
         <Input 

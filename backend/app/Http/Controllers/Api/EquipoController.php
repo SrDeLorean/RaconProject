@@ -108,14 +108,19 @@ class EquipoController extends Controller
             ];
         });
 
-        // Obtener todos los partidos en los que participa este equipo
+        // Obtener todos los partidos en los que participa este equipo filtrados por organización
         $partidos = \App\Models\Partido::with([
             'local:id,nombre,logo,abreviatura',
             'visitante:id,nombre,logo,abreviatura',
             'competencia:id,nombre'
         ])
-        ->where('equipo_local_id', $equipo->id)
-        ->orWhere('equipo_visitante_id', $equipo->id)
+        ->whereHas('competencia.temporada', function ($q) use ($organizacionId) {
+            $q->where('organizacion_id', $organizacionId);
+        })
+        ->where(function($q) use ($equipo) {
+            $q->where('equipo_local_id', $equipo->id)
+              ->orWhere('equipo_visitante_id', $equipo->id);
+        })
         ->orderBy('fecha', 'desc')
         ->orderBy('hora', 'desc')
         ->get();
@@ -151,12 +156,15 @@ class EquipoController extends Controller
             }
         }
 
-        // Obtener el próximo partido programado
+        // Obtener el próximo partido programado filtrado por organización
         $proximoPartido = \App\Models\Partido::with([
             'local:id,nombre,logo,abreviatura',
             'visitante:id,nombre,logo,abreviatura',
             'competencia:id,nombre'
         ])
+        ->whereHas('competencia.temporada', function ($q) use ($organizacionId) {
+            $q->where('organizacion_id', $organizacionId);
+        })
         ->where(function($q) use ($equipo) {
             $q->where('equipo_local_id', $equipo->id)
               ->orWhere('equipo_visitante_id', $equipo->id);
@@ -592,8 +600,18 @@ class EquipoController extends Controller
     /**
      * Delete the specified resource.
      */
-    public function destroy(Equipo $equipo): Response
+    public function destroy(Equipo $equipo): Response|JsonResponse
     {
+        $partidosCount = \App\Models\Partido::where('equipo_local_id', $equipo->id)
+            ->orWhere('equipo_visitante_id', $equipo->id)
+            ->count();
+
+        if ($partidosCount > 0) {
+            return response()->json([
+                'message' => 'No es posible eliminar este equipo porque tiene partidos registrados (ya disputados o pendientes). Debes reasignar o eliminar los partidos asociados antes de borrar el club.'
+            ], 422);
+        }
+
         Cache::forget('equipo_show_' . $equipo->id);
         $equipo->delete();
 

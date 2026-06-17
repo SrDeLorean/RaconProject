@@ -22,8 +22,14 @@ class OrganizacionController extends Controller
             'owner', 
             'temporadas.competencias.equipos', 
             'temporadas.competencias.partidos',
+            'temporadas.competencias.campeon', 
+            'temporadas.competencias.subcampeon', 
+            'temporadas.competencias.tercerLugar',
             'temporadas.competenciasUt.equipos',
-            'temporadas.competenciasUt.partidos'
+            'temporadas.competenciasUt.partidos',
+            'temporadas.competenciasUt.campeon', 
+            'temporadas.competenciasUt.subcampeon', 
+            'temporadas.competenciasUt.tercerLugar'
         ]);
 
         if ($request->filled('estado') && $request->estado !== 'todas') {
@@ -75,8 +81,14 @@ class OrganizacionController extends Controller
         $organizacion->load([
             'temporadas.competencias.equipos', 
             'temporadas.competencias.partidos', 
+            'temporadas.competencias.campeon', 
+            'temporadas.competencias.subcampeon', 
+            'temporadas.competencias.tercerLugar', 
             'temporadas.competenciasUt.equipos', 
             'temporadas.competenciasUt.partidos', 
+            'temporadas.competenciasUt.campeon', 
+            'temporadas.competenciasUt.subcampeon', 
+            'temporadas.competenciasUt.tercerLugar', 
             'owner'
         ]);
         return response()->json($organizacion);
@@ -119,8 +131,16 @@ class OrganizacionController extends Controller
     /**
      * Delete the specified resource.
      */
-    public function destroy(Organizacion $organizacion): Response
+    public function destroy(Organizacion $organizacion): Response|JsonResponse
     {
+        $temporadasCount = $organizacion->temporadas()->count();
+
+        if ($temporadasCount > 0) {
+            return response()->json([
+                'message' => 'No es posible eliminar esta organización porque tiene temporadas asociadas. Para borrarla, primero necesitas eliminar las temporadas vinculadas.'
+            ], 422);
+        }
+
         $organizacion->delete();
 
         return response()->noContent();

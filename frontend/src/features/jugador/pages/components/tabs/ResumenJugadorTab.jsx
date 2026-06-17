@@ -3,7 +3,7 @@ import Card from '@/components/shared/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 
-export default function ResumenJugadorTab({ profileData, solicitudes, navigate }) {
+export default function ResumenJugadorTab({ profileData, solicitudes, navigate, onTabChange }) {
   const careerStats = profileData?.estadisticas || {
     partidos_jugados: 0,
     total_goles: 0,
@@ -142,8 +142,12 @@ export default function ResumenJugadorTab({ profileData, solicitudes, navigate }
               )}
             </div>
             <Button size="sm" variant={solicitudes.length > 0 ? "default" : "outline"} className={`text-[11px] font-bold w-full h-9 transition-all ${solicitudes.length > 0 ? 'bg-gradient-to-r from-primary to-destructive hover:opacity-90 text-white border-none shadow-lg shadow-primary/30' : ''}`} onClick={() => {
-              const el = document.getElementById('ofertas-seccion');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
+              if (onTabChange) {
+                onTabChange('ofertas');
+              } else {
+                const el = document.getElementById('ofertas-seccion');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }
             }}>
               Revisar Ofertas
             </Button>

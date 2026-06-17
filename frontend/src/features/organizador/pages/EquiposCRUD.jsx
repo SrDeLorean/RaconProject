@@ -5,6 +5,7 @@ import { useEquipos } from '../hooks/useEquipos';
 import DataTable from '@/components/ui/DataTable';
 import CrudHeader from '@/components/shared/CrudHeader';
 import DeleteModal from '@/components/shared/DeleteModal';
+import PageHelp from '@/components/shared/PageHelp';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
@@ -182,6 +183,25 @@ export default function EquiposCRUD() {
             ¿Confirmas que deseas eliminar permanentemente a <strong className="text-foreground">{ui.itemToDelete?.nombre}</strong>? Esta acción borrará todas sus membresías y registros históricos.
           </>
         }
+      />
+
+      <PageHelp 
+        title="Base de Datos: Clubes"
+        description="El corazón de tu modo Clubes Pro. Administra quién juega y qué logos se mostrarán en la web."
+        steps={[
+          {
+            title: "Capitanías",
+            description: "Para que un equipo pueda inscribirse o gestionar su plantilla, debe tener un Capitán asignado con una cuenta válida en la web."
+          },
+          {
+            title: "Auditoría de Logos",
+            description: "Revisa si algún equipo tiene un logo inapropiado o enlace roto y edítalo desde el botón 'Editar'."
+          },
+          {
+            title: "Suspensión de Equipos",
+            description: "Si un equipo abandona el torneo, puedes marcarlo como inactivo en lugar de eliminarlo para conservar su historial de partidos."
+          }
+        ]}
       />
     </div>
   );

@@ -36,7 +36,9 @@ function computeStandings(partidos, equipos) {
     if (p.goles_local == null || p.goles_visitante == null) return;
     const gl = p.goles_local, gv = p.goles_visitante;
     const lid = p.equipo_local_id, vid = p.equipo_visitante_id;
-    if (!map[lid] || !map[vid]) return;
+    
+    if (!lid || !vid || !map[lid] || !map[vid]) return;
+    
     map[lid].pj++; map[vid].pj++;
     map[lid].gf += gl; map[lid].gc += gv;
     map[vid].gf += gv; map[vid].gc += gl;
@@ -416,10 +418,36 @@ function PlayoffBracket({ partidos }) {
       map[key].push(p);
     });
 
-    // Sort rounds and group adjacent/swapped matches into matchups
     return Object.entries(map)
       .sort(([a], [b]) => getRoundWeight(a) - getRoundWeight(b))
       .map(([roundName, roundMatches]) => {
+        const roundNameLower = roundName.toLowerCase();
+        let expectedSingleLegCount = 999;
+        if (roundNameLower.includes('final') && !roundNameLower.includes('semifinal') && !roundNameLower.includes('cuartos')) {
+          expectedSingleLegCount = 1;
+        } else if (roundNameLower.includes('semi')) {
+          expectedSingleLegCount = 2;
+        } else if (roundNameLower.includes('cuarto')) {
+          expectedSingleLegCount = 4;
+        } else if (roundNameLower.includes('octavo') || roundNameLower.includes('16')) {
+          expectedSingleLegCount = 8;
+        } else if (roundNameLower.includes('32')) {
+          expectedSingleLegCount = 16;
+        } else if (roundNameLower.includes('64')) {
+          expectedSingleLegCount = 32;
+        }
+
+        const hasAnySwapped = roundMatches.some((m1, idx1) => {
+          return roundMatches.some((m2, idx2) => {
+            if (idx1 === idx2) return false;
+            return m1.local?.id && m2.local?.id &&
+                   m1.local.id === m2.visitante?.id &&
+                   m1.visitante?.id === m2.local.id;
+          });
+        });
+
+        const isDoubleLeg = hasAnySwapped || (roundMatches.length > expectedSingleLegCount);
+
         const matchups = [];
         const visited = new Set();
 
@@ -439,6 +467,7 @@ function PlayoffBracket({ partidos }) {
             );
 
             const matchTBDAdjacent = (
+              isDoubleLeg &&
               (!current.local && !current.visitante && !candidate.local && !candidate.visitante) &&
               (j === i + 1)
             );
@@ -556,9 +585,9 @@ function FixturaLiga({ partidos }) {
 
 // ─── Copa Fixture Tab ─────────────────────────────────────────────────────────
 
-function FixturaCopa({ partidos }) {
+function FixturaCopa({ partidos, allPartidos }) {
   const grupoPartidos   = useMemo(() => partidos.filter(p => p.grupo), [partidos]);
-  const knockoutPartidos = useMemo(() => partidos.filter(p => !p.grupo), [partidos]);
+  const knockoutPartidos = useMemo(() => (allPartidos || partidos).filter(p => !p.grupo), [allPartidos, partidos]);
   const grupos = useMemo(() => groupBy(grupoPartidos, 'grupo'), [grupoPartidos]);
 
   return (
@@ -641,9 +670,25 @@ export default function DetalleCompetenciaPublica() {
   const partidos = competencia?.partidos || [];
   const equipos  = competencia?.equipos  || [];
   const formato  = (competencia?.formato || 'liga').toLowerCase();
-  const isPlayoff = formato === 'playoffs' || formato === 'playoff';
-  const isCopa    = formato === 'copa';
+  const isPlayoff = formato === 'playoffs' || formato === 'playoff' || formato === 'eliminatoria';
+  const isCopa    = formato === 'copa' || partidos.some(p => p.grupo);
   const isLiga    = !isPlayoff && !isCopa;
+
+  const grupoPartidos = useMemo(() => partidos.filter(p => p.grupo), [partidos]);
+  const knockoutPartidos = useMemo(() => partidos.filter(p => {
+    if (isCopa) {
+      return !p.grupo;
+    }
+    if (isPlayoff) {
+      return true;
+    }
+    const j = (p.jornada || '').toLowerCase();
+    return j.includes('octavos') || j.includes('cuartos') || j.includes('semi') || j.includes('final') || j.includes('tercer') || j.includes('3er');
+  }), [partidos, isCopa, isPlayoff]);
+
+  const hasGroups = grupoPartidos.length > 0;
+  const hasPlayoffs = knockoutPartidos.length > 0 || isPlayoff;
+  const hasLeagueTable = isLiga && !hasGroups && partidos.length > 0;
 
   // Extract unique dates from partidos
   const uniqueDates = useMemo(() => {
@@ -1020,32 +1065,44 @@ export default function DetalleCompetenciaPublica() {
 
                   {/* Render filtered matches based on active Date */}
                   {isLiga    && <FixturaLiga    partidos={filteredPartidos} />}
-                  {isPlayoff && <PlayoffBracket partidos={filteredPartidos} />}
-                  {isCopa    && <FixturaCopa    partidos={filteredPartidos} />}
+                  {isPlayoff && <PlayoffBracket partidos={partidos} />}
+                  {isCopa    && <FixturaCopa    partidos={filteredPartidos} allPartidos={partidos} />}
                 </div>
               )}
 
-              {/* TABLA */}
+              {/* TABLA / CLASIFICACIÓN */}
               {activeSubTab === 'tabla' && (
-                <>
-                  {isLiga && <TablaLiga partidos={partidos} equipos={equipos} />}
-                  {isCopa && <TablaCopa partidos={partidos} equipos={equipos} />}
-                  {isPlayoff && (
-                    <div className="border border-border/50 bg-card/25 backdrop-blur-md rounded-2xl p-8 text-center shadow-lg">
-                      <div className="text-5xl mb-4">🏆</div>
-                      <h3 className="text-xl font-display font-black text-foreground uppercase tracking-wider mb-2">Formato Eliminatorio</h3>
-                      <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                        Los playoffs no tienen tabla de posiciones. Consulta el cuadro de eliminación en la pestaña{' '}
-                        <button
-                          onClick={() => setActiveSubTab('fixture')}
-                          className="text-primary underline underline-offset-2 font-bold hover:no-underline"
-                        >
-                          Calendario / Partidos
-                        </button>.
-                      </p>
+                <div className="space-y-10 animate-fade-in">
+                  {/* Fase Regular / Liga / Grupos */}
+                  {hasGroups && (
+                    <div className="space-y-4">
+                      <TablaCopa partidos={partidos} equipos={equipos} />
                     </div>
                   )}
-                </>
+
+                  {hasLeagueTable && (
+                    <div className="space-y-4">
+                      <TablaLiga partidos={partidos} equipos={equipos} />
+                    </div>
+                  )}
+
+                  {/* Divider line if both exist */}
+                  {((hasGroups || hasLeagueTable) && hasPlayoffs) && (
+                    <hr className="border-border/40 my-8" />
+                  )}
+
+                  {/* Playoff Bracket */}
+                  {hasPlayoffs && (
+                    <div className="space-y-6">
+                      <h3 className="text-lg font-display font-black text-foreground uppercase tracking-wider">🏆 Cuadro Eliminatorio (Playoffs)</h3>
+                      <PlayoffBracket partidos={knockoutPartidos} />
+                    </div>
+                  )}
+
+                  {!hasGroups && !hasLeagueTable && !hasPlayoffs && (
+                    <p className="text-center text-sm text-muted-foreground italic py-10">No hay información de clasificación disponible.</p>
+                  )}
+                </div>
               )}
             </div>
           </div>

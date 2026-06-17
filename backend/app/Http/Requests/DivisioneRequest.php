@@ -27,4 +27,14 @@ class DivisioneRequest extends FormRequest
 			'nivel' => 'required',
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'id_competencia.required' => 'La competencia asociada es obligatoria.',
+            'nombre.required'         => 'El nombre de la división es obligatorio.',
+            'nombre.string'           => 'El nombre de la división debe ser una cadena de texto.',
+            'nivel.required'          => 'El nivel de la división es obligatorio.',
+        ];
+    }
 }

@@ -10,6 +10,7 @@ import CrudHeader from '@/components/shared/CrudHeader';
 import Card from '@/components/shared/Card';
 import api from '@/api/axios';
 import Modal from '@/components/ui/Modal';
+import ImageUploader from '@/components/ui/ImageUploader';
 
 
 export default function PartidosReportesClub({ equipo, roster }) {
@@ -52,6 +53,34 @@ export default function PartidosReportesClub({ equipo, roster }) {
   const [teamVisitanteStats, setTeamVisitanteStats] = useState({ shots: 10, possession: 50, corners: 4, fouls: 5 });
   const [playerStats, setPlayerStats] = useState([]);
   const [manualProcessing, setManualProcessing] = useState(false);
+
+  // Nuevas capturas de reporte manual (empates y normal)
+  const [fotoPartido, setFotoPartido] = useState('');
+  const [fotoJugadores, setFotoJugadores] = useState('');
+  const [fotoConectados, setFotoConectados] = useState('');
+
+  // Estadísticas del propio equipo para reporte manual
+  const [teamManualStats, setTeamManualStats] = useState({
+    goles_favor: 0,
+    goles_en_contra: 0,
+    asistencias: 0,
+    tiros: 0,
+    pases_intentados: 0,
+    precision_pases: 0,
+    entradas_intentadas: 0,
+    entradas_exitosas: 0,
+    tarjetas_rojas: 0,
+    tarjetas_amarillas: 0,
+    atajadas: 0
+  });
+
+  const isDraw = statsScoreLocal !== '' && statsScoreVisitante !== '' && Number(statsScoreLocal) === Number(statsScoreVisitante);
+
+  useEffect(() => {
+    if (isDraw) {
+      setReportMethod('manual');
+    }
+  }, [isDraw]);
 
   // Cargar Partidos
   const fetchPartidos = async () => {
@@ -163,7 +192,9 @@ export default function PartidosReportesClub({ equipo, roster }) {
     setSelectedMatch(match);
     setStatsScoreLocal('');
     setStatsScoreVisitante('');
-    setReportMethod('ea'); // Método recomendado por defecto
+    setFotoPartido('');
+    setFotoJugadores('');
+    setFotoConectados('');
     setEaMatches([]);
     setEaError(null);
     setSelectedEaMatchId('');
@@ -172,19 +203,79 @@ export default function PartidosReportesClub({ equipo, roster }) {
     setEaAlertEmpate(false);
     setEaWarnings(null);
 
-    // Inicializar estadísticas manuales vacías de jugadores
-    const mappedPlayers = roster.map(member => {
-      const userObj = member.usuario || member;
-      return {
-        id: userObj.id,
-        name: userObj.gamertag || userObj.name || 'Jugador',
-        goals: 0,
-        assists: 0,
-        yellowCard: false,
-        redCard: false
-      };
-    });
-    setPlayerStats(mappedPlayers);
+    // Si ya existe reporte parcial del equipo en la base de datos, lo pre-cargamos
+    const isLocal = match.equipo_local_id === equipo.id;
+    const existingReport = isLocal ? match.reporte_local_stats : match.reporte_visitante_stats;
+
+    if (existingReport) {
+      setStatsScoreLocal(String(existingReport.goles_local || 0));
+      setStatsScoreVisitante(String(existingReport.goles_visitante || 0));
+      if (existingReport.fotos) {
+        setFotoPartido(existingReport.fotos.partido || '');
+        setFotoJugadores(existingReport.fotos.jugadores || '');
+        setFotoConectados(existingReport.fotos.conectados || '');
+      }
+      if (existingReport.team_stats) {
+        setTeamManualStats({
+          goles_favor: existingReport.team_stats.goles_favor || 0,
+          goles_en_contra: existingReport.team_stats.goles_en_contra || 0,
+          asistencias: existingReport.team_stats.asistencias || 0,
+          tiros: existingReport.team_stats.tiros || 0,
+          pases_intentados: existingReport.team_stats.pases_intentados || 0,
+          precision_pases: existingReport.team_stats.precision_pases || 0,
+          entradas_intentadas: existingReport.team_stats.entradas_intentadas || 0,
+          entradas_exitosas: existingReport.team_stats.entradas_exitosas || 0,
+          tarjetas_rojas: existingReport.team_stats.tarjetas_rojas || 0,
+          tarjetas_amarillas: existingReport.team_stats.tarjetas_amarillas || 0,
+          atajadas: existingReport.team_stats.atajadas || 0
+        });
+      }
+      if (existingReport.player_stats) {
+        setPlayerStats(existingReport.player_stats);
+      }
+    } else {
+      setTeamManualStats({
+        goles_favor: 0,
+        goles_en_contra: 0,
+        asistencias: 0,
+        tiros: 0,
+        pases_intentados: 0,
+        precision_pases: 0,
+        entradas_intentadas: 0,
+        entradas_exitosas: 0,
+        tarjetas_rojas: 0,
+        tarjetas_amarillas: 0,
+        atajadas: 0
+      });
+
+      // Inicializar estadísticas manuales vacías de jugadores
+      const mappedPlayers = roster.map(member => {
+        const userObj = member.usuario || member;
+        return {
+          jugador_id: userObj.id,
+          name: userObj.gamertag || userObj.name || 'Jugador',
+          valoracion: 6.0,
+          goles: 0,
+          asistencias: 0,
+          pases: 0,
+          yellowCard: false,
+          redCard: false
+        };
+      });
+      setPlayerStats(mappedPlayers);
+    }
+
+    // Si el partido ya tiene goles (empate o reporte manual previo)
+    const goalsL = match.goles_local;
+    const goalsV = match.goles_visitante;
+    const isEmpatePre = goalsL !== null && goalsV !== null && Number(goalsL) === Number(goalsV);
+    
+    if (isEmpatePre) {
+      setReportMethod('manual');
+    } else {
+      setReportMethod('ea');
+    }
+
     setIsStatsModalOpen(true);
 
     // Intentar pre-cargar partidos de EA
@@ -277,20 +368,32 @@ export default function PartidosReportesClub({ equipo, roster }) {
       return;
     }
 
+    const isEmpate = Number(statsScoreLocal) === Number(statsScoreVisitante);
+    if (isEmpate) {
+      if (!fotoPartido || !fotoJugadores || !fotoConectados) {
+        alert("⚠️ Para reportar un empate es obligatorio subir las 3 fotos (Estadísticas del partido, Estadísticas del jugador, y Jugadores conectados).");
+        return;
+      }
+    }
+
     setManualProcessing(true);
     try {
-      const res = await api.put(`/partidos/${selectedMatch.id}`, {
+      const isLocal = selectedMatch.equipo_local_id === equipo.id;
+      const res = await api.post(`/partidos/${selectedMatch.id}/manual-report`, {
         goles_local: Number(statsScoreLocal),
         goles_visitante: Number(statsScoreVisitante),
-        stats: {
-          teamLocal: teamLocalStats,
-          teamVisitante: teamVisitanteStats,
-          players: playerStats
-        }
+        fotos: {
+          partido: fotoPartido,
+          jugadores: fotoJugadores,
+          conectados: fotoConectados
+        },
+        team_stats: teamManualStats,
+        player_stats: playerStats,
+        side: isLocal ? 'local' : 'visitante'
       });
 
       if (res.data) {
-        setSuccessMsg("🎉 ¡Marcador y estadísticas reportadas manualmente con éxito!");
+        setSuccessMsg("🎉 ¡Reporte manual unificado enviado con éxito! Pendiente de confirmación del organizador.");
         setIsStatsModalOpen(false);
         fetchPartidos();
       }
@@ -501,8 +604,8 @@ export default function PartidosReportesClub({ equipo, roster }) {
       {/* MODAL: ESTADÍSTICAS DEL PARTIDO & REPORTES DE JUGADORES / EA API          */}
       {/* ========================================================================= */}
       {isStatsModalOpen && selectedMatch && (
-        <div className="fixed inset-0 bg-background/90 backdrop-blur-md z-[120] flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl bg-card border border-border/50 shadow-2xl rounded-2xl p-6 space-y-5 max-h-[90vh] overflow-y-auto animate-fade-in relative">
+        <div className="fixed inset-0 bg-background/90 backdrop-blur-md z-[120] overflow-y-auto flex justify-center p-4 sm:p-10">
+          <div className="w-full max-w-2xl bg-card border border-border/50 shadow-2xl rounded-2xl p-6 space-y-5 my-auto animate-fade-in relative">
             
             {/* Cabecera del Dialogo */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-border/40 pb-3 gap-3">
@@ -516,8 +619,10 @@ export default function PartidosReportesClub({ equipo, roster }) {
               {/* Selector de Pestañas del Reporte */}
               <div className="flex gap-1 bg-muted/40 p-1 rounded-lg border border-border/40 shrink-0">
                 <button 
+                  disabled={isDraw}
                   onClick={() => setReportMethod('ea')}
-                  className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-1 ${reportMethod === 'ea' ? 'bg-background text-primary shadow-sm border border-border/20' : 'text-muted-foreground hover:text-foreground'}`}
+                  className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-1 ${reportMethod === 'ea' ? 'bg-background text-primary shadow-sm border border-border/20' : 'text-muted-foreground hover:text-foreground'} ${isDraw ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title={isDraw ? "Los empates requieren reporte manual obligatorio" : ""}
                 >
                   🎮 EA Sports API
                 </button>
@@ -722,9 +827,6 @@ export default function PartidosReportesClub({ equipo, roster }) {
               </div>
             )}
 
-            {/* ========================================== */}
-            {/* OPCION 2: ENTRADA MANUAL                  */}
-            {/* ========================================== */}
             {reportMethod === 'manual' && (
               <div className="space-y-5">
                 <div className="grid grid-cols-2 gap-4">
@@ -738,36 +840,99 @@ export default function PartidosReportesClub({ equipo, roster }) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 border-t border-border/30 pt-3">
-                  <div className="space-y-2">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Estadísticas Local</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Tiros</label>
-                        <input type="number" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold" value={teamLocalStats.shots} onChange={(e) => setTeamLocalStats({...teamLocalStats, shots: Number(e.target.value)})} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Posesión %</label>
-                        <input type="number" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold" value={teamLocalStats.possession} onChange={(e) => setTeamLocalStats({...teamLocalStats, possession: Number(e.target.value)})} />
-                      </div>
-                    </div>
+                {/* Alerta de Empate / Obligación Manual */}
+                {isDraw && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 p-4 rounded-xl text-xs space-y-1 animate-pulse">
+                    <p className="font-bold flex items-center gap-1.5 text-amber-300">
+                      ⚠️ Empate Detectado - Reporte Manual Requerido
+                    </p>
+                    <p className="leading-relaxed text-[11px] text-muted-foreground">
+                      Debido a que el encuentro finalizó en empate, el sistema exige que realices un reporte manual detallado.
+                      **Es obligatorio subir las 3 capturas del juego** (Estadísticas del partido, Estadísticas de jugadores, y Jugadores conectados).
+                    </p>
                   </div>
+                )}
 
-                  <div className="space-y-2">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Estadísticas Visitante</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Tiros</label>
-                        <input type="number" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold" value={teamVisitanteStats.shots} onChange={(e) => setTeamVisitanteStats({...teamVisitanteStats, shots: Number(e.target.value)})} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Posesión %</label>
-                        <input type="number" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold" value={teamVisitanteStats.possession} onChange={(e) => setTeamVisitanteStats({...teamVisitanteStats, possession: Number(e.target.value)})} />
-                      </div>
+                {/* Subida de Fotos */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border border-border/40 p-4 rounded-xl bg-muted/10">
+                  <div className="space-y-1.5">
+                    <ImageUploader 
+                      label="Estadísticas Partido *" 
+                      value={fotoPartido} 
+                      onChange={setFotoPartido}
+                      folder="reportes"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <ImageUploader 
+                      label="Valoraciones Plantilla *" 
+                      value={fotoJugadores} 
+                      onChange={setFotoJugadores}
+                      folder="reportes"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <ImageUploader 
+                      label="Jugadores Conectados *" 
+                      value={fotoConectados} 
+                      onChange={setFotoConectados}
+                      folder="reportes"
+                    />
+                  </div>
+                </div>
+
+                {/* Estadísticas de Equipo */}
+                <div className="space-y-2 border-t border-border/30 pt-3">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Estadísticas del Club ({equipo.nombre})</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black uppercase text-muted-foreground">Goles a Favor</label>
+                      <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold" value={teamManualStats.goles_favor} onChange={(e) => setTeamManualStats({...teamManualStats, goles_favor: Number(e.target.value)})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black uppercase text-muted-foreground">Goles en Contra</label>
+                      <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold" value={teamManualStats.goles_en_contra} onChange={(e) => setTeamManualStats({...teamManualStats, goles_en_contra: Number(e.target.value)})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black uppercase text-muted-foreground">Asistencias</label>
+                      <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold" value={teamManualStats.asistencias} onChange={(e) => setTeamManualStats({...teamManualStats, asistencias: Number(e.target.value)})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black uppercase text-muted-foreground">Tiros</label>
+                      <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold" value={teamManualStats.tiros} onChange={(e) => setTeamManualStats({...teamManualStats, tiros: Number(e.target.value)})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black uppercase text-muted-foreground">Pases Intentados</label>
+                      <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold" value={teamManualStats.pases_intentados} onChange={(e) => setTeamManualStats({...teamManualStats, pases_intentados: Number(e.target.value)})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black uppercase text-muted-foreground">Precisión de Pases (%)</label>
+                      <input type="number" min="0" max="100" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold" value={teamManualStats.precision_pases} onChange={(e) => setTeamManualStats({...teamManualStats, precision_pases: Number(e.target.value)})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black uppercase text-muted-foreground">Entradas Intentadas</label>
+                      <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold" value={teamManualStats.entradas_intentadas} onChange={(e) => setTeamManualStats({...teamManualStats, entradas_intentadas: Number(e.target.value)})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black uppercase text-muted-foreground">Entradas Exitosas</label>
+                      <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold" value={teamManualStats.entradas_exitosas} onChange={(e) => setTeamManualStats({...teamManualStats, entradas_exitosas: Number(e.target.value)})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black uppercase text-muted-foreground">Tarjetas Rojas</label>
+                      <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold" value={teamManualStats.tarjetas_rojas} onChange={(e) => setTeamManualStats({...teamManualStats, tarjetas_rojas: Number(e.target.value)})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black uppercase text-muted-foreground">Tarjetas Amarillas</label>
+                      <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold" value={teamManualStats.tarjetas_amarillas} onChange={(e) => setTeamManualStats({...teamManualStats, tarjetas_amarillas: Number(e.target.value)})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black uppercase text-muted-foreground">Atajadas</label>
+                      <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold" value={teamManualStats.atajadas} onChange={(e) => setTeamManualStats({...teamManualStats, atajadas: Number(e.target.value)})} />
                     </div>
                   </div>
                 </div>
 
+                {/* Estadísticas de Plantilla */}
                 <div className="space-y-2 border-t border-border/30 pt-3">
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">Rendimiento de Plantilla ({equipo.nombre})</h4>
                   <div className="max-h-48 overflow-y-auto border border-border/40 rounded-xl bg-muted/5 divide-y divide-border/20 pr-1">
@@ -775,16 +940,20 @@ export default function PartidosReportesClub({ equipo, roster }) {
                       <p className="text-[10px] text-muted-foreground text-center py-4">No hay jugadores registrados en el roster.</p>
                     ) : (
                       playerStats.map((p, idx) => (
-                        <div key={p.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-2.5 gap-2 text-[11px] font-semibold">
-                          <span className="text-foreground font-bold truncate w-28 text-left">{p.name}</span>
-                          <div className="flex items-center gap-3">
+                        <div key={p.jugador_id || p.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-2.5 gap-2 text-[11px] font-semibold">
+                          <span className="text-foreground font-bold truncate w-24 text-left">{p.name}</span>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex items-center gap-1">
+                              <span className="text-[8px] uppercase text-muted-foreground">Val:</span>
+                              <input type="number" min="0" max="10" step="0.1" value={p.valoracion} onChange={(e) => { const c = [...playerStats]; c[idx].valoracion = Number(e.target.value); setPlayerStats(c); }} className="w-11 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold" />
+                            </div>
                             <div className="flex items-center gap-1">
                               <span className="text-[8px] uppercase text-muted-foreground">Goles:</span>
-                              <input type="number" min="0" value={p.goals} onChange={(e) => { const c = [...playerStats]; c[idx].goals = Number(e.target.value); setPlayerStats(c); }} className="w-10 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold" />
+                              <input type="number" min="0" value={p.goles} onChange={(e) => { const c = [...playerStats]; c[idx].goles = Number(e.target.value); setPlayerStats(c); }} className="w-9 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold" />
                             </div>
                             <div className="flex items-center gap-1">
                               <span className="text-[8px] uppercase text-muted-foreground">Asists:</span>
-                              <input type="number" min="0" value={p.assists} onChange={(e) => { const c = [...playerStats]; c[idx].assists = Number(e.target.value); setPlayerStats(c); }} className="w-10 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold" />
+                              <input type="number" min="0" value={p.asistencias} onChange={(e) => { const c = [...playerStats]; c[idx].asistencias = Number(e.target.value); setPlayerStats(c); }} className="w-9 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold" />
                             </div>
                             <div className="flex gap-2">
                               <label className="flex items-center gap-1 cursor-pointer">
@@ -817,60 +986,99 @@ export default function PartidosReportesClub({ equipo, roster }) {
         isOpen={eaMismatchModal !== null}
         onClose={() => setEaMismatchModal(null)}
         title="⚠️ Discrepancia de Clubes EA Sports"
-        maxWidth="max-w-lg"
+        maxWidth="max-w-xl"
         zIndex="z-[130]"
       >
-        <div className="space-y-4">
-          <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-xl">
-            <p className="text-xs text-destructive-foreground font-semibold leading-relaxed">
-              Los clubes detectados en el partido de EA Sports no corresponden con los clubes del partido oficial programado. Por favor, selecciona el partido correcto o verifica los IDs en la configuración.
+        <div className="space-y-6 text-center font-sans text-xs pt-2">
+          {/* Icono con resplandor neón */}
+          <div className="relative py-2">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-amber-500/15 rounded-full blur-xl animate-pulse pointer-events-none"></div>
+            <div className="relative w-14 h-14 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 flex items-center justify-center text-xl mx-auto mb-2 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+              ⚠️
+            </div>
+            <h4 className="text-base font-display font-black text-foreground uppercase tracking-wider">
+              Conflicto de Identificación de Clubes
+            </h4>
+            <p className="text-[11px] text-muted-foreground leading-relaxed max-w-md mx-auto mt-1">
+              Los clubes reportados desde la API de EA Sports no coinciden con los configurados en el partido oficial programado.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Comparación visual lado a lado */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
             {/* Partido Programado Oficial */}
-            <div className="space-y-2.5 p-3 rounded-xl bg-card border border-border/45">
-              <h4 className="text-[10px] font-black text-primary uppercase tracking-wider border-b border-border/20 pb-1">
-                📌 Partido Programado (DB)
-              </h4>
-              <div className="space-y-1.5 text-xs">
-                <div>
-                  <span className="text-[9px] text-muted-foreground block uppercase font-bold">Local</span>
-                  <span className="font-bold text-foreground truncate block">{eaMismatchModal?.expectedLocal}</span>
-                  <code className="block text-[10px] text-primary/80 font-mono mt-0.5">ID EA: {eaMismatchModal?.expectedLocalId || 'Sin ID'}</code>
+            <div className="relative p-4 rounded-xl bg-card border border-border/60 shadow-md overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
+              <h5 className="text-[10px] font-black text-primary uppercase tracking-widest border-b border-border/20 pb-2 mb-3 flex items-center gap-1.5">
+                <span>📌</span> Partido Programado (DB)
+              </h5>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between items-center bg-muted/20 p-2 rounded-lg border border-border/30">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-muted-foreground uppercase font-black">Local</span>
+                    <span className="font-bold text-foreground text-xs truncate max-w-[150px]">{eaMismatchModal?.expectedLocal}</span>
+                  </div>
+                  <code className="text-[9px] bg-background px-2 py-0.5 rounded font-mono font-bold text-primary border border-border/40">
+                    ID: {eaMismatchModal?.expectedLocalId || 'Sin ID'}
+                  </code>
                 </div>
-                <div className="pt-1.5 border-t border-border/10">
-                  <span className="text-[9px] text-muted-foreground block uppercase font-bold">Visitante</span>
-                  <span className="font-bold text-foreground truncate block">{eaMismatchModal?.expectedVisitante}</span>
-                  <code className="block text-[10px] text-primary/80 font-mono mt-0.5">ID EA: {eaMismatchModal?.expectedVisitanteId || 'Sin ID'}</code>
+
+                <div className="flex justify-between items-center bg-muted/20 p-2 rounded-lg border border-border/30">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-muted-foreground uppercase font-black">Visitante</span>
+                    <span className="font-bold text-foreground text-xs truncate max-w-[150px]">{eaMismatchModal?.expectedVisitante}</span>
+                  </div>
+                  <code className="text-[9px] bg-background px-2 py-0.5 rounded font-mono font-bold text-primary border border-border/40">
+                    ID: {eaMismatchModal?.expectedVisitanteId || 'Sin ID'}
+                  </code>
                 </div>
               </div>
             </div>
 
             {/* Partido Detectado en EA */}
-            <div className="space-y-2.5 p-3 rounded-xl bg-muted/10 border border-border/45">
-              <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-wider border-b border-border/20 pb-1">
-                🎮 Detectado en EA Sports
-              </h4>
-              <div className="space-y-1.5 text-xs">
-                <div>
-                  <span className="text-[9px] text-muted-foreground block uppercase font-bold">Club A</span>
-                  <span className="font-bold text-amber-400 truncate block">{eaMismatchModal?.receivedLocal}</span>
-                  <code className="block text-[10px] text-amber-500/80 font-mono mt-0.5">ID EA: {eaMismatchModal?.receivedLocalId}</code>
+            <div className="relative p-4 rounded-xl bg-card border border-border/60 shadow-md overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
+              <h5 className="text-[10px] font-black text-amber-500 uppercase tracking-widest border-b border-border/20 pb-2 mb-3 flex items-center gap-1.5">
+                <span>🎮</span> Detectado en EA Sports
+              </h5>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between items-center bg-muted/20 p-2 rounded-lg border border-border/30">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-muted-foreground uppercase font-black">Club A</span>
+                    <span className="font-bold text-amber-400 text-xs truncate max-w-[150px]">{eaMismatchModal?.receivedLocal}</span>
+                  </div>
+                  <code className="text-[9px] bg-background px-2 py-0.5 rounded font-mono font-bold text-amber-500 border border-border/40">
+                    ID: {eaMismatchModal?.receivedLocalId || 'Sin ID'}
+                  </code>
                 </div>
-                <div className="pt-1.5 border-t border-border/10">
-                  <span className="text-[9px] text-muted-foreground block uppercase font-bold">Club B</span>
-                  <span className="font-bold text-amber-400 truncate block">{eaMismatchModal?.receivedVisitante}</span>
-                  <code className="block text-[10px] text-amber-500/80 font-mono mt-0.5">ID EA: {eaMismatchModal?.receivedVisitanteId}</code>
+
+                <div className="flex justify-between items-center bg-muted/20 p-2 rounded-lg border border-border/30">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-muted-foreground uppercase font-black">Club B</span>
+                    <span className="font-bold text-amber-400 text-xs truncate max-w-[150px]">{eaMismatchModal?.receivedVisitante}</span>
+                  </div>
+                  <code className="text-[9px] bg-background px-2 py-0.5 rounded font-mono font-bold text-amber-500 border border-border/40">
+                    ID: {eaMismatchModal?.receivedVisitanteId || 'Sin ID'}
+                  </code>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end pt-2">
+          {/* Ayuda táctica */}
+          <div className="p-3 bg-muted/30 border border-border/40 rounded-xl text-left">
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              💡 <strong>¿Cómo solucionarlo?</strong> Asegúrate de seleccionar el partido correcto en la lista de encuentros de EA Sports. Si el problema persiste, verifica que los Capitanes hayan configurado los <strong>IDs de Club EA correctos</strong> en la Oficina del Club.
+            </p>
+          </div>
+
+          {/* Acciones */}
+          <div className="flex justify-end pt-2 border-t border-border/20">
             <Button 
               onClick={() => setEaMismatchModal(null)} 
-              className="px-4 py-2 text-xs bg-muted/30 border border-border/60 hover:bg-muted text-foreground font-bold rounded-lg transition-all"
+              className="px-5 h-9 text-xs bg-primary hover:bg-primary/95 text-primary-foreground border-none font-bold rounded-lg shadow-md hover:shadow-primary/20 transition-all font-display uppercase tracking-wider"
             >
               Entendido
             </Button>

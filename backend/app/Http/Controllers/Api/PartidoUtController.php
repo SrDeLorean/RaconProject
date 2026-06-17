@@ -29,7 +29,12 @@ class PartidoUtController extends Controller
             'fecha',
             'hora',
             'goles_local',
-            'goles_visitante'
+            'goles_visitante',
+            'reporte_local_stats',
+            'reporte_visitante_stats',
+            'reporte_local_completado',
+            'reporte_visitante_completado',
+            'reporte_confirmado'
         ])->with([
             'local:id,nombre,logo,club_id_ea,id_capitan,id_companero',
             'local.capitan:id,name,gamertag',
@@ -264,12 +269,11 @@ class PartidoUtController extends Controller
             'partidos.*.visitante.id' => 'required',
         ]);
 
-        // Limpiar partidos previos para regenerar
-        PartidoUt::where('competencia_ut_id', $competenciaUt->id)->delete();
-
+        $existingMatches = PartidoUt::where('competencia_ut_id', $competenciaUt->id)->get();
+        $keptIds = [];
         $saved = [];
+
         foreach ($request->input('partidos') as $pData) {
-            // Ignorar descansos "BYE"
             if ($pData['local']['id'] === 'bye' || $pData['visitante']['id'] === 'bye') {
                 continue;
             }
@@ -277,21 +281,76 @@ class PartidoUtController extends Controller
             $localId = is_numeric($pData['local']['id']) ? $pData['local']['id'] : null;
             $visitanteId = is_numeric($pData['visitante']['id']) ? $pData['visitante']['id'] : null;
 
-            $partido = PartidoUt::create([
-                'competencia_ut_id' => $competenciaUt->id,
-                'equipo_ut_local_id' => $localId,
-                'equipo_ut_visitante_id' => $visitanteId,
-                'jornada' => $pData['jornada'],
-                'grupo' => $pData['grupo'] ?? null,
-                'fecha' => $pData['fecha'] ?? null,
-                'hora' => $pData['hora'] ?? null,
-                'goles_local' => isset($pData['score_local']) ? $pData['score_local'] : null,
-                'goles_visitante' => isset($pData['score_visitante']) ? $pData['score_visitante'] : null,
-                'stats' => $pData['stats'] ?? null,
-            ]);
-            $this->syncManualStats($partido);
-            $saved[] = $partido;
+            $leg = $pData['leg'] ?? null;
+            $matchupIndex = $pData['matchupIndex'] ?? null;
+
+            // Find match by composite key
+            $matched = null;
+            foreach ($existingMatches as $em) {
+                $emStats = $em->stats;
+                if (is_string($emStats)) {
+                    $emStats = json_decode($emStats, true) ?? [];
+                }
+
+                $emLeg = $emStats['leg'] ?? null;
+                $emMatchupIndex = $emStats['matchupIndex'] ?? null;
+
+                if ($em->jornada === $pData['jornada']) {
+                    if ($localId !== null && $visitanteId !== null) {
+                        // Match with team IDs
+                        if ($em->equipo_ut_local_id == $localId && $em->equipo_ut_visitante_id == $visitanteId && $emLeg === $leg) {
+                            $matched = $em;
+                            break;
+                        }
+                    } else {
+                        // TBD match - match by matchupIndex and leg
+                        if ($em->equipo_ut_local_id === null && $em->equipo_ut_visitante_id === null && $emMatchupIndex == $matchupIndex && $emLeg === $leg) {
+                            $matched = $em;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            $stats = $pData['stats'] ?? [];
+            if (is_string($stats)) {
+                $stats = json_decode($stats, true) ?? [];
+            }
+            if ($leg !== null) $stats['leg'] = $leg;
+            if ($matchupIndex !== null) $stats['matchupIndex'] = $matchupIndex;
+
+            if ($matched) {
+                $matched->update([
+                    'fecha' => $pData['fecha'] ?? $matched->fecha,
+                    'hora' => $pData['hora'] ?? $matched->hora,
+                    'equipo_ut_local_id' => $localId,
+                    'equipo_ut_visitante_id' => $visitanteId,
+                    'stats' => $stats,
+                ]);
+                $this->syncManualStats($matched);
+                $keptIds[] = $matched->id;
+                $saved[] = $matched;
+            } else {
+                $newPartido = PartidoUt::create([
+                    'competencia_ut_id' => $competenciaUt->id,
+                    'equipo_ut_local_id' => $localId,
+                    'equipo_ut_visitante_id' => $visitanteId,
+                    'jornada' => $pData['jornada'],
+                    'grupo' => $pData['grupo'] ?? null,
+                    'fecha' => $pData['fecha'] ?? null,
+                    'hora' => $pData['hora'] ?? null,
+                    'goles_local' => isset($pData['score_local']) ? $pData['score_local'] : null,
+                    'goles_visitante' => isset($pData['score_visitante']) ? $pData['score_visitante'] : null,
+                    'stats' => $stats,
+                ]);
+                $this->syncManualStats($newPartido);
+                $keptIds[] = $newPartido->id;
+                $saved[] = $newPartido;
+            }
         }
+
+        // Delete any existing matches that are NOT in the payload (meaning they were deleted)
+        PartidoUt::where('competencia_ut_id', $competenciaUt->id)->whereNotIn('id', $keptIds)->delete();
 
         Cache::forget('competencia_ut_show_' . $competenciaUt->id);
 

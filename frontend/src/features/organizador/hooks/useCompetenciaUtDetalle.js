@@ -124,13 +124,50 @@ export const useCompetenciaUtDetalle = (id) => {
       triggerNotification('success', 'Participante eliminado del torneo.');
       await fetchCompetenciaInfo();
     } catch (error) {
-      triggerNotification('error', 'Error al dar de baja.');
+      triggerNotification('error', error.response?.data?.message || 'Error al dar de baja.');
+      throw error;
+    }
+  };
+
+  const darWOEquipo = async (equipoUtId) => {
+    try {
+      await api.post(`/competencias-ut/${id}/equipos/${equipoUtId}/wo`);
+      triggerNotification('success', 'Se ha registrado Walkover para todos los partidos del participante.');
+      await fetchCompetenciaInfo();
+    } catch (error) {
+      triggerNotification('error', error.response?.data?.message || 'Error al aplicar Walkover.');
+    }
+  };
+
+  const reemplazarEquipo = async (equipoUtId, replacePayload) => {
+    try {
+      await api.post(`/competencias-ut/${id}/equipos/${equipoUtId}/reemplazar`, replacePayload);
+      triggerNotification('success', 'El participante ha sido reemplazado en el torneo.');
+      await fetchCompetenciaInfo();
+    } catch (error) {
+      triggerNotification('error', error.response?.data?.message || 'Error al reemplazar el participante.');
+    }
+  };
+
+  const finalizarCompetencia = async (podioData) => {
+    try {
+      await api.put(`/competencias-ut/${id}`, {
+        ...competencia,
+        estado: 'finalizada',
+        campeon_id: podioData.campeon_id,
+        subcampeon_id: podioData.subcampeon_id,
+        tercer_lugar_id: podioData.tercer_lugar_id
+      });
+      triggerNotification('success', 'Torneo UT finalizado oficialmente. ¡Podio registrado!');
+      await fetchCompetenciaInfo();
+    } catch (error) {
+      triggerNotification('error', 'Error al finalizar el torneo UT.');
     }
   };
 
   return {
     data: { competencia, equiposInscritos, usuariosDisponibles, searchTerm },
     ui: { isFetchingInfo, isFetchingEquipos, isSearching, notification },
-    actions: { setSearchTerm, triggerNotification, setNotification, inscribirManual, cambiarEstado, removerEquipo, fetchCompetenciaInfo }
+    actions: { setSearchTerm, triggerNotification, setNotification, inscribirManual, cambiarEstado, removerEquipo, darWOEquipo, reemplazarEquipo, fetchCompetenciaInfo, finalizarCompetencia }
   };
 };

@@ -22,6 +22,7 @@ class EstadisticaJugadorUt extends Model
         'asistencias',
         'tiros',
         'tarjetas_rojas',
+        'tarjetas_amarillas',
         'jugador_partido',
         'pases_intentados',
         'pases_completados',

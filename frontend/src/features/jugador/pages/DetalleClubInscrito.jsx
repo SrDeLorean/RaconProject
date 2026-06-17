@@ -5,6 +5,7 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Alert from '@/components/shared/Alert';
 import Partidos from '@/features/public/pages/Partidos';
+import PageHelp from '@/components/shared/PageHelp';
 
 export default function DetalleClubInscrito() {
   const { id } = useParams();
@@ -299,6 +300,29 @@ export default function DetalleClubInscrito() {
           </div>
         </div>
       </div>
+
+      <PageHelp 
+        title="Sede Detallada del Club"
+        description="Esta pantalla te muestra un desglose del perfil, plantilla y competencias del club en el cual te encuentras enrolado."
+        steps={[
+          {
+            title: "Perfil e Identidad",
+            description: "Muestra el escudo del equipo, siglas representativas, plataforma oficial, redes sociales del club (Twitter/Twitch) y la información del Capitán o dueño."
+          },
+          {
+            title: "Pestaña Info General",
+            description: "Contiene una descripción detallada del club redactada por su mánager, junto con estadísticas básicas de miembros y plataforma oficial."
+          },
+          {
+            title: "Pestaña Plantilla del Club",
+            description: "Lista a todos tus compañeros de equipo registrados en el roster, junto con sus dorsales asignados, gamertags de consolas y posiciones preferidas de juego."
+          },
+          {
+            title: "Competiciones y Calendario",
+            description: "Muestra un listado de los torneos activos en los que el club está participando y el calendario oficial de partidos (historial y encuentros pendientes)."
+          }
+        ]}
+      />
     </div>
   );
 }

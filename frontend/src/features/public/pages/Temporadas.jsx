@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import api from '@/api/axios';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -9,11 +9,18 @@ import Card from '@/components/shared/Card';
 
 
 
-const getImageUrl = (path) => {
-  if (!path) return null;
+const getImageUrl = (path, fallbackType) => {
+  if (!path) {
+    if (fallbackType === 'user' || fallbackType === 'usuario') return '/images/users/default-user.png';
+    if (fallbackType === 'org_logo' || fallbackType === 'organizacion_logo') return '/images/default-org-logo.svg';
+    if (fallbackType === 'org_banner' || fallbackType === 'organizacion_banner') return '/images/default-org-banner.svg';
+    if (fallbackType === 'team_logo' || fallbackType === 'equipo_logo') return '/images/default-team-logo.svg';
+    if (fallbackType === 'team_banner' || fallbackType === 'equipo_banner') return '/images/default-team-banner.svg';
+    return null;
+  }
   if (path.startsWith('http')) return path;
   if (typeof window.mediaUrl === 'function') {
-    return window.mediaUrl(path);
+    return window.mediaUrl(path, fallbackType);
   }
   const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') ;
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
@@ -32,7 +39,9 @@ function computeStandings(partidos, equipos) {
     if (p.goles_local == null || p.goles_visitante == null) return;
     const gl = p.goles_local, gv = p.goles_visitante;
     const lid = p.equipo_local_id, vid = p.equipo_visitante_id;
-    if (!map[lid] || !map[vid]) return;
+    
+    if (!lid || !vid || !map[lid] || !map[vid]) return;
+    
     map[lid].pj++; map[vid].pj++;
     map[lid].gf += gl; map[lid].gc += gv;
     map[vid].gf += gv; map[vid].gc += gl;
@@ -58,6 +67,7 @@ export default function Temporadas() {
   const [scheduleLoaded, setScheduleLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState('Overview'); // 'Overview' | 'Divisions' | 'Champions' | 'Schedule' | 'Stats'
   const [visibleMatchesCount, setVisibleMatchesCount] = useState(20);
+  const [championsSubTab, setChampionsSubTab] = useState('equipos'); // 'equipos' | 'jugadores'
 
   // Fetch only organization detail initially
   useEffect(() => {
@@ -215,13 +225,81 @@ export default function Temporadas() {
       if (isTodas || is11v11) {
         t.competencias?.forEach(c => {
           if (c.estado === 'finalizada') {
+            const campeon = c.campeon;
+            const subcampeon = c.subcampeon;
+            const tercerLugar = c.tercer_lugar || c.tercerLugar;
+
             const standings = computeStandings(c.partidos || [], c.equipos || []);
+            const getTeamStats = (teamId, teamObj) => {
+              const s = standings.find(x => x.id === teamId || (teamObj && x.nombre === teamObj.nombre));
+              const logoVal = teamObj?.logo || teamObj?.logo_url || s?.logo;
+              return {
+                logo: logoVal ? getImageUrl(logoVal) : null,
+                pj: s ? s.pj : 0,
+                pg: s ? s.pg : 0,
+                pe: s ? s.pe : 0,
+                pp: s ? s.pp : 0,
+                gf: s ? s.gf : 0,
+                gc: s ? s.gc : 0,
+                pts: s ? s.pts : 0,
+                winRate: s && s.pj > 0 ? Math.round((s.pg / s.pj) * 100) : 0
+              };
+            };
+
+            let podio = [];
+            if (campeon) {
+              podio.push({
+                medal: '🥇',
+                label: 'CAMPEÓN',
+                id: campeon.id,
+                nombre: campeon.nombre,
+                abreviatura: campeon.abreviatura,
+                ...getTeamStats(campeon.id, campeon)
+              });
+            }
+            if (subcampeon) {
+              podio.push({
+                medal: '🥈',
+                label: 'SUBCAMPEÓN',
+                id: subcampeon.id,
+                nombre: subcampeon.nombre,
+                abreviatura: subcampeon.abreviatura,
+                ...getTeamStats(subcampeon.id, subcampeon)
+              });
+            }
+            if (tercerLugar) {
+              podio.push({
+                medal: '🥉',
+                label: '3ER LUGAR',
+                id: tercerLugar.id,
+                nombre: tercerLugar.nombre,
+                abreviatura: tercerLugar.abreviatura,
+                ...getTeamStats(tercerLugar.id, tercerLugar)
+              });
+            }
+
+            if (podio.length === 0) {
+              standings.slice(0, 3).forEach((team, idx) => {
+                const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉';
+                const label = idx === 0 ? 'CAMPEÓN' : idx === 1 ? 'SUBCAMPEÓN' : '3ER LUGAR';
+                podio.push({
+                  medal,
+                  label,
+                  id: team.id,
+                  nombre: team.nombre,
+                  abreviatura: team.abreviatura,
+                  ...getTeamStats(team.id, team)
+                });
+              });
+            }
+
             list.push({
               id: c.id,
               nombre: c.nombre,
               esUt: false,
               temporadaNombre: t.nombre,
-              top3: standings.slice(0, 3)
+              podio,
+              topStats: c.top_stats
             });
           }
         });
@@ -231,13 +309,81 @@ export default function Temporadas() {
         const compsUt = t.competenciasUt || t.competencias_ut || [];
         compsUt.forEach(c => {
           if (c.estado === 'finalizada') {
+            const campeon = c.campeon;
+            const subcampeon = c.subcampeon;
+            const tercerLugar = c.tercer_lugar || c.tercerLugar;
+
             const standings = computeStandings(c.partidos || [], c.equipos || []);
+            const getTeamStats = (teamId, teamObj) => {
+              const s = standings.find(x => x.id === teamId || (teamObj && x.nombre === teamObj.nombre));
+              const logoVal = teamObj?.logo || teamObj?.logo_url || s?.logo;
+              return {
+                logo: logoVal ? getImageUrl(logoVal) : null,
+                pj: s ? s.pj : 0,
+                pg: s ? s.pg : 0,
+                pe: s ? s.pe : 0,
+                pp: s ? s.pp : 0,
+                gf: s ? s.gf : 0,
+                gc: s ? s.gc : 0,
+                pts: s ? s.pts : 0,
+                winRate: s && s.pj > 0 ? Math.round((s.pg / s.pj) * 100) : 0
+              };
+            };
+
+            let podio = [];
+            if (campeon) {
+              podio.push({
+                medal: '🥇',
+                label: 'CAMPEÓN',
+                id: campeon.id,
+                nombre: campeon.nombre,
+                abreviatura: campeon.nombre?.slice(0, 3) || 'UT',
+                ...getTeamStats(campeon.id, campeon)
+              });
+            }
+            if (subcampeon) {
+              podio.push({
+                medal: '🥈',
+                label: 'SUBCAMPEÓN',
+                id: subcampeon.id,
+                nombre: subcampeon.nombre,
+                abreviatura: subcampeon.nombre?.slice(0, 3) || 'UT',
+                ...getTeamStats(subcampeon.id, subcampeon)
+              });
+            }
+            if (tercerLugar) {
+              podio.push({
+                medal: '🥉',
+                label: '3ER LUGAR',
+                id: tercerLugar.id,
+                nombre: tercerLugar.nombre,
+                abreviatura: tercerLugar.nombre?.slice(0, 3) || 'UT',
+                ...getTeamStats(tercerLugar.id, tercerLugar)
+              });
+            }
+
+            if (podio.length === 0) {
+              standings.slice(0, 3).forEach((team, idx) => {
+                const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉';
+                const label = idx === 0 ? 'CAMPEÓN' : idx === 1 ? 'SUBCAMPEÓN' : '3ER LUGAR';
+                podio.push({
+                  medal,
+                  label,
+                  id: team.id,
+                  nombre: team.nombre,
+                  abreviatura: team.abreviatura,
+                  ...getTeamStats(team.id, team)
+                });
+              });
+            }
+
             list.push({
               id: c.id,
               nombre: c.nombre,
               esUt: true,
               temporadaNombre: t.nombre,
-              top3: standings.slice(0, 3)
+              podio,
+              topStats: c.top_stats
             });
           }
         });
@@ -340,17 +486,12 @@ export default function Temporadas() {
         
         {/* Banner image as header */}
         <div className="relative h-56 md:h-72 w-full overflow-hidden border-b border-border/40">
-          {organizacion.banner ? (
-            <img 
-              src={getImageUrl(organizacion.banner)} 
-              alt={organizacion.nombre} 
-              className="w-full h-full object-cover opacity-85" 
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-r from-primary/10 via-background to-primary/5 flex items-center justify-center">
-              <span className="text-muted-foreground text-xs uppercase tracking-widest font-condensed">Sin banner oficial</span>
-            </div>
-          )}
+          <img 
+            src={getImageUrl(organizacion.banner, 'org_banner')} 
+            alt={organizacion.nombre} 
+            className="w-full h-full object-cover opacity-85" 
+            onError={(e) => window.handleImageError(e, 'org_banner')}
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent z-10"></div>
         </div>
 
@@ -370,17 +511,12 @@ export default function Temporadas() {
               </div>
 
               <div className="flex items-center gap-5 mt-2 z-10 animate-fade-in-up">
-                {organizacion.logo ? (
-                  <img 
-                    src={getImageUrl(organizacion.logo)} 
-                    alt={organizacion.nombre}
-                    className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover border-4 border-card bg-card shadow-xl shrink-0"
-                  />
-                ) : (
-                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-background border-4 border-card flex items-center justify-center font-display font-black text-primary text-3xl shrink-0">
-                    {organizacion.nombre?.charAt(0)}
-                  </div>
-                )}
+                <img 
+                  src={getImageUrl(organizacion.logo, 'org_logo')} 
+                  alt={organizacion.nombre}
+                  className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover border-4 border-card bg-card shadow-xl shrink-0"
+                  onError={(e) => window.handleImageError(e, 'org_logo')}
+                />
                 <div>
                   <h1 className="text-4xl md:text-6xl font-display font-black text-foreground uppercase tracking-normal leading-tight drop-shadow-2xl">
                     {organizacion.nombre}
@@ -627,38 +763,24 @@ export default function Temporadas() {
                     
                     {/* Banner header for the division card */}
                     <div className="relative h-28 w-full overflow-hidden border-b border-border/30 bg-muted/20">
-                      {comp.banner ? (
-                        <img 
-                          src={getImageUrl(comp.banner)} 
-                          alt={comp.nombre} 
-                          className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500" 
-                        />
-                      ) : organizacion.banner ? (
-                        <img 
-                          src={getImageUrl(organizacion.banner)} 
-                          alt={comp.nombre} 
-                          className="w-full h-full object-cover opacity-60 filter blur-[1px] group-hover:scale-105 transition-transform duration-500" 
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-r from-primary/10 to-primary/5"></div>
-                      )}
+                      <img 
+                        src={getImageUrl(comp.banner || organizacion.banner, 'org_banner')} 
+                        alt={comp.nombre} 
+                        className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500" 
+                        onError={(e) => window.handleImageError(e, 'org_banner')}
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-card/90 to-transparent"></div>
                     </div>
 
                     <div className="px-6 pb-6 pt-0 space-y-4 relative z-20 -mt-10">
                       {/* Logo and metadata row */}
                       <div className="flex items-end justify-between border-b border-border/40 pb-3">
-                        {comp.logo ? (
-                          <img 
-                            src={getImageUrl(comp.logo)} 
-                            alt={comp.nombre} 
-                            className="w-16 h-16 rounded-xl object-cover border-2 border-card bg-card shadow-md shrink-0 z-20"
-                          />
-                        ) : (
-                          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-background border-2 border-card flex items-center justify-center font-display font-black text-primary text-xl shrink-0 z-20">
-                            {comp.nombre?.charAt(0)}
-                          </div>
-                        )}
+                        <img 
+                          src={getImageUrl(comp.logo, 'team_logo')} 
+                          alt={comp.nombre} 
+                          className="w-16 h-16 rounded-xl object-cover border-2 border-card bg-card shadow-md shrink-0 z-20"
+                          onError={(e) => window.handleImageError(e, 'team_logo')}
+                        />
                         <div className="flex flex-col items-end gap-1.5 text-right relative z-20">
                           <span className="text-[9px] font-condensed font-black px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase tracking-widest leading-none">
                             {comp.formato}
@@ -719,45 +841,466 @@ export default function Temporadas() {
 
         {/* Champions Tab */}
         {activeTab === 'Champions' && (
-          <div className="border border-border/50 bg-card/25 backdrop-blur-md p-8 rounded-2xl shadow-lg relative overflow-hidden scanlines text-center max-w-4xl mx-auto animate-fade-in">
-            <div className="absolute inset-0 tactical-noise pointer-events-none z-10 opacity-30"></div>
-            <span className="text-5xl relative z-20">👑</span>
-            <div className="space-y-3 mt-4 relative z-20">
-              <h2 className="font-display font-black text-4xl text-foreground uppercase tracking-wider">
-                SALÓN DE LA FAMA DE {organizacion.nombre}
-              </h2>
-              <p className="text-xs md:text-sm text-muted-foreground leading-relaxed font-sans max-w-lg mx-auto">
-                Los clubes que conquistaron la gloria táctica y dejaron su huella dorada en los registros del circuito oficial.
-              </p>
+          <div className="space-y-8 animate-fade-in max-w-5xl mx-auto">
+            {/* Header del Salón de la Fama */}
+            <div className="border border-border/50 bg-card/25 backdrop-blur-md p-8 rounded-2xl shadow-lg relative overflow-hidden text-center scanlines">
+              <div className="absolute inset-0 tactical-noise pointer-events-none z-10 opacity-30"></div>
+              <span className="text-5xl relative z-20">👑</span>
+              <div className="space-y-3 mt-4 relative z-20">
+                <h2 className="font-display font-black text-4xl text-foreground uppercase tracking-wider">
+                  SALÓN DE LA FAMA DE {organizacion.nombre}
+                </h2>
+                <p className="text-xs md:text-sm text-muted-foreground leading-relaxed font-sans max-w-lg mx-auto">
+                  La enciclopedia dorada del circuito oficial. Aquí se inmortalizan los clubes laureados y los héroes individuales de cada división.
+                </p>
+              </div>
+
+              {/* Selector de Sub-pestañas */}
+              <div className="flex justify-center gap-2 mt-8 bg-muted/20 p-1.5 rounded-xl border border-border/40 w-fit mx-auto relative z-20">
+                <button
+                  onClick={() => setChampionsSubTab('equipos')}
+                  className={`px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                    championsSubTab === 'equipos'
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  🛡️ Clubes Laureados
+                </button>
+                <button
+                  onClick={() => setChampionsSubTab('jugadores')}
+                  className={`px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                    championsSubTab === 'jugadores'
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  ⭐ Héroes de Élite
+                </button>
+              </div>
             </div>
 
+            {/* Listado de Competencias Finalizadas */}
             {finalizedCompetencias.length > 0 ? (
-              <div className="space-y-8 mt-6">
+              <div className="space-y-8">
                 {finalizedCompetencias.map((fc) => (
-                  <div key={fc.id} className="border border-border/40 bg-muted/10 p-6 rounded-2xl space-y-4 font-sans relative z-20 text-left">
-                    <div className="border-b border-border/30 pb-2 flex justify-between items-center">
-                      <span className="font-display font-black text-lg text-primary uppercase">{fc.nombre}</span>
-                      <span className="text-[10px] font-mono text-muted-foreground uppercase">{fc.temporadaNombre}</span>
+                  <div key={fc.id} className="border border-border/40 bg-card/10 p-6 rounded-3xl space-y-6 font-sans relative z-20 text-left hover:border-primary/20 transition-all duration-300">
+                    <div className="border-b border-border/30 pb-3 flex justify-between items-center">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-3.5 h-3.5 rounded-full bg-primary" />
+                        <span className="font-display font-black text-xl text-foreground uppercase tracking-wide">{fc.nombre}</span>
+                        <Badge variant={fc.esUt ? "brand" : "primary"} className="text-[8px] uppercase tracking-widest font-mono">
+                          {fc.esUt ? "ULTIMATE TEAM" : "MODO 11v11"}
+                        </Badge>
+                      </div>
+                      <span className="text-[10px] font-mono text-muted-foreground uppercase font-bold tracking-wider">{fc.temporadaNombre}</span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {fc.top3.map((team, idx) => {
-                        const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉';
-                        const label = idx === 0 ? 'CAMPEÓN' : idx === 1 ? 'SUBCAMPEÓN' : '3ER LUGAR';
-                        const colorClass = idx === 0 ? 'text-primary' : 'text-muted-foreground';
-                        const borderClass = idx === 0 ? 'border-primary/20 hover:border-primary/45' : 'border-border/40 hover:border-primary/20';
-                        return (
-                          <div key={team.id} className={`bg-card/40 p-4 border rounded-xl transition-colors text-center ${borderClass}`}>
-                            <span className="text-3xl">{medal}</span>
-                            <h4 className="font-display font-black text-lg text-foreground uppercase mt-2 truncate">
-                              {team.nombre}
-                            </h4>
-                            <span className={`text-[9px] font-condensed font-black uppercase tracking-widest block mt-1 ${colorClass}`}>
-                              {label} ({team.pts} PTS)
-                            </span>
+
+                    {/* VISTA SUB-TAB: EQUIPOS (PODIO TÁCTICO) */}
+                    {championsSubTab === 'equipos' && (
+                      <div className="space-y-4">
+                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block">
+                          🏆 CUADRO DE HONOR Y PODIO OFICIAL
+                        </span>
+                        
+                        {/* Render del Podio Visual */}
+                        {(() => {
+                          const gold = fc.podio.find(p => p.label.includes('CAMPEÓN'));
+                          const silver = fc.podio.find(p => p.label.includes('SUBCAMPEÓN'));
+                          const bronze = fc.podio.find(p => p.label.includes('3ER LUGAR') || p.label.includes('3 PUESTO'));
+
+                          return (
+                            <div className="py-8 max-w-5xl mx-auto border border-border/30 bg-background/25 rounded-3xl pb-16 flex flex-col items-center relative overflow-hidden min-h-[320px]">
+                              {/* Backdrop Glow */}
+                              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+
+                              <div className="flex flex-col md:flex-row items-end justify-center gap-6 w-full px-6 pt-10 pb-6 relative z-10">
+                                
+                                {/* 🥈 SEGUNDO LUGAR (SUBCAMPEÓN) */}
+                                {silver ? (
+                                  <div className="w-full md:w-1/3 order-2 md:order-1 flex flex-col items-center group mt-8 md:mt-0 animate-fade-in-up anim-breathing-card" style={{ animationDelay: '0.1s' }}>
+                                    <Link 
+                                      to={silver.id ? `/equipos/${silver.id}` : '#'} 
+                                      className="relative w-24 h-24 mb-4 flex items-center justify-center shrink-0 hover:scale-105 transition-all duration-300 group/avatar z-10"
+                                    >
+                                      <div className="absolute inset-0 border border-dashed border-info/40 rounded-full anim-rotate-cw anim-pulse-ring"></div>
+                                      <div className="absolute inset-1.5 border-2 border-double border-white/10 border-t-info border-b-info rounded-full anim-rotate-ccw"></div>
+                                      {silver.logo ? (
+                                        <img src={silver.logo} alt="" className="w-16 h-16 rounded-full object-cover border border-info/40 silver-glow relative z-10" />
+                                      ) : (
+                                        <div className="w-16 h-16 rounded-full bg-background border border-info/40 flex items-center justify-center font-display font-black text-xl text-info silver-glow uppercase relative z-10">
+                                          {silver.abreviatura?.slice(0, 3) || 'SLV'}
+                                        </div>
+                                      )}
+                                    </Link>
+                                    
+                                    <div className="text-center mb-3">
+                                      <Link 
+                                        to={silver.id ? `/equipos/${silver.id}` : '#'}
+                                        className="hover:text-primary transition-colors block"
+                                      >
+                                        <h4 className="text-sm font-display font-black text-foreground uppercase tracking-wider truncate max-w-[180px] leading-tight hover:text-primary">{silver.nombre}</h4>
+                                      </Link>
+                                      <span className="text-[9px] font-mono text-info uppercase font-bold tracking-wider block mt-0.5">SUBCAMPEÓN</span>
+                                    </div>
+                                    
+                                    {/* Pedestal Column */}
+                                    <div className="w-full h-52 bg-gradient-to-t from-background via-card to-info/15 border-t-2 border-l border-r border-info/40 rounded-t-3xl relative flex flex-col items-center justify-start pt-6 px-4 gap-2 shadow-[0_-10px_30px_rgba(59,130,246,0.15)] group-hover:shadow-[0_-10px_40px_rgba(59,130,246,0.3)] group-hover:border-info/70 transition-all duration-500 overflow-hidden">
+                                      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-info to-transparent"></div>
+                                      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,rgba(59,130,246,0.05)_100%)] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                      
+                                      <span className="text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-info to-info/50 leading-none drop-shadow-[0_0_10px_rgba(59,130,246,0.5)] z-10">#2</span>
+                                      
+                                      <div className="w-full border-t border-border/20 my-1 z-10" />
+                                      
+                                      {/* Performance stats grid */}
+                                      <div className="w-full text-center space-y-1.5 z-10 font-mono">
+                                        <div className="flex justify-between items-center text-[10px]">
+                                          <span className="text-muted-foreground font-bold">WIN RATE:</span>
+                                          <span className="text-emerald-400 font-black">{silver.winRate}%</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[10px]">
+                                          <span className="text-muted-foreground font-bold">GOLES (F/C):</span>
+                                          <span className="text-foreground font-black">{silver.gf} / {silver.gc}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[10px]">
+                                          <span className="text-muted-foreground font-bold">RECORD:</span>
+                                          <span className="text-foreground font-black">{silver.pg}G-{silver.pe}E-{silver.pp}P</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[10px]">
+                                          <span className="text-muted-foreground font-bold">PJ / PTS:</span>
+                                          <span className="text-info font-black">{silver.pj} PJ / {silver.pts} PTS</span>
+                                        </div>
+                                      </div>
+
+                                      <span className="text-[8px] bg-info/20 text-info px-3 py-1 rounded-full font-mono uppercase font-black tracking-wider mt-auto mb-4 border border-info/30 shadow-[0_0_10px_rgba(59,130,246,0.3)] z-10">
+                                        PLATA
+                                      </span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="w-full md:w-1/3 order-2 md:order-1 flex flex-col items-center justify-end h-52 bg-muted/5 border border-dashed border-border/25 rounded-t-3xl p-6 text-center text-xs text-muted-foreground italic">
+                                    Sin Subcampeón
+                                  </div>
+                                )}
+
+                                {/* 🥇 PRIMER LUGAR (CAMPEÓN) */}
+                                {gold ? (
+                                  <div className="w-full md:w-1/3 order-1 md:order-2 flex flex-col items-center group -translate-y-4 animate-fade-in-up anim-breathing-card" style={{ animationDelay: '0.2s' }}>
+                                    <Link 
+                                      to={gold.id ? `/equipos/${gold.id}` : '#'} 
+                                      className="relative w-28 h-28 mb-4 flex items-center justify-center shrink-0 hover:scale-105 transition-all duration-300 group/avatar z-10"
+                                    >
+                                      <div className="absolute inset-0 bg-warning/10 rounded-full blur-xl pointer-events-none animate-pulse"></div>
+                                      <div className="absolute inset-0 border-2 border-dashed border-warning rounded-full anim-rotate-cw"></div>
+                                      <div className="absolute inset-2 border border-dotted border-primary rounded-full anim-rotate-ccw" style={{ animationDuration: '6s' }}></div>
+                                      {gold.logo ? (
+                                        <img src={gold.logo} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-warning gold-glow relative z-10" />
+                                      ) : (
+                                        <div className="w-20 h-20 rounded-full bg-background border-2 border-warning flex items-center justify-center font-display font-black text-2xl text-warning gold-glow uppercase relative z-10">
+                                          {gold.abreviatura?.slice(0, 3) || 'GLD'}
+                                        </div>
+                                      )}
+                                    </Link>
+                                    
+                                    <div className="text-center mb-3">
+                                      <Link 
+                                        to={gold.id ? `/equipos/${gold.id}` : '#'}
+                                        className="hover:text-primary transition-colors block"
+                                      >
+                                        <h4 className="text-base font-display font-black text-foreground uppercase tracking-wider truncate max-w-[200px] leading-tight hover:text-primary">{gold.nombre}</h4>
+                                      </Link>
+                                      <span className="text-[10px] font-mono text-warning uppercase font-black tracking-widest block mt-0.5">CAMPEÓN</span>
+                                    </div>
+                                    
+                                    {/* Pedestal Column */}
+                                    <div className="w-full h-64 bg-gradient-to-t from-background via-card to-warning/20 border-t-2 border-l border-r border-warning/50 rounded-t-[2.5rem] relative flex flex-col items-center justify-start pt-8 px-4 gap-2 shadow-[0_-15px_40px_rgba(245,158,11,0.25)] group-hover:shadow-[0_-15px_60px_rgba(245,158,11,0.4)] group-hover:border-warning/80 transition-all duration-500 overflow-hidden">
+                                      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-warning to-transparent opacity-80"></div>
+                                      <div className="absolute top-0 inset-x-0 h-32 bg-warning/10 blur-xl pointer-events-none"></div>
+                                      <div className="absolute -top-4 bg-gradient-to-r from-warning to-yellow-300 text-yellow-950 font-mono font-black text-[9px] px-4 py-1 rounded-full uppercase tracking-widest border border-warning/50 shadow-[0_0_15px_rgba(245,158,11,0.6)] z-20 animate-bounce-slow">
+                                        👑 CAMPEÓN
+                                      </div>
+                                      
+                                      <span className="text-5xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-warning to-warning/40 leading-none drop-shadow-[0_0_15px_rgba(245,158,11,0.8)] z-10 mt-2">#1</span>
+                                      
+                                      <div className="w-full border-t border-border/20 my-1 z-10" />
+                                      
+                                      {/* Performance stats grid */}
+                                      <div className="w-full text-center space-y-1.5 z-10 font-mono">
+                                        <div className="flex justify-between items-center text-xs">
+                                          <span className="text-muted-foreground font-bold">WIN RATE:</span>
+                                          <span className="text-emerald-400 font-black">{gold.winRate}%</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-xs">
+                                          <span className="text-muted-foreground font-bold">GOLES (F/C):</span>
+                                          <span className="text-foreground font-black">{gold.gf} / {gold.gc}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-xs">
+                                          <span className="text-muted-foreground font-bold">RECORD:</span>
+                                          <span className="text-foreground font-black">{gold.pg}G-{gold.pe}E-{gold.pp}P</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-xs">
+                                          <span className="text-muted-foreground font-bold">PJ / PTS:</span>
+                                          <span className="text-warning font-black">{gold.pj} PJ / {gold.pts} PTS</span>
+                                        </div>
+                                      </div>
+
+                                      <span className="text-[9px] bg-warning/20 text-warning px-4 py-1 rounded-full font-mono uppercase font-black tracking-widest mt-auto mb-5 border border-warning/30 shadow-[0_0_12px_rgba(245,158,11,0.4)] z-10">
+                                        ORO
+                                      </span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="w-full md:w-1/3 order-1 md:order-2 flex flex-col items-center justify-end h-64 bg-muted/5 border border-dashed border-border/25 rounded-t-[2.5rem] p-6 text-center text-xs text-muted-foreground italic">
+                                    Sin Campeón
+                                  </div>
+                                )}
+
+                                {/* 🥉 TERCER LUGAR (3ER LUGAR) */}
+                                {bronze ? (
+                                  <div className="w-full md:w-1/3 order-3 md:order-3 flex flex-col items-center group mt-8 md:mt-0 animate-fade-in-up anim-breathing-card" style={{ animationDelay: '0.3s' }}>
+                                    <Link 
+                                      to={bronze.id ? `/equipos/${bronze.id}` : '#'} 
+                                      className="relative w-24 h-24 mb-4 flex items-center justify-center shrink-0 hover:scale-105 transition-all duration-300 group/avatar z-10"
+                                    >
+                                      <div className="absolute inset-0 border border-dashed border-primary/45 rounded-full anim-rotate-cw anim-pulse-ring"></div>
+                                      <div className="absolute inset-1.5 border-2 border-double border-white/10 border-t-primary border-b-primary rounded-full anim-rotate-ccw"></div>
+                                      {bronze.logo ? (
+                                        <img src={bronze.logo} alt="" className="w-16 h-16 rounded-full object-cover border border-primary/40 purple-glow relative z-10" />
+                                      ) : (
+                                        <div className="w-16 h-16 rounded-full bg-background border border-primary/40 flex items-center justify-center font-display font-black text-xl text-primary purple-glow uppercase relative z-10">
+                                          {bronze.abreviatura?.slice(0, 3) || 'BRZ'}
+                                        </div>
+                                      )}
+                                    </Link>
+                                    
+                                    <div className="text-center mb-3">
+                                      <Link 
+                                        to={bronze.id ? `/equipos/${bronze.id}` : '#'}
+                                        className="hover:text-primary transition-colors block"
+                                      >
+                                        <h4 className="text-sm font-display font-black text-foreground uppercase tracking-wider truncate max-w-[180px] leading-tight hover:text-primary">{bronze.nombre}</h4>
+                                      </Link>
+                                      <span className="text-[9px] font-mono text-primary uppercase font-bold tracking-wider block mt-0.5">3ER LUGAR</span>
+                                    </div>
+                                    
+                                    {/* Pedestal Column */}
+                                    <div className="w-full h-44 bg-gradient-to-t from-background via-card to-primary/15 border-t-2 border-l border-r border-primary/40 rounded-t-3xl relative flex flex-col items-center justify-start pt-5 px-4 gap-2 shadow-[0_-10px_30px_rgba(139,92,246,0.15)] group-hover:shadow-[0_-10px_40px_rgba(139,92,246,0.3)] group-hover:border-primary/70 transition-all duration-500 overflow-hidden">
+                                      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent"></div>
+                                      
+                                      <span className="text-2xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-primary to-primary/50 leading-none drop-shadow-[0_0_10px_rgba(139,92,246,0.5)] z-10">#3</span>
+                                      
+                                      <div className="w-full border-t border-border/20 my-1 z-10" />
+                                      
+                                      {/* Performance stats grid */}
+                                      <div className="w-full text-center space-y-1 z-10 font-mono">
+                                        <div className="flex justify-between items-center text-[10px]">
+                                          <span className="text-muted-foreground font-bold">WIN RATE:</span>
+                                          <span className="text-emerald-400 font-black">{bronze.winRate}%</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[10px]">
+                                          <span className="text-muted-foreground font-bold">GOLES (F/C):</span>
+                                          <span className="text-foreground font-black">{bronze.gf} / {bronze.gc}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[10px]">
+                                          <span className="text-muted-foreground font-bold">RECORD:</span>
+                                          <span className="text-foreground font-black">{bronze.pg}G-{bronze.pe}E-{bronze.pp}P</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[10px]">
+                                          <span className="text-muted-foreground font-bold">PJ / PTS:</span>
+                                          <span className="text-primary font-black">{bronze.pj} PJ / {bronze.pts} PTS</span>
+                                        </div>
+                                      </div>
+
+                                      <span className="text-[8px] bg-primary/20 text-primary px-3 py-1 rounded-full font-mono uppercase font-black tracking-wider mt-auto mb-3 border border-primary/30 shadow-[0_0_10px_rgba(139,92,246,0.3)] z-10">
+                                        BRONCE
+                                      </span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="w-full md:w-1/3 order-3 md:order-3 flex flex-col items-center justify-end h-44 bg-muted/5 border border-dashed border-border/25 rounded-t-3xl p-6 text-center text-xs text-muted-foreground italic">
+                                    Sin 3er Lugar
+                                  </div>
+                                )}
+
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+
+                    {/* VISTA SUB-TAB: JUGADORES (INFOGRAFÍA COMPACTA) */}
+                    {championsSubTab === 'jugadores' && (
+                      <div className="space-y-4">
+                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block">
+                          ⭐ LÍDERES INDIVIDUALES (INFOGRAFÍA ESTADÍSTICA)
+                        </span>
+
+                        {fc.topStats && (fc.topStats.goleadores?.length > 0 || fc.topStats.asistentes?.length > 0 || fc.topStats.mvps?.length > 0) ? (
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            
+                            {/* GOLEADORES */}
+                            {fc.topStats.goleadores?.length > 0 ? (
+                              <div className="border border-border/30 bg-background/20 rounded-2xl p-4.5 space-y-3.5 relative overflow-hidden shadow-sm">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
+                                <div className="flex items-center justify-between border-b border-border/10 pb-2">
+                                  <span className="text-[10px] font-black tracking-wider text-primary uppercase">⚽ GOLEADOR</span>
+                                  <span className="text-[9px] font-bold text-muted-foreground">TOP 3</span>
+                                </div>
+
+                                {/* TOP 1 HIGHLIGHT */}
+                                {(() => {
+                                  const top1 = fc.topStats.goleadores[0];
+                                  return (
+                                    <div className="flex items-center justify-between bg-primary/5 border border-primary/25 rounded-xl p-3">
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-10 h-10 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center font-display font-black text-primary text-sm shrink-0">
+                                          1ST
+                                        </div>
+                                        <div className="min-w-0">
+                                          <p className="text-xs font-black text-foreground truncate uppercase">{top1.gamertag || top1.name}</p>
+                                          <p className="text-[9px] text-muted-foreground truncate">{top1.equipo_nombre}</p>
+                                        </div>
+                                      </div>
+                                      <div className="text-right shrink-0">
+                                        <span className="text-lg font-display font-black text-primary text-glow-primary">{top1.total}</span>
+                                        <span className="text-[8px] font-bold block text-muted-foreground">GOLES</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+
+                                {/* TOP 2 & 3 LIST */}
+                                <div className="space-y-2 pt-1">
+                                  {fc.topStats.goleadores.slice(1, 3).map((p, idx) => (
+                                    <div key={p.id || idx} className="flex justify-between items-center text-[11px] hover:bg-muted/10 p-1.5 rounded-lg transition-colors">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <span className="font-mono text-muted-foreground font-black">{idx + 2}.</span>
+                                        <div className="min-w-0">
+                                          <span className="font-bold text-foreground truncate max-w-[90px] inline-block uppercase">{p.gamertag || p.name}</span>
+                                          <span className="text-[8px] text-muted-foreground truncate block">{p.equipo_nombre}</span>
+                                        </div>
+                                      </div>
+                                      <span className="font-mono font-bold text-primary shrink-0">{p.total} G</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="border border-border/20 bg-background/10 rounded-2xl p-4 text-center text-xs text-muted-foreground italic flex items-center justify-center animate-fade-in">Sin registros</div>
+                            )}
+
+                            {/* ASISTENTES */}
+                            {fc.topStats.asistentes?.length > 0 ? (
+                              <div className="border border-border/30 bg-background/20 rounded-2xl p-4.5 space-y-3.5 relative overflow-hidden shadow-sm">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+                                <div className="flex items-center justify-between border-b border-border/10 pb-2">
+                                  <span className="text-[10px] font-black tracking-wider text-emerald-400 uppercase">🎯 ASISTENTE</span>
+                                  <span className="text-[9px] font-bold text-muted-foreground">TOP 3</span>
+                                </div>
+
+                                {/* TOP 1 HIGHLIGHT */}
+                                {(() => {
+                                  const top1 = fc.topStats.asistentes[0];
+                                  return (
+                                    <div className="flex items-center justify-between bg-emerald-500/5 border border-emerald-500/25 rounded-xl p-3">
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center font-display font-black text-emerald-400 text-sm shrink-0">
+                                          1ST
+                                        </div>
+                                        <div className="min-w-0">
+                                          <p className="text-xs font-black text-foreground truncate uppercase">{top1.gamertag || top1.name}</p>
+                                          <p className="text-[9px] text-muted-foreground truncate">{top1.equipo_nombre}</p>
+                                        </div>
+                                      </div>
+                                      <div className="text-right shrink-0">
+                                        <span className="text-lg font-display font-black text-emerald-400 text-glow-emerald">{top1.total}</span>
+                                        <span className="text-[8px] font-bold block text-muted-foreground">ASIST.</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+
+                                {/* TOP 2 & 3 LIST */}
+                                <div className="space-y-2 pt-1">
+                                  {fc.topStats.asistentes.slice(1, 3).map((p, idx) => (
+                                    <div key={p.id || idx} className="flex justify-between items-center text-[11px] hover:bg-muted/10 p-1.5 rounded-lg transition-colors">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <span className="font-mono text-muted-foreground font-black">{idx + 2}.</span>
+                                        <div className="min-w-0">
+                                          <span className="font-bold text-foreground truncate max-w-[90px] inline-block uppercase">{p.gamertag || p.name}</span>
+                                          <span className="text-[8px] text-muted-foreground truncate block">{p.equipo_nombre}</span>
+                                        </div>
+                                      </div>
+                                      <span className="font-mono font-bold text-emerald-400 shrink-0">{p.total} A</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="border border-border/20 bg-background/10 rounded-2xl p-4 text-center text-xs text-muted-foreground italic flex items-center justify-center animate-fade-in">Sin registros</div>
+                            )}
+
+                            {/* MVPS */}
+                            {fc.topStats.mvps?.length > 0 ? (
+                              <div className="border border-border/30 bg-background/20 rounded-2xl p-4.5 space-y-3.5 relative overflow-hidden shadow-sm">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-full blur-2xl pointer-events-none" />
+                                <div className="flex items-center justify-between border-b border-border/10 pb-2">
+                                  <span className="text-[10px] font-black tracking-wider text-yellow-400 uppercase">⭐ MVP DE ORO</span>
+                                  <span className="text-[9px] font-bold text-muted-foreground">TOP 3</span>
+                                </div>
+
+                                {/* TOP 1 HIGHLIGHT */}
+                                {(() => {
+                                  const top1 = fc.topStats.mvps[0];
+                                  return (
+                                    <div className="flex items-center justify-between bg-yellow-500/5 border border-yellow-500/25 rounded-xl p-3">
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-10 h-10 rounded-lg bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center font-display font-black text-yellow-400 text-sm shrink-0">
+                                          1ST
+                                        </div>
+                                        <div className="min-w-0">
+                                          <p className="text-xs font-black text-foreground truncate uppercase">{top1.gamertag || top1.name}</p>
+                                          <p className="text-[9px] text-muted-foreground truncate">{top1.equipo_nombre}</p>
+                                        </div>
+                                      </div>
+                                      <div className="text-right shrink-0">
+                                        <span className="text-lg font-display font-black text-yellow-400 text-glow-yellow">{Number(top1.total).toFixed(1)}</span>
+                                        <span className="text-[8px] font-bold block text-muted-foreground">VALOR.</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+
+                                {/* TOP 2 & 3 LIST */}
+                                <div className="space-y-2 pt-1">
+                                  {fc.topStats.mvps.slice(1, 3).map((p, idx) => (
+                                    <div key={p.id || idx} className="flex justify-between items-center text-[11px] hover:bg-muted/10 p-1.5 rounded-lg transition-colors">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <span className="font-mono text-muted-foreground font-black">{idx + 2}.</span>
+                                        <div className="min-w-0">
+                                          <span className="font-bold text-foreground truncate max-w-[90px] inline-block uppercase">{p.gamertag || p.name}</span>
+                                          <span className="text-[8px] text-muted-foreground truncate block">{p.equipo_nombre}</span>
+                                        </div>
+                                      </div>
+                                      <span className="font-mono font-bold text-yellow-400 shrink-0">{Number(p.total).toFixed(1)} ⭐</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="border border-border/20 bg-background/10 rounded-2xl p-4 text-center text-xs text-muted-foreground italic flex items-center justify-center animate-fade-in">Sin registros</div>
+                            )}
+
                           </div>
-                        );
-                      })}
-                    </div>
+                        ) : (
+                          <div className="border border-border/20 border-dashed rounded-2xl p-6 text-center text-xs text-muted-foreground italic bg-muted/5">
+                            No hay líderes estadísticos registrados en esta división.
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -811,21 +1354,21 @@ export default function Temporadas() {
                     <div className="relative z-10 space-y-5">
                       {/* Card Header with Banner background */}
                       <div className="relative h-20 w-full rounded-xl overflow-hidden border border-border/40 flex items-center px-4 justify-between bg-muted/20">
-                        {ds.banner ? (
-                          <img src={getImageUrl(ds.banner)} alt={ds.nombre} className="absolute inset-0 w-full h-full object-cover opacity-30" />
-                        ) : organizacion.banner ? (
-                          <img src={getImageUrl(organizacion.banner)} alt={ds.nombre} className="absolute inset-0 w-full h-full object-cover opacity-20 filter blur-[1px]" />
-                        ) : null}
+                        <img 
+                          src={getImageUrl(ds.banner || organizacion.banner, 'org_banner')} 
+                          alt={ds.nombre} 
+                          className="absolute inset-0 w-full h-full object-cover opacity-30" 
+                          onError={(e) => window.handleImageError(e, 'org_banner')}
+                        />
                         <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent"></div>
                         
                         <div className="relative z-15 flex items-center gap-3">
-                          {ds.logo ? (
-                            <img src={getImageUrl(ds.logo)} alt={ds.nombre} className="w-10 h-10 rounded-lg object-cover border border-border/40 bg-card shadow-sm" />
-                          ) : (
-                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-background border border-border/40 flex items-center justify-center font-display font-black text-primary text-sm">
-                              {ds.nombre?.charAt(0)}
-                            </div>
-                          )}
+                          <img 
+                            src={getImageUrl(ds.logo, 'team_logo')} 
+                            alt={ds.nombre} 
+                            className="w-10 h-10 rounded-lg object-cover border border-border/40 bg-card shadow-sm" 
+                            onError={(e) => window.handleImageError(e, 'team_logo')}
+                          />
                           <div>
                             <h4 className="font-display font-black text-lg text-foreground uppercase tracking-wide leading-tight">{ds.nombre}</h4>
                             <span className="text-[9px] font-mono text-muted-foreground uppercase">{ds.plataforma}</span>
@@ -857,13 +1400,12 @@ export default function Temporadas() {
                         {ds.leader ? (
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              {ds.leader.logo ? (
-                                <img src={getImageUrl(ds.leader.logo)} alt={ds.leader.nombre} className="w-7 h-7 rounded-md object-cover border border-border/40 bg-card shadow-inner" />
-                              ) : (
-                                <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center font-display font-black text-xs text-muted-foreground border border-border/40">
-                                  {ds.leader.abreviatura || ds.leader.nombre?.charAt(0)}
-                                </div>
-                              )}
+                              <img 
+                                src={getImageUrl(ds.leader.logo, 'team_logo')} 
+                                alt={ds.leader.nombre} 
+                                className="w-7 h-7 rounded-md object-cover border border-border/40 bg-card shadow-inner" 
+                                onError={(e) => window.handleImageError(e, 'team_logo')}
+                              />
                               <span className="font-display font-bold text-sm text-foreground uppercase tracking-wide truncate max-w-[180px]">{ds.leader.nombre}</span>
                             </div>
                             <Badge variant="outline" className="text-primary border-primary/30 text-xs font-mono font-black py-0.5 px-2">

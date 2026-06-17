@@ -2,6 +2,7 @@ import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
 import Card from '@/components/shared/Card';
+import PageHelp from '@/components/shared/PageHelp';
 import api from '@/api/axios';
 
 const ResumenTab = lazy(() => import('./components/tabs/ResumenTab'));
@@ -168,6 +169,25 @@ export default function DashboardOrganizador() {
           </div>
         </div>
       </div>
+
+      <PageHelp 
+        title="Dashboard del Organizador"
+        description="Centro de mando principal. Desde aquí puedes monitorear de un vistazo la salud y actividad reciente de todas tus ligas y organizaciones adscritas."
+        steps={[
+          {
+            title: "Métricas Generales",
+            description: "En la parte superior verás las tarjetas de resumen (Equipos Activos, Partidos, Jugadores y Torneos). Utiliza esto para saber el volumen de tráfico actual de la plataforma."
+          },
+          {
+            title: "Accesos Rápidos",
+            description: "Bajo las métricas tienes botones directos para operar. Usa 'Crear Competición' para abrir nuevos torneos rápidamente sin tener que navegar por los menús laterales."
+          },
+          {
+            title: "Auditoría de Actividad",
+            description: "Las listas inferiores te muestran los últimos partidos reportados y traspasos. Haz clic en 'Ver Todos' si necesitas realizar aprobaciones masivas o revisiones a detalle."
+          }
+        ]}
+      />
 
       {loading ? (
         <div className="py-32 flex flex-col items-center justify-center gap-4">

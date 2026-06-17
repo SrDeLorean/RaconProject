@@ -136,15 +136,16 @@
   }
 
   /* Fondo premium para modo claro: gradiente suave y limpio */
+  /* NOTE: background-attachment:fixed eliminado — causa scroll jank severo en móvil/GPU compositing */
   :root body {
     background: linear-gradient(180deg, hsl(210 20% 98%) 0%, hsl(220 14% 95%) 50%, hsl(220 12% 90%) 100%);
-    background-attachment: fixed;
+    background-attachment: scroll;
   }
 
   /* Fondo premium para modo oscuro: gradiente profundo azulado */
   .dark body {
     background: linear-gradient(180deg, #020205 0%, #060a17 50%, #0b1530 100%);
-    background-attachment: fixed;
+    background-attachment: scroll;
   }
 
   body::before {
@@ -237,7 +238,7 @@
 
   /* --- GLASSMORPHISM 2.0 --- */
   .glass-sidebar {
-    @apply bg-background/30 backdrop-blur-3xl border-r border-white/5 shadow-[4px_0_24px_rgba(0,0,0,0.12)];
+    @apply bg-card border-r border-white/5 shadow-[4px_0_24px_rgba(0,0,0,0.12)] lg:bg-background/30 lg:backdrop-blur-3xl;
   }
 
   .glass-hud-panel {
@@ -249,21 +250,25 @@
     color-scheme: dark;
   }
 
+  /* Icono de Calendario remarcado para mayor visibilidad y usabilidad */
   input[type="date"]::-webkit-calendar-picker-indicator,
   input[type="time"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
-    background-color: hsl(var(--primary) / 0.2);
-    border-radius: 6px;
-    padding: 6px;
-    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.2));
-    transition: all 0.3s ease;
+    background-color: hsl(var(--primary));
+    border: 2px solid hsl(var(--background));
+    border-radius: 8px;
+    padding: 8px;
+    filter: drop-shadow(0 0 8px hsl(var(--primary) / 0.6));
+    opacity: 0.9;
+    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   }
 
   input[type="date"]:hover::-webkit-calendar-picker-indicator,
   input[type="time"]:hover::-webkit-calendar-picker-indicator {
-    background-color: hsl(var(--primary) / 0.5);
-    transform: scale(1.1);
-    filter: drop-shadow(0 0 6px rgba(232, 0, 29, 0.4));
+    background-color: hsl(var(--primary));
+    transform: scale(1.15);
+    opacity: 1;
+    filter: drop-shadow(0 0 12px hsl(var(--primary) / 0.9));
   }
 
   .glass-card {
@@ -329,12 +334,13 @@
   .input-premium {
     @apply w-full border rounded-xl px-4 py-2.5 text-xs font-semibold text-foreground;
     @apply focus:outline-none transition-all duration-300;
-    background: hsl(var(--background) / 0.5);
-    border-color: hsl(var(--border) / 0.5);
+    background: linear-gradient(180deg, hsl(var(--background) / 0.8), hsl(var(--card) / 0.6));
+    border-color: hsl(var(--border) / 0.6);
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
   }
   .input-premium:focus {
-    border-color: hsl(var(--primary) / 0.6);
-    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1), 0 0 20px hsl(var(--primary) / 0.08);
+    border-color: hsl(var(--primary) / 0.8);
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.3), 0 0 0 3px hsl(var(--primary) / 0.15), 0 0 20px hsl(var(--primary) / 0.2);
   }
   .input-premium::placeholder {
     @apply text-muted-foreground/60;
@@ -901,7 +907,56 @@ input, select, textarea {
 
 .animate-drum-roll {
   animation: drumRoll 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}.animate-drum-roll { animation: drumRoll 1s cubic-bezier(0.25, 1, 0.5, 1) both; } @keyframes drumRoll { 0% { opacity: 0; transform: scale(0.9) translateY(40px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
-.animate-drum-roll {
-  animation: drumRoll 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
+
+/* ==========================================================================
+   OPTIMIZACION DE RENDIMIENTO (HARDWARE ACCELERATION & MOBILE DEGRADATION)
+   ========================================================================== */
+
+/* Respeta la preferencia del usuario por reducir movimiento */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-ping, .animate-pulse, .anim-rotate-cw, .anim-rotate-ccw {
+    animation: none !important;
+  }
+}
+
+/* Mejora el rendimiento de secciones largas que están fuera de pantalla */
+.content-section-offscreen {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 400px;
+}
+@media (max-width: 1024px) {
+  /* Apagar por completo el desenfoque de fondo en móviles y tablets */
+  [class*="backdrop-blur"] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  
+  /* Aumentar la opacidad de los fondos de tarjeta para compensar la falta de blur */
+  .bg-card\/40, .bg-card\/35, .bg-card\/30, .bg-card\/25, .bg-card\/20, .bg-card\/60, .bg-card\/50 {
+    background-color: hsl(var(--card) / 0.92) !important;
+  }
+  
+  .bg-background\/80, .bg-background\/60, .bg-background\/50, .bg-background\/40, .bg-background\/30 {
+    background-color: hsl(var(--background) / 0.98) !important;
+  }
+
+  .bg-black\/20 {
+    background-color: rgba(0, 0, 0, 0.85) !important;
+  }
+}
+
+/* Corrección de z-index: Evitar que las pestañas sticky tapen los modales de reporte y configuración */
+.relative:has(.fixed.z-\[120\]),
+.relative:has(.fixed.z-\[130\]),
+.relative:has(.fixed.z-\[150\]) {
+  z-index: 60 !important;
+}
+
+

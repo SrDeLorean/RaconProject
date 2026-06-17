@@ -103,8 +103,18 @@ class TemporadaController extends Controller
     /**
      * Delete the specified resource.
      */
-    public function destroy(Temporada $temporada): Response
+    public function destroy(Temporada $temporada): Response|JsonResponse
     {
+        // Verificar si la temporada tiene competencias asociadas
+        $competenciasCount = $temporada->competencias()->count();
+        $competenciasUtCount = $temporada->competenciasUt()->count();
+
+        if ($competenciasCount > 0 || $competenciasUtCount > 0) {
+            return response()->json([
+                'message' => 'No es posible eliminar esta temporada porque ya tiene competencias (11v11 o UT) registradas en ella. Para borrar la temporada, primero necesitas borrar todas las competencias asociadas.'
+            ], 422);
+        }
+
         $temporada->delete();
 
         return response()->noContent();

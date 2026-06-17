@@ -66,6 +66,8 @@ class CompetenciaEquipoController extends Controller
             'estado_inscripcion' => $request->estado_inscripcion ?? 'aprobado'
         ]);
 
+        \Illuminate\Support\Facades\Cache::forget('competencia_show_' . $competencia->id);
+
         return response()->json(['message' => 'Club asignado a la división correctamente.']);
     }
 
@@ -79,13 +81,110 @@ class CompetenciaEquipoController extends Controller
             'estado_inscripcion' => $request->estado_inscripcion
         ]);
 
+        \Illuminate\Support\Facades\Cache::forget('competencia_show_' . $competencia->id);
+
         return response()->json(['message' => 'Estado de inscripción actualizado.']);
     }
 
     // 5. Expulsar / Dar de baja a un equipo del torneo
     public function destroy(Competencia $competencia, $equipo_id)
     {
+        if ($competencia->partidos()->exists()) {
+            return response()->json([
+                'message' => 'No se puede dar de baja directamente porque la competencia ya tiene un calendario generado. Utiliza las opciones de WO o Reemplazo.'
+            ], 422);
+        }
+
         $competencia->equipos()->detach($equipo_id);
+        
+        \Illuminate\Support\Facades\Cache::forget('competencia_show_' . $competencia->id);
+
         return response()->json(['message' => 'El club ha sido dado de baja del torneo.']);
+    }
+
+    /**
+     * Dar Walkover (WO) a todos los partidos de un equipo en la competencia.
+     */
+    public function darWO(Competencia $competencia, $equipo_id)
+    {
+        $partidos = \App\Models\Partido::where('competencia_id', $competencia->id)
+            ->where(function ($q) use ($equipo_id) {
+                $q->where('equipo_local_id', $equipo_id)
+                  ->orWhere('equipo_visitante_id', $equipo_id);
+            })
+            ->get();
+
+        foreach ($partidos as $partido) {
+            if ($partido->equipo_local_id == $equipo_id) {
+                $partido->goles_local = 0;
+                $partido->goles_visitante = 3;
+            } else {
+                $partido->goles_local = 3;
+                $partido->goles_visitante = 0;
+            }
+
+            $stats = $partido->stats ?? [];
+            $stats['is_wo'] = true;
+            $stats['wo_team_id'] = (int) $equipo_id;
+            $partido->stats = $stats;
+            
+            $partido->reporte_confirmado = true;
+            $partido->save();
+        }
+
+        \Illuminate\Support\Facades\Cache::forget('competencia_show_' . $competencia->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Se ha aplicado Walkover (WO) a todos los partidos del club en esta competencia.'
+        ]);
+    }
+
+    /**
+     * Reemplazar un equipo por otro en el calendario/fixture.
+     */
+    public function reemplazar(Competencia $competencia, $equipo_id, Request $request)
+    {
+        $request->validate([
+            'nuevo_equipo_id' => 'required|exists:equipos,id'
+        ]);
+
+        $nuevo_equipo_id = $request->nuevo_equipo_id;
+
+        if ($competencia->equipos()->where('equipo_id', $nuevo_equipo_id)->exists()) {
+            return response()->json([
+                'message' => 'El nuevo club ya se encuentra inscrito en esta competencia.'
+            ], 422);
+        }
+
+        // Reemplazar en la tabla pivot
+        $competencia->equipos()->detach($equipo_id);
+        $competencia->equipos()->attach($nuevo_equipo_id, ['estado_inscripcion' => 'aprobado']);
+
+        // Actualizar partidos (tanto jugados como pendientes)
+        \App\Models\Partido::where('competencia_id', $competencia->id)
+            ->where('equipo_local_id', $equipo_id)
+            ->update(['equipo_local_id' => $nuevo_equipo_id]);
+
+        \App\Models\Partido::where('competencia_id', $competencia->id)
+            ->where('equipo_visitante_id', $equipo_id)
+            ->update(['equipo_visitante_id' => $nuevo_equipo_id]);
+
+        // Actualizar estadísticas de equipo
+        \App\Models\EstadisticaEquipo::where('competencia_id', $competencia->id)
+            ->where('equipo_id', $equipo_id)
+            ->update(['equipo_id' => $nuevo_equipo_id]);
+
+        // Actualizar estadísticas de jugadores
+        \App\Models\EstadisticaJugador::where('competencia_id', $competencia->id)
+            ->where('equipo_id', $equipo_id)
+            ->update(['equipo_id' => $nuevo_equipo_id]);
+
+        \Illuminate\Support\Facades\Cache::forget('competencia_show_' . $competencia->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'El club ha sido reemplazado correctamente en el calendario, estadísticas y la competencia.'
+        ]);
     }
 }

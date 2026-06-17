@@ -39,6 +39,23 @@ export default function PlantillaClub({
     { value: 'DC', label: 'Delantero Centro (ST)' },
   ];
 
+  const getPosBadgeClass = (pos) => {
+    const p = (pos || '').toUpperCase();
+    if (['POR', 'PO', 'GK', 'PORTERO'].some(x => p.includes(x))) {
+      return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30';
+    }
+    if (['DF', 'DFC', 'LD', 'LI', 'CB', 'LB', 'RB', 'DEFENSA'].some(x => p.includes(x))) {
+      return 'bg-blue-500/10 text-blue-500 border-blue-500/30';
+    }
+    if (['MC', 'MCD', 'MCO', 'MI', 'MD', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'MEDIO', 'VOLANTE'].some(x => p.includes(x))) {
+      return 'bg-green-500/10 text-green-500 border-green-500/30';
+    }
+    if (['DC', 'ED', 'EI', 'ST', 'LW', 'RW', 'CF', 'DELANTERO', 'ATACANTE'].some(x => p.includes(x))) {
+      return 'bg-primary/10 text-primary border-primary/30';
+    }
+    return 'bg-muted-foreground/10 text-muted-foreground border-border/30';
+  };
+
   const handleOpenEdit = (player) => {
     setEditingPlayer(player);
     setEditDorsal(player.dorsal || '');
@@ -95,7 +112,7 @@ export default function PlantillaClub({
       header: 'Competidor',
       render: (row) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center font-display font-black text-primary text-base shrink-0 shadow-inner">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-card to-background border border-primary/30 shadow-[0_0_12px_rgba(232,0,29,0.2)] flex items-center justify-center font-display font-black text-primary text-base shrink-0 shadow-inner">
             {row.dorsal || '-'}
           </div>
           <div className="flex flex-col">
@@ -109,13 +126,16 @@ export default function PlantillaClub({
     },
     {
       header: 'Ficha Táctica',
-      render: (row) => (
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-mono bg-primary/5 px-2.5 py-0.5 rounded text-primary uppercase font-bold border border-primary/20 inline-block w-fit">
-            {posicionesDisponibles.find(p => p.value === row.posicion)?.label || row.posicion || 'Por asignar'}
-          </span>
-        </div>
-      )
+      render: (row) => {
+        const badgeClass = getPosBadgeClass(row.posicion);
+        return (
+          <div className="flex flex-col gap-1">
+            <span className={`text-[10px] font-mono px-2.5 py-1 rounded-lg uppercase font-bold border inline-block w-fit tracking-wide shadow-sm ${badgeClass}`}>
+              {posicionesDisponibles.find(p => p.value === row.posicion)?.label || row.posicion || 'Por asignar'}
+            </span>
+          </div>
+        );
+      }
     },
     {
       header: 'Operaciones',
@@ -124,18 +144,18 @@ export default function PlantillaClub({
           <Button 
             variant="outline" 
             size="sm" 
-            className="h-8 text-xs border-primary/30 text-primary hover:bg-primary/10" 
+            className="h-8 text-xs border-border hover:border-primary/40 text-foreground hover:text-primary transition-all flex items-center gap-1 bg-card/40 hover:bg-primary/10" 
             onClick={() => handleOpenEdit(row)}
           >
-            Configurar
+            <span>⚙️</span> Configurar
           </Button>
           <Button 
             variant="outline" 
             size="sm" 
-            className="h-8 text-xs border-destructive/20 text-destructive hover:bg-destructive/10" 
+            className="h-8 text-xs border-border hover:border-destructive/40 text-muted-foreground hover:text-destructive transition-all flex items-center gap-1 bg-card/40 hover:bg-destructive/10" 
             onClick={() => onDesvincular(row)}
           >
-            Dar de Baja
+            <span>❌</span> Dar de Baja
           </Button>
         </div>
       )
@@ -170,20 +190,40 @@ export default function PlantillaClub({
       header: 'Estado de Solicitud',
       render: (row) => {
         if (row.estado === 'pendiente_jugador') {
-          return <Badge variant="warning">Pendiente Jugador</Badge>;
+          return (
+            <Badge variant="warning" className="uppercase text-[8px] font-black tracking-widest px-2.5 py-0.5 flex items-center gap-1.5 w-fit border border-amber-500/20 bg-amber-500/10">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+              Pendiente Jugador
+            </Badge>
+          );
         }
         if (row.estado === 'pendiente_admin') {
-          return <Badge variant="primary">Pendiente Admin</Badge>;
+          return (
+            <Badge variant="primary" className="uppercase text-[8px] font-black tracking-widest px-2.5 py-0.5 flex items-center gap-1.5 w-fit border border-blue-500/20 bg-blue-500/10 text-blue-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+              Pendiente Admin
+            </Badge>
+          );
         }
         if (row.estado === 'aprobado') {
-          return <Badge variant="success">Aceptado / Inscrito</Badge>;
+          return (
+            <Badge variant="success" className="uppercase text-[8px] font-black tracking-widest px-2.5 py-0.5 flex items-center gap-1.5 w-fit border border-emerald-500/20 bg-emerald-500/10">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              Aceptado
+            </Badge>
+          );
         }
         if (row.estado === 'rechazado') {
           return (
-            <div className="flex flex-col gap-0.5">
-              <Badge variant="destructive">Rechazado</Badge>
+            <div className="flex flex-col gap-1">
+              <Badge variant="destructive" className="uppercase text-[8px] font-black tracking-widest px-2.5 py-0.5 flex items-center gap-1.5 w-fit border border-destructive/20 bg-destructive/10">
+                <span className="w-1.5 h-1.5 rounded-full bg-destructive"></span>
+                Rechazado
+              </Badge>
               {row.observaciones_admin && (
-                <span className="text-[9px] text-destructive leading-tight max-w-[120px] truncate">{row.observaciones_admin}</span>
+                <span className="text-[9px] text-destructive/80 font-bold max-w-[150px] leading-tight break-words pl-1">
+                  Motivo: {row.observaciones_admin}
+                </span>
               )}
             </div>
           );
@@ -234,18 +274,18 @@ export default function PlantillaClub({
             onChange={(e) => onSearchChange(e.target.value)}
           />
           
-          <div className="space-y-3 max-h-[350px] overflow-y-auto pt-1 pr-1">
+          <div className="space-y-3.5 max-h-[350px] overflow-y-auto pt-1 pr-1">
             {jugadoresLibres.filter(j => !j.role || j.role === 'jugador').length > 0 ? (
               jugadoresLibres.filter(j => !j.role || j.role === 'jugador').map((jugador) => (
-                <div key={jugador.id} className="flex flex-col p-3 rounded-xl bg-background border border-border/40 text-xs shadow-md transition-all hover:border-primary/40 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col max-w-[150px]">
-                      <span className="font-bold text-foreground truncate">{jugador.gamertag || jugador.name}</span>
+                <div key={jugador.id} className="flex flex-col p-3.5 rounded-xl bg-card/40 border border-border/40 text-xs shadow-md transition-all hover:border-primary/40 hover:shadow-[0_0_15px_rgba(232,0,29,0.06)] hover:bg-card/60 space-y-3 group/agent">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="font-bold text-foreground text-sm truncate group-hover/agent:text-primary transition-colors">{jugador.gamertag || jugador.name}</span>
                       <span className="text-[10px] text-muted-foreground truncate">{jugador.name} • {jugador.email}</span>
                     </div>
                     <Button 
                       size="sm" 
-                      className="h-7 text-[10px] px-3 bg-primary text-primary-foreground font-bold shadow-[0_0_10px_hsla(var(--primary),0.3)]"
+                      className="h-8 text-[10px] px-3.5 bg-primary text-primary-foreground font-black uppercase tracking-wider shadow-[0_0_10px_hsla(var(--primary),0.3)] hover:shadow-[0_0_15px_hsla(var(--primary),0.5)] transition-all shrink-0"
                       onClick={() => handleOpenSign(jugador)}
                     >
                       Fichar
@@ -253,25 +293,27 @@ export default function PlantillaClub({
                   </div>
                   
                   {/* Detalles de Demarcación y Contratos en otras Ligas */}
-                  <div className="pt-2 border-t border-border/30 flex flex-col gap-1 text-[10px]">
+                  <div className="pt-2.5 border-t border-border/20 flex flex-col gap-1.5 text-[10px]">
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Demarcación:</span>
-                      <span className="font-semibold text-foreground uppercase">
-                        {posicionesDisponibles.find(p => p.value === jugador.posicion)?.value || jugador.posicion || 'Sin Demarcación'}
+                      <span className="text-muted-foreground uppercase font-bold text-[9px] tracking-wider">Demarcación:</span>
+                      <span className={`font-mono font-bold uppercase px-2.5 py-0.5 rounded border text-[9px] ${getPosBadgeClass(jugador.posicion)}`}>
+                        {posicionesDisponibles.find(p => p.value === jugador.posicion)?.label || jugador.posicion || 'Sin Demarcación'}
                       </span>
                     </div>
-                    <div className="flex flex-col gap-1 mt-1">
-                      <span className="text-muted-foreground font-bold uppercase tracking-wider text-[8px]">Contratos Activos:</span>
+                    <div className="flex flex-col gap-1.5 mt-1">
+                      <span className="text-muted-foreground font-bold uppercase tracking-wider text-[8px]">Contratos Activos en Otras Ligas:</span>
                       {jugador.contratos && jugador.contratos.length > 0 ? (
                         <div className="flex flex-wrap gap-1 mt-0.5">
                           {jugador.contratos.map((c, idx) => (
-                            <span key={idx} className="bg-muted px-1.5 py-0.5 rounded text-[8px] border border-border/40 text-foreground font-mono">
-                              {c.club} ({c.organizacion})
+                            <span key={idx} className="bg-muted/60 px-2 py-0.5 rounded text-[8px] border border-border/40 text-foreground font-mono font-bold">
+                              🏢 {c.club} ({c.organizacion})
                             </span>
                           ))}
                         </div>
                       ) : (
-                        <span className="text-muted-foreground italic text-[9px]">Agente Libre Absoluto (Sin Contratos)</span>
+                        <span className="text-muted-foreground italic text-[9px] pl-1 flex items-center gap-1">
+                          🟢 Agente Libre Absoluto (Sin Contratos)
+                        </span>
                       )}
                     </div>
                   </div>
@@ -437,7 +479,7 @@ export default function PlantillaClub({
                       return (
                         <label 
                           key={org.id} 
-                          className={`flex items-center justify-between p-2 rounded-lg text-xs cursor-pointer border transition-colors ${
+                          className={`flex items-center justify-between p-2.5 rounded-lg text-xs cursor-pointer border transition-colors ${
                             alreadyHasContract 
                               ? 'opacity-40 bg-muted/40 border-transparent cursor-not-allowed' 
                               : selectedOrgs.includes(org.id)

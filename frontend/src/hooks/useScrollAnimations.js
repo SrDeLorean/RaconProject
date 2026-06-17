@@ -27,19 +27,19 @@ export default function useScrollAnimations() {
         if (entry.isIntersecting) {
           // Make visible
           entry.target.style.visibility = 'visible';
-          // Trigger reflow to restart animation
-          entry.target.classList.remove(targetAnimClass);
-          void entry.target.offsetWidth;
+          // Add animation class (starts animation)
           entry.target.classList.add(targetAnimClass);
+          // Stop observing to avoid reflows and repaints on future scroll movements
+          observer.unobserve(entry.target);
         } else {
-          // Hide and remove class when out of view
+          // Hide and remove class when out of view (on initial load)
           entry.target.style.visibility = 'hidden';
           entry.target.classList.remove(targetAnimClass);
         }
       });
     }, { 
-      threshold: 0.1, // Trigger when 10% of the element is visible
-      rootMargin: '0px 0px -50px 0px' 
+      threshold: 0.05, // Trigger slightly earlier for smoother feeling
+      rootMargin: '0px 0px -20px 0px' 
     });
 
     animatedElements.forEach((el) => {

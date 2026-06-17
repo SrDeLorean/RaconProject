@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <!-- Background -->
+  <rect width="200" height="200" fill="#090514" rx="24" />
+  
+  <!-- Tech Grids -->
+  <g stroke="#2d124d" stroke-width="0.5" opacity="0.6">
+    <line x1="20" y1="0" x2="20" y2="200" />
+    <line x1="60" y1="0" x2="60" y2="200" />
+    <line x1="100" y1="0" x2="100" y2="200" />
+    <line x1="140" y1="0" x2="140" y2="200" />
+    <line x1="180" y1="0" x2="180" y2="200" />
+    
+    <line x1="0" y1="20" x2="200" y2="20" />
+    <line x1="0" y1="60" x2="200" y2="60" />
+    <line x1="0" y1="100" x2="200" y2="100" />
+    <line x1="0" y1="140" x2="200" y2="140" />
+    <line x1="0" y1="180" x2="200" y2="180" />
+  </g>
+
+  <!-- Glowing Ring -->
+  <circle cx="100" cy="100" r="75" fill="none" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="10,5" opacity="0.3" />
+  <circle cx="100" cy="100" r="70" fill="none" stroke="#ec4899" stroke-width="2" opacity="0.6" />
+
+  <!-- Shield -->
+  <path d="M100 50 L150 70 V120 C150 150 100 165 100 165 C100 165 50 150 50 120 V70 Z" fill="none" stroke="#ec4899" stroke-width="4" stroke-linejoin="round" />
+  <path d="M100 60 L140 76 V116 C140 140 100 152 100 152 C100 152 60 140 60 116 V76 Z" fill="#8b5cf6" fill-opacity="0.1" stroke="#8b5cf6" stroke-width="2" stroke-linejoin="round" />
+
+  <!-- Joystick/Helmet Esports Symbol -->
+  <path d="M85 90 H115 V102 H107 L112 120 H103 L100 110 L97 120 H88 L93 102 H85 Z" fill="#ec4899" opacity="0.9" />
+  <circle cx="100" cy="96" r="3" fill="#ffffff" />
+</svg>

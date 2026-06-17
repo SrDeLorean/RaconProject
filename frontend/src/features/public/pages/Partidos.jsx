@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Badge from '@/components/ui/Badge';
 import api from '@/api/axios';
@@ -42,6 +42,7 @@ const getImageUrl = (path) => {
 
 export default function Partidos({ forOrganizer = false, forPlayer = false, forTeam = false, hideHero = false, playerId = null, teamId = null }) {
   const { user } = useAuthStore();
+  const carouselRef = useRef(null);
   const navigate = useNavigate();
   const [allPartidos, setAllPartidos] = useState([]);
   const [profileData, setProfileData] = useState(null);
@@ -85,7 +86,13 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
     }
     api.get('/organizaciones', { params })
       .then(res => {
-        const list = res.data.data || res.data || [];
+        const val = res?.data;
+        let list = [];
+        if (val) {
+          if (Array.isArray(val)) list = val;
+          else if (val.data && Array.isArray(val.data)) list = val.data;
+          else if (val.data?.data && Array.isArray(val.data.data)) list = val.data.data;
+        }
         setOrganizaciones(list);
         if ((forOrganizer || forPlayer) && list.length > 0) {
           setOrgFiltro(list[0].id);
@@ -104,7 +111,16 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
         .catch(err => console.error("Error loading competitions:", err));
     } else {
       api.get('/competencias')
-        .then(res => setCompetencias(res.data.data || res.data || []))
+        .then(res => {
+          const val = res?.data;
+          let list = [];
+          if (val) {
+            if (Array.isArray(val)) list = val;
+            else if (val.data && Array.isArray(val.data)) list = val.data;
+            else if (val.data?.data && Array.isArray(val.data.data)) list = val.data.data;
+          }
+          setCompetencias(list);
+        })
         .catch(err => console.error("Error loading all competitions:", err));
     }
   }, [orgFiltro]);
@@ -146,7 +162,13 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
         }
         
         const response = await api.get('/partidos-fechas', { params });
-        const fetchedDates = response.data || [];
+        const val = response?.data;
+        let fetchedDates = [];
+        if (val) {
+          if (Array.isArray(val)) fetchedDates = val;
+          else if (val.data && Array.isArray(val.data)) fetchedDates = val.data;
+          else if (val.data?.data && Array.isArray(val.data.data)) fetchedDates = val.data.data;
+        }
         
         if (fetchedDates.length === 0) {
           const today = new Date();
@@ -302,7 +324,14 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
         }
 
         const response = await api.get('/partidos', { params });
-        setAllPartidos(response.data || []);
+        const val = response?.data;
+        let rawPartidos = [];
+        if (val) {
+          if (Array.isArray(val)) rawPartidos = val;
+          else if (val.data && Array.isArray(val.data)) rawPartidos = val.data;
+          else if (val.data?.data && Array.isArray(val.data.data)) rawPartidos = val.data.data;
+        }
+        setAllPartidos(rawPartidos);
       } catch (error) {
         console.error('Error al traer partidos de la BD:', error);
       } finally {
@@ -353,14 +382,18 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
     });
   }, [filteredMatches, activeHorario, uniqueHorarios]);
 
-  // Auto scroll to keep selected date centered in viewport horizontally
+  // Auto scroll to keep selected date centered inside the container horizontally without shifting viewport
   useEffect(() => {
+    const container = carouselRef.current;
     const activeEl = document.getElementById(`date-btn-${dateIndex}`);
-    if (activeEl) {
-      activeEl.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center'
+    if (container && activeEl) {
+      const containerWidth = container.offsetWidth;
+      const elementOffset = activeEl.offsetLeft;
+      const elementWidth = activeEl.offsetWidth;
+      
+      container.scrollTo({
+        left: elementOffset - (containerWidth / 2) + (elementWidth / 2),
+        behavior: 'smooth'
       });
     }
   }, [dateIndex]);
@@ -694,7 +727,7 @@ export default function Partidos({ forOrganizer = false, forPlayer = false, forT
           </button>
 
           {/* Carrusel de Fechas */}
-          <div className="flex-1 flex gap-3 overflow-x-auto pb-1.5 custom-scrollbar">
+          <div ref={carouselRef} className="flex-1 flex gap-3 overflow-x-auto pb-1.5 custom-scrollbar relative">
             {formattedDates.map((item, idx) => {
               const isActive = dateIndex === idx;
               return (

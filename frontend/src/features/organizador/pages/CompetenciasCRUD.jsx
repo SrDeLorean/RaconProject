@@ -6,6 +6,7 @@ import { useCompetencias } from '../hooks/useCompetencias';
 import DataTable from '@/components/ui/DataTable';
 import CrudHeader from '@/components/shared/CrudHeader';
 import DeleteModal from '@/components/shared/DeleteModal';
+import PageHelp from '@/components/shared/PageHelp';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/shared/Alert';
@@ -199,13 +200,36 @@ export default function CompetenciasCRUD() {
       />
 
       {/* MODAL: CONFIRMAR ELIMINACIÓN */}
-      <DeleteModal 
-        isOpen={ui.isDeleteModalOpen} 
-        onClose={actions.closeDeleteModal} 
-        onConfirm={actions.executeDelete} 
-        isDeleting={ui.isDeleting} 
-        title="Eliminar División" 
-        message={<>¿Seguro que deseas eliminar permanentemente la división <strong className="text-foreground">{ui.itemToDelete?.nombre}</strong>?</>} 
+      <DeleteModal
+        isOpen={ui.isDeleteModalOpen}
+        onClose={actions.closeDeleteModal}
+        onConfirm={actions.executeDelete}
+        title="Eliminar Competencia"
+        message="¿Estás seguro de eliminar esta competencia? Se borrarán inscripciones y partidos vinculados de manera permanente."
+        isDeleting={ui.isDeleting}
+      />
+
+      <PageHelp 
+        title="Torneos Clubes Pro (11v11)"
+        description="Este es el motor de los torneos 11 contra 11. Aquí defines cómo, cuándo y por qué premio competirán los equipos."
+        steps={[
+          {
+            title: "Alta del Torneo",
+            description: "Haz clic en 'Crear' para configurar los reglamentos financieros (Prize Pool e Inscripción) y las plazas máximas que admitirás."
+          },
+          {
+            title: "Fases del Torneo",
+            description: "Selecciona el Formato: Liga Regular (todos contra todos), Playoffs (llaves eliminatorias directas) o Fase de Grupos + Eliminatorias."
+          },
+          {
+            title: "Manejo de Estados",
+            description: "El torneo inicia en 'Inscripciones' para recibir clubes. Una vez lleno, edítalo a 'En Curso' para bloquear inscripciones y permitir carga de partidos."
+          },
+          {
+            title: "Botón de Acceso Profundo",
+            description: "Haz clic en 'Gestionar' dentro de la tabla para entrar al panel profundo de esa liga y aceptar solicitudes."
+          }
+        ]}
       />
     </div>
   );

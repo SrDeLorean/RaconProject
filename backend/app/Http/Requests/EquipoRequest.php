@@ -65,10 +65,15 @@ class EquipoRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'nombre.unique' => 'Ya existe un club registrado con este nombre.',
-            'abreviatura.unique' => 'Este TAG ya está en uso por otro equipo.',
-            'id_capitan.unique' => 'Solo puedes ser capitán de un equipo a la vez.',
-            'plataforma.in' => 'La plataforma seleccionada no es válida.',
+            'nombre.required'      => 'El nombre del club es obligatorio.',
+            'nombre.unique'        => 'Ya existe un club registrado con este nombre.',
+            'abreviatura.required' => 'La abreviatura del club (TAG) es obligatoria.',
+            'abreviatura.unique'   => 'Este TAG o abreviatura ya está en uso por otro equipo.',
+            'abreviatura.max'      => 'La abreviatura del club no puede superar los 10 caracteres.',
+            'id_capitan.unique'    => 'Solo puedes ser capitán de un equipo a la vez.',
+            'id_capitan.exists'    => 'El capitán seleccionado no existe en el sistema.',
+            'plataforma.in'        => 'La plataforma seleccionada no es válida.',
+            'club_id_ea.max'       => 'El ID de club de EA no puede superar los 255 caracteres.',
         ];
     }
 }
