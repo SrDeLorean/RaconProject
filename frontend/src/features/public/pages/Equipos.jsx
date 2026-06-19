@@ -476,6 +476,71 @@ export default function Equipos() {
                           </div>
                         </div>
 
+                        {/* Competencias y Reconocimientos (Palmarés) */}
+                        <div className="flex items-center justify-between gap-4 mt-0.5 bg-background/20 rounded-xl p-2.5 border border-border/15 text-[10px] font-mono">
+                          
+                          {/* Competencias Activas (disputando) */}
+                          <div className="flex-1 min-w-0 space-y-1 text-left">
+                            <span className="text-[7.5px] text-muted-foreground uppercase tracking-wider block">DISPUTANDO</span>
+                            <div className="flex items-center gap-1.5 overflow-hidden">
+                              {eq.competencias && eq.competencias.length > 0 ? (
+                                eq.competencias.slice(0, 3).map((comp, compIdx) => (
+                                  <div key={comp.id || compIdx} className="w-6 h-6 rounded bg-black/45 border border-white/10 flex items-center justify-center shrink-0" title={comp.nombre}>
+                                    {comp.logo ? (
+                                      <img 
+                                        src={getImageUrl(comp.logo)} 
+                                        alt={comp.nombre} 
+                                        className="w-5 h-5 object-contain rounded"
+                                      />
+                                    ) : (
+                                      <span className="text-[9px] font-bold text-white">{comp.nombre?.charAt(0)}</span>
+                                    )}
+                                  </div>
+                                ))
+                              ) : (
+                                <span className="text-[9px] text-muted-foreground font-sans">Sin Torneos</span>
+                              )}
+                              {eq.competencias && eq.competencias.length > 3 && (
+                                <span className="text-[8px] font-bold text-white/50">+{eq.competencias.length - 3}</span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Reconocimientos / Palmarés (Podio Top 3) */}
+                          <div className="shrink-0 space-y-1 text-right pl-3 border-l border-border/20">
+                            <span className="text-[7.5px] text-muted-foreground uppercase tracking-wider block">PALMARÉS</span>
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Champions count */}
+                              {((eq.campeonatos_count || 0) > 0) && (
+                                <div className="flex items-center gap-0.5" title={`${eq.campeonatos_count} Campeón`}>
+                                  <span className="text-amber-400 text-xs">🏆</span>
+                                  <span className="font-bold text-foreground text-[10px]">{eq.campeonatos_count}</span>
+                                </div>
+                              )}
+                              {/* Subchampions count */}
+                              {((eq.subcampeonatos_count || 0) > 0) && (
+                                <div className="flex items-center gap-0.5" title={`${eq.subcampeonatos_count} Subcampeón`}>
+                                  <span className="text-slate-300 text-xs">🥈</span>
+                                  <span className="font-bold text-foreground text-[10px]">{eq.subcampeonatos_count}</span>
+                                </div>
+                              )}
+                              {/* Tercer Lugar count */}
+                              {((eq.terceros_count || 0) > 0) && (
+                                <div className="flex items-center gap-0.5" title={`${eq.terceros_count} Tercer Lugar`}>
+                                  <span className="text-amber-600 text-xs">🥉</span>
+                                  <span className="font-bold text-foreground text-[10px]">{eq.terceros_count}</span>
+                                </div>
+                              )}
+
+                              {/* Fallback if no achievements */}
+                              {!(eq.campeonatos_count || eq.subcampeonatos_count || eq.terceros_count) && (
+                                <span className="text-[9px] text-muted-foreground font-sans">Sin Títulos</span>
+                              )}
+                            </div>
+                          </div>
+
+                        </div>
+
                         {/* Action row with Social Media buttons & VER CLUB CTA */}
                         <div className="flex items-center justify-between border-t border-border/30 pt-3 mt-1">
                           

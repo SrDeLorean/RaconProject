@@ -111,18 +111,42 @@ export default function OficinaClub({ formData, setFormData, formErrors, isSavin
                 Canales Oficiales y Streaming
               </h4>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <Input 
                   label="Cuenta de Twitter / X" 
                   placeholder="@NombreClub"
-                  value={formData.twitter} 
+                  value={formData.twitter || ''} 
                   onChange={(e) => setFormData({...formData, twitter: e.target.value})} 
                 />
                 <Input 
                   label="Canal de Twitch" 
                   placeholder="twitch.tv/Club"
-                  value={formData.twitch} 
+                  value={formData.twitch || ''} 
                   onChange={(e) => setFormData({...formData, twitch: e.target.value})} 
+                />
+                <Input 
+                  label="Cuenta de Instagram" 
+                  placeholder="@NombreClub"
+                  value={formData.instagram || ''} 
+                  onChange={(e) => setFormData({...formData, instagram: e.target.value})} 
+                />
+                <Input 
+                  label="Canal de YouTube" 
+                  placeholder="youtube.com/@Club"
+                  value={formData.youtube || ''} 
+                  onChange={(e) => setFormData({...formData, youtube: e.target.value})} 
+                />
+                <Input 
+                  label="Cuenta de TikTok" 
+                  placeholder="@NombreClub"
+                  value={formData.tiktok || ''} 
+                  onChange={(e) => setFormData({...formData, tiktok: e.target.value})} 
+                />
+                <Input 
+                  label="Enlace / Número de WhatsApp" 
+                  placeholder="Ej. +56912345678"
+                  value={formData.whatsapp || ''} 
+                  onChange={(e) => setFormData({...formData, whatsapp: e.target.value})} 
                 />
               </div>
             </div>

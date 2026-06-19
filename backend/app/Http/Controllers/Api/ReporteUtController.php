@@ -410,15 +410,15 @@ class ReporteUtController extends Controller
             'fotos.jugadores' => ['nullable', 'string'],
             'fotos.conectados'=> ['nullable', 'string'],
             'team_stats'      => ['required', 'array'],
-            'player_stats'    => ['required', 'array'],
+            'player_stats'    => ['nullable', 'array'],
             'side'            => ['nullable', 'string', 'in:local,visitante'],
         ]);
 
-        // Si es empate, se exige que las 3 fotos estén presentes
+        // Si es empate, se exige que las 2 fotos (partido y conectados) estén presentes
         $isEmpate = (int)$data['goles_local'] === (int)$data['goles_visitante'];
         if ($isEmpate) {
-            if (empty($data['fotos']['partido']) || empty($data['fotos']['jugadores']) || empty($data['fotos']['conectados'])) {
-                return response()->json(['message' => 'Para reportar un empate es obligatorio subir las 3 fotos (Estadísticas del partido, Estadísticas del jugador, y Jugadores conectados).'], 422);
+            if (empty($data['fotos']['partido']) || empty($data['fotos']['conectados'])) {
+                return response()->json(['message' => 'Para reportar un empate es obligatorio subir las 2 fotos (Estadísticas del partido y Jugadores conectados).'], 422);
             }
         }
 
@@ -491,30 +491,34 @@ class ReporteUtController extends Controller
             'visitante_stats.player_stats' => ['required', 'array'],
         ]);
 
-        // Validar coherencia de estadísticas de plantilla Local en backend
-        $localGoalsSum = collect($data['local_stats']['player_stats'])->sum('goles');
-        $localAssistsSum = collect($data['local_stats']['player_stats'])->sum('asistencias');
-        $localTeamGoals = (int)($data['local_stats']['team_stats']['goles_favor'] ?? 0);
-        $localTeamAssists = (int)($data['local_stats']['team_stats']['asistencias'] ?? 0);
+        // Validar coherencia de estadísticas de plantilla Local en backend (solo si se enviaron)
+        if (count($data['local_stats']['player_stats'] ?? []) > 0) {
+            $localGoalsSum = collect($data['local_stats']['player_stats'])->sum('goles');
+            $localAssistsSum = collect($data['local_stats']['player_stats'])->sum('asistencias');
+            $localTeamGoals = (int)($data['local_stats']['team_stats']['goles_favor'] ?? 0);
+            $localTeamAssists = (int)($data['local_stats']['team_stats']['asistencias'] ?? 0);
 
-        if ($localGoalsSum !== $localTeamGoals) {
-            return response()->json(['message' => "La suma de goles de los jugadores locales ({$localGoalsSum}) no coincide con los Goles a Favor del club local ({$localTeamGoals})."], 422);
-        }
-        if ($localAssistsSum !== $localTeamAssists) {
-            return response()->json(['message' => "La suma de asistencias de los jugadores locales ({$localAssistsSum}) no coincide con las Asistencias del club local ({$localTeamAssists})."], 422);
+            if ($localGoalsSum !== $localTeamGoals) {
+                return response()->json(['message' => "La suma de goles de los jugadores locales ({$localGoalsSum}) no coincide con los Goles a Favor del club local ({$localTeamGoals})."], 422);
+            }
+            if ($localAssistsSum !== $localTeamAssists) {
+                return response()->json(['message' => "La suma de asistencias de los jugadores locales ({$localAssistsSum}) no coincide con las Asistencias del club local ({$localTeamAssists})."], 422);
+            }
         }
 
-        // Validar coherencia de estadísticas de plantilla Visitante en backend
-        $visitanteGoalsSum = collect($data['visitante_stats']['player_stats'])->sum('goles');
-        $visitanteAssistsSum = collect($data['visitante_stats']['player_stats'])->sum('asistencias');
-        $visitanteTeamGoals = (int)($data['visitante_stats']['team_stats']['goles_favor'] ?? 0);
-        $visitanteTeamAssists = (int)($data['visitante_stats']['team_stats']['asistencias'] ?? 0);
+        // Validar coherencia de estadísticas de plantilla Visitante en backend (solo si se enviaron)
+        if (count($data['visitante_stats']['player_stats'] ?? []) > 0) {
+            $visitanteGoalsSum = collect($data['visitante_stats']['player_stats'])->sum('goles');
+            $visitanteAssistsSum = collect($data['visitante_stats']['player_stats'])->sum('asistencias');
+            $visitanteTeamGoals = (int)($data['visitante_stats']['team_stats']['goles_favor'] ?? 0);
+            $visitanteTeamAssists = (int)($data['visitante_stats']['team_stats']['asistencias'] ?? 0);
 
-        if ($visitanteGoalsSum !== $visitanteTeamGoals) {
-            return response()->json(['message' => "La suma de goles de los jugadores visitantes ({$visitanteGoalsSum}) no coincide con los Goles a Favor del club visitante ({$visitanteTeamGoals})."], 422);
-        }
-        if ($visitanteAssistsSum !== $visitanteTeamAssists) {
-            return response()->json(['message' => "La suma de asistencias de los jugadores visitantes ({$visitanteAssistsSum}) no coincide con las Asistencias del club visitante ({$visitanteTeamAssists})."], 422);
+            if ($visitanteGoalsSum !== $visitanteTeamGoals) {
+                return response()->json(['message' => "La suma de goles de los jugadores visitantes ({$visitanteGoalsSum}) no coincide con los Goles a Favor del club visitante ({$visitanteTeamGoals})."], 422);
+            }
+            if ($visitanteAssistsSum !== $visitanteTeamAssists) {
+                return response()->json(['message' => "La suma de asistencias de los jugadores visitantes ({$visitanteAssistsSum}) no coincide con las Asistencias del club visitante ({$visitanteTeamAssists})."], 422);
+            }
         }
 
         DB::transaction(function() use ($partido, $data) {

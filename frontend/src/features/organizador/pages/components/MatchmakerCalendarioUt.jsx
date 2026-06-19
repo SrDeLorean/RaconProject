@@ -1003,7 +1003,7 @@ export default function MatchmakerCalendarioUt({ equipos = [], competenciaId = n
       teamB: teamBStats,
       teamLocal: teamAStats,
       teamVisitante: teamBStats,
-      players: playerStats
+      players: []
     };
 
     if (isMatchSaved) {
@@ -1921,244 +1921,48 @@ export default function MatchmakerCalendarioUt({ equipos = [], competenciaId = n
                 <h3 className="text-xl font-display font-black text-foreground uppercase tracking-wide flex items-center gap-2">
                   🎮 Ficha de Partido UT
                 </h3>
-                <p className="text-[10px] text-muted-foreground mt-0.5">Ingresa los resultados manuales o sincroniza usando la API de EA.</p>
-              </div>
-
-              <div className="flex gap-1 bg-muted/40 p-1 rounded-lg border border-border/40 shrink-0">
-                <button 
-                  onClick={() => setReportMethod('manual')}
-                  className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer ${reportMethod === 'manual' ? 'bg-background text-primary shadow-sm border border-border/20' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  📝 Manual
-                </button>
-                <button 
-                  onClick={() => setReportMethod('ea')}
-                  className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-1 cursor-pointer ${reportMethod === 'ea' ? 'bg-background text-primary shadow-sm border border-border/20' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  🌐 EA API
-                </button>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Ingresa los resultados manuales.</p>
               </div>
             </div>
 
-            {reportMethod === 'manual' ? (
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-6 bg-muted/10 p-4 rounded-xl border border-border/40">
-                  {/* Local */}
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-bold text-primary uppercase truncate max-w-[200px]">{selectedMatch.local.nombre}</h4>
-                    <div className="space-y-3">
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-muted-foreground font-black uppercase tracking-wider block">Goles convertidos</label>
-                        <Input type="number" value={statsScoreA} onChange={(e) => setStatsScoreA(e.target.value)} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Visitante */}
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-bold text-primary uppercase truncate max-w-[200px]">{selectedMatch.visitante.nombre}</h4>
-                    <div className="space-y-3">
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-muted-foreground font-black uppercase tracking-wider block">Goles convertidos</label>
-                        <Input type="number" value={statsScoreB} onChange={(e) => setStatsScoreB(e.target.value)} />
-                      </div>
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-6 bg-muted/10 p-4 rounded-xl border border-border/40">
+                {/* Local */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-primary uppercase truncate max-w-[200px]">{selectedMatch.local.nombre}</h4>
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-muted-foreground font-black uppercase tracking-wider block">Goles convertidos</label>
+                      <Input type="number" value={statsScoreA} onChange={(e) => setStatsScoreA(e.target.value)} />
                     </div>
                   </div>
                 </div>
 
-                <div className="h-px bg-border/40"></div>
-
-                {/* Estadísticas de Jugador */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">Estadísticas de Participantes (Capitán/Pareja)</h4>
-                  {playerStats.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic">No hay jugadores configurados en estos equipos para reportar.</p>
-                  ) : (
-                    <div className="space-y-2 border border-border/40 rounded-xl overflow-hidden bg-muted/10 p-2">
-                      {playerStats.map((p, idx) => (
-                        <div key={p.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border-b border-border/30 last:border-0 gap-3 text-xs">
-                          <span className="font-bold text-foreground truncate w-48">{p.name}</span>
-                          <div className="flex gap-4">
-                            <div className="flex items-center gap-1.5">
-                              <label className="text-[9px] font-black text-muted-foreground uppercase tracking-wider">Goles</label>
-                              <input 
-                                type="number" 
-                                value={p.goals} 
-                                onChange={(e) => {
-                                  const clone = [...playerStats];
-                                  clone[idx].goals = Number(e.target.value);
-                                  setPlayerStats(clone);
-                                }}
-                                className="w-12 h-8 rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground" 
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                {/* Visitante */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-primary uppercase truncate max-w-[200px]">{selectedMatch.visitante.nombre}</h4>
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-muted-foreground font-black uppercase tracking-wider block">Goles convertidos</label>
+                      <Input type="number" value={statsScoreB} onChange={(e) => setStatsScoreB(e.target.value)} />
                     </div>
-                  )}
-                </div>
-
-                <div className="flex gap-2 justify-end pt-3">
-                  <Button onClick={() => setIsStatsModalOpen(false)} variant="outline" className="h-10 text-[10px]">
-                    Cancelar
-                  </Button>
-                  <Button 
-                    onClick={handleSaveStats} 
-                    disabled={manualSaving}
-                    className="h-10 text-[10px] bg-primary border-none"
-                  >
-                    {manualSaving ? 'Guardando...' : 'Guardar Ficha'}
-                  </Button>
+                  </div>
                 </div>
               </div>
-            ) : (
-              /* EA API */
-              <div className="space-y-6 animate-fade-in">
-                {eaLoading && (
-                  <div className="flex flex-col items-center justify-center py-12 gap-3">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-                    <span className="text-xs font-bold tracking-widest text-primary uppercase animate-pulse">Buscando partidos en servidores EA...</span>
-                  </div>
-                )}
 
-                {!eaLoading && eaError && (
-                  <div className="border border-amber-500/30 bg-amber-500/5 rounded-xl p-4 space-y-2">
-                    <p className="text-xs font-bold text-amber-400">
-                      ⚠️ No se pudieron obtener los datos de EA
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {eaError}
-                    </p>
-                    <div className="text-[10px] text-amber-500 font-semibold bg-amber-500/10 p-2.5 rounded-lg">
-                      💡 Asegúrate de registrar el <strong>EA Club ID</strong> correcto para ambos participantes en la configuración del torneo.
-                    </div>
-                  </div>
-                )}
-
-                {!eaLoading && !eaError && eaMatches.length === 0 && (
-                  <div className="text-center py-12 border border-dashed border-border/50 rounded-2xl bg-muted/10 space-y-2">
-                    <span className="text-3xl">🎮</span>
-                    <p className="text-xs font-bold text-foreground">Sin encuentros encontrados</p>
-                    <p className="text-[10px] text-muted-foreground max-w-xs mx-auto">
-                      No se detectaron partidos recientes en el club EA ingresado para esta pareja/jugador.
-                    </p>
-                  </div>
-                )}
-
-                {!eaLoading && !eaError && eaMatches.length > 0 && (
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] text-muted-foreground font-black uppercase tracking-wider block">
-                        Selecciona el partido de EA para reportar en el sistema:
-                      </label>
-                      <Select
-                        value={selectedEaMatchId}
-                        onChange={(e) => {
-                          const mId = e.target.value;
-                          setSelectedEaMatchId(mId);
-                          const mObj = eaMatches.find(m => m.matchId === mId);
-                          if (mObj && mObj.clubs) {
-                            const keys = Object.keys(mObj.clubs);
-                            if (keys.length === 2) {
-                              const dbLocalEaId = String(selectedMatch.local?.club_id_ea || '').trim();
-                              const dbVisitEaId = String(selectedMatch.visitante?.club_id_ea || '').trim();
-                              
-                              const key0 = String(keys[0]).trim();
-                              const key1 = String(keys[1]).trim();
-                              
-                              const isMatch0Local = key0 === dbLocalEaId;
-                              const isMatch1Local = key1 === dbLocalEaId;
-                              const isMatch0Visit = key0 === dbVisitEaId;
-                              const isMatch1Visit = key1 === dbVisitEaId;
-                              
-                              const hasLocal = isMatch0Local || isMatch1Local;
-                              const hasVisit = isMatch0Visit || isMatch1Visit;
-                              
-                              if (!hasLocal || !hasVisit) {
-                                const clubA = mObj.clubs[keys[0]]?.details?.name || 'Club A';
-                                const clubB = mObj.clubs[keys[1]]?.details?.name || 'Club B';
-                                setEaMismatchModal({
-                                  expectedLocal: selectedMatch.local?.nombre || 'Local Oficial',
-                                  expectedVisitante: selectedMatch.visitante?.nombre || 'Visitante Oficial',
-                                  expectedLocalId: dbLocalEaId,
-                                  expectedVisitanteId: dbVisitEaId,
-                                  receivedLocal: clubA,
-                                  receivedVisitante: clubB,
-                                  receivedLocalId: key0,
-                                  receivedVisitanteId: key1,
-                                });
-                                setSelectedEaMatchId('');
-                                setEaClubLocalId('');
-                                setEaClubVisitanteId('');
-                                return;
-                              }
-
-                              if (isMatch0Local) {
-                                setEaClubLocalId(key0);
-                                setEaClubVisitanteId(key1);
-                              } else {
-                                setEaClubLocalId(key1);
-                                setEaClubVisitanteId(key0);
-                              }
-                            }
-                          }
-                        }}
-                        options={[
-                          { value: '', label: '-- Elige un partido de la lista --' },
-                          ...eaMatches.map(m => {
-                            const keys = Object.keys(m.clubs || {});
-                            const nameA = m.clubs[keys[0]]?.details?.name || 'Club A';
-                            const nameB = m.clubs[keys[1]]?.details?.name || 'Club B';
-                            const scoreA = m.clubs[keys[0]]?.goals || 0;
-                            const scoreB = m.clubs[keys[1]]?.goals || 0;
-                            const timeAgoStr = m.timeAgo || '';
-                            return {
-                              value: m.matchId,
-                              label: `🎮 ${nameA} (${scoreA}) vs ${nameB} (${scoreB}) - hace ${timeAgoStr}`
-                            };
-                          })
-                        ]}
-                      />
-                    </div>
-
-                    {eaWarnings && (
-                      <div className="border border-destructive/30 bg-destructive/5 rounded-xl p-4 space-y-2">
-                        <p className="text-xs font-bold text-destructive">⚠️ Alerta de Validación de Participantes</p>
-                        <p className="text-[11px] text-muted-foreground">Los siguientes jugadores no pertenecen al equipo inscrito:</p>
-                        <div className="space-y-1">
-                          {eaWarnings.map((p, i) => (
-                            <div key={i} className="text-[10px] text-destructive font-mono">
-                              ❌ Gamertag: <strong>{p.playername}</strong> (Ingresó y no coincide con el capitán/pareja registrados)
-                            </div>
-                          ))}
-                        </div>
-                        <Button 
-                          onClick={() => handleEaReportSubmit(true)}
-                          className="w-full text-xs bg-destructive text-destructive-foreground hover:bg-destructive/80 h-9 font-bold mt-2"
-                        >
-                          Ignorar validación e inscribir reporte de todas formas
-                        </Button>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2 justify-end pt-3">
-                      <Button onClick={() => setIsStatsModalOpen(false)} variant="outline" className="h-10 text-[10px]" disabled={eaProcessing}>
-                        Cancelar
-                      </Button>
-                      <Button 
-                        onClick={() => handleEaReportSubmit(false)} 
-                        isLoading={eaProcessing} 
-                        disabled={!selectedEaMatchId || eaProcessing} 
-                        className="h-10 text-[10px] bg-primary border-none"
-                      >
-                        Sincronizar e Importar
-                      </Button>
-                    </div>
-                  </div>
-                )}
+              <div className="flex gap-2 justify-end pt-3">
+                <Button onClick={() => setIsStatsModalOpen(false)} variant="outline" className="h-10 text-[10px]">
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleSaveStats} 
+                  disabled={manualSaving}
+                  className="h-10 text-[10px] bg-primary border-none"
+                >
+                  {manualSaving ? 'Guardando...' : 'Guardar Ficha'}
+                </Button>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}

@@ -346,6 +346,16 @@
     @apply text-muted-foreground/60;
   }
 
+  select option {
+    background-color: hsl(var(--card)) !important;
+    color: hsl(var(--foreground)) !important;
+  }
+  .dark select option {
+    background-color: #18181b !important;
+    color: #ffffff !important;
+  }
+
+
   .filter-panel {
     @apply border backdrop-blur-md rounded-2xl p-5 shadow-lg;
     background: rgba(255, 255, 255, 0.72);

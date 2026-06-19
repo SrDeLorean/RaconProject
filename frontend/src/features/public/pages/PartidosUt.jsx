@@ -119,7 +119,7 @@ export default function PartidosUt({ forOrganizer = false, forPlayer = false, fo
     if (orgFiltro) {
       api.get(`/organizaciones/${orgFiltro}`)
         .then(res => {
-          setCompetencias(res.data?.temporadas?.flatMap(t => t.competencias_ut || []) || []);
+          setCompetencias(res.data?.temporadas?.flatMap(t => t.competenciasUt || t.competencias_ut || []) || []);
         })
         .catch(err => console.error("Error loading UT competitions:", err));
     } else {
@@ -391,7 +391,7 @@ export default function PartidosUt({ forOrganizer = false, forPlayer = false, fo
         stats: {
           teamA: { shots: 10, possession: 50, corners: 4, fouls: 5 },
           teamB: { shots: 10, possession: 50, corners: 4, fouls: 5 },
-          players: playerStats
+          players: []
         }
       };
 
@@ -1094,7 +1094,7 @@ export default function PartidosUt({ forOrganizer = false, forPlayer = false, fo
                 <h3 className="text-lg font-display font-black text-foreground uppercase tracking-wide flex items-center gap-2">
                   🎮 Reportar Resultado UT
                 </h3>
-                <p className="text-[10px] text-muted-foreground mt-0.5">Ingresa los goles del partido y los goles individuales.</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Ingresa los goles del partido.</p>
               </div>
               <button 
                 onClick={() => setSelectedReportMatch(null)}
@@ -1143,35 +1143,7 @@ export default function PartidosUt({ forOrganizer = false, forPlayer = false, fo
                 </div>
               </div>
 
-              {/* Estadísticas de Jugadores */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-foreground uppercase tracking-widest">Goles por Jugador (Capitanes y Parejas)</h4>
-                {playerStats.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">No hay jugadores configurados en estos equipos para reportar.</p>
-                ) : (
-                  <div className="space-y-2 border border-border/40 rounded-2xl overflow-hidden bg-muted/10 p-2">
-                    {playerStats.map((p, idx) => (
-                      <div key={p.id} className="flex justify-between items-center p-3 border-b border-border/20 last:border-0 gap-3 text-xs">
-                        <span className="font-bold text-foreground truncate">{p.name}</span>
-                        <div className="flex items-center gap-2">
-                          <label className="text-[9px] font-black text-muted-foreground uppercase tracking-wider">Goles:</label>
-                          <input 
-                            type="number" 
-                            min="0"
-                            value={p.goals} 
-                            onChange={(e) => {
-                              const clone = [...playerStats];
-                              clone[idx].goals = Math.max(0, Number(e.target.value));
-                              setPlayerStats(clone);
-                            }}
-                            className="w-12 h-8 rounded-lg bg-background border border-border/60 text-center font-mono font-bold text-foreground" 
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {/* Estadísticas de Jugadores simplificadas para UT (no requeridas) */}
 
               <div className="flex gap-2 justify-end pt-3">
                 <button 

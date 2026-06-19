@@ -1,8 +1,90 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '@/api/axios';
 import Badge from '@/components/ui/Badge';
 import Partidos from './Partidos';
+
+const SOCIAL_ICONS = {
+  whatsapp: (
+    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.457L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.966C16.59 1.988 14.113.96 11.48.96c-5.438 0-9.863 4.37-9.866 9.8.001 1.93.535 3.568 1.545 5.093L2.148 21.3l5.5-1.423-.001-.004-.002.001z" />
+    </svg>
+  ),
+  instagram: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+    </svg>
+  ),
+  twitter: (
+    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  ),
+  x: (
+    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  ),
+  twitch: (
+    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
+    </svg>
+  ),
+  youtube: (
+    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.107C19.53 3.5 12 3.5 12 3.5s-7.53 0-9.388.556a3.002 3.002 0 0 0-2.11 2.107C0 8.018 0 12 0 12s0 3.982.502 5.837a3.003 3.003 0 0 0 2.11 2.107C4.47 20.5 12 20.5 12 20.5s7.53 0 9.388-.556a3.003 3.003 0 0 0 2.11-2.107C24 15.982 24 12 24 12s0-3.982-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+    </svg>
+  ),
+  tiktok: (
+    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.05 1.62 4.2 1.21 1.4 2.93 2.38 4.77 2.64v3.88c-1.51-.16-3-.8-4.14-1.85-.75-.69-1.3-1.57-1.6-2.52-.04 2.87-.03 5.75-.04 8.62-.05 1.56-.44 3.13-1.19 4.51-1.25 2.33-3.71 3.92-6.38 4.09-2.91.22-5.91-.98-7.46-3.48-1.54-2.43-1.39-5.85.38-8.11 1.34-1.74 3.44-2.79 5.66-2.83V12.7c-1.12.01-2.27.37-3.11 1.11-.96.86-1.4 2.21-1.16 3.48.24 1.33 1.25 2.47 2.53 2.82 1.43.4 3.07-.15 3.86-1.39.46-.72.63-1.59.6-2.43.02-5.45.01-10.9.02-16.35-.04.05-.08.06-.08.08z" />
+    </svg>
+  )
+};
+
+const SOCIAL_THEMES = {
+  whatsapp: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 hover:shadow-[0_0_12px_rgba(16,185,129,0.3)]',
+  instagram: 'bg-pink-500/10 border-pink-500/30 text-pink-400 hover:bg-pink-500/25 hover:shadow-[0_0_12px_rgba(236,72,153,0.3)]',
+  twitter: 'bg-slate-300/10 border-slate-300/30 text-slate-300 hover:bg-slate-300/25 hover:shadow-[0_0_12px_rgba(203,213,225,0.3)]',
+  x: 'bg-slate-300/10 border-slate-300/30 text-slate-300 hover:bg-slate-300/25 hover:shadow-[0_0_12px_rgba(203,213,225,0.3)]',
+  twitch: 'bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/25 hover:shadow-[0_0_12px_rgba(168,85,247,0.3)]',
+  youtube: 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/25 hover:shadow-[0_0_12px_rgba(239,68,68,0.3)]',
+  tiktok: 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/25 hover:shadow-[0_0_12px_rgba(6,182,212,0.3)]'
+};
+
+const getSocialLink = (platform, value) => {
+  if (!value) return null;
+  const cleanVal = value.trim();
+  if (cleanVal.startsWith('http://') || cleanVal.startsWith('https://')) {
+    return cleanVal;
+  }
+  
+  switch (platform.toLowerCase()) {
+    case 'whatsapp': {
+      const phone = cleanVal.replace(/[+\s\-()]/g, '');
+      return `https://wa.me/${phone}`;
+    }
+    case 'instagram':
+      return `https://instagram.com/${cleanVal.replace('@', '')}`;
+    case 'twitter':
+    case 'x':
+      return `https://x.com/${cleanVal.replace('@', '')}`;
+    case 'twitch':
+      return `https://twitch.tv/${cleanVal}`;
+    case 'youtube':
+      return cleanVal.startsWith('@') 
+        ? `https://youtube.com/${cleanVal}` 
+        : `https://youtube.com/@${cleanVal}`;
+    case 'tiktok':
+      return cleanVal.startsWith('@')
+        ? `https://tiktok.com/${cleanVal}`
+        : `https://tiktok.com/@${cleanVal}`;
+    default:
+      return cleanVal;
+  }
+};
 
 export default function DetalleEquipo() {
   const { id } = useParams();
@@ -14,6 +96,15 @@ export default function DetalleEquipo() {
   const [traspasosSearch, setTraspasosSearch] = useState('');
   const [traspasosFiltro, setTraspasosFiltro] = useState('todos'); // 'todos' | 'alta' | 'baja'
   const [traspasosPage, setTraspasosPage] = useState(1);
+
+  // New filters & loading states
+  const [allOrgs, setAllOrgs] = useState([]);
+  const [rosterOrg, setRosterOrg] = useState('todos');
+  const [traspasosOrg, setTraspasosOrg] = useState('todos');
+  const [statsOrg, setStatsOrg] = useState('');
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [historyOrg, setHistoryOrg] = useState('todos');
+  const [historySeason, setHistorySeason] = useState('todos');
 
   const getPlatDetails = (plat) => {
     const p = (plat || '').toUpperCase();
@@ -118,28 +209,101 @@ export default function DetalleEquipo() {
     return { label: `${idx + 1}°`, style: 'bg-primary/10 text-primary/70 border-primary/20' };
   };
 
+  // Combined data fetching on mount
   useEffect(() => {
-    const fetchEquipo = async () => {
+    const fetchAllData = async () => {
       setLoading(true);
       try {
-        const response = await api.get(`/equipos/${id}`);
-        setEquipo(response.data);
+        const orgsResponse = await api.get('/organizaciones');
+        const orgsData = orgsResponse.data?.data || orgsResponse.data || [];
+        setAllOrgs(orgsData);
+
+        let defaultOrgId = '';
+        if (orgsData.length > 0) {
+          defaultOrgId = orgsData[0].id.toString();
+          setStatsOrg(defaultOrgId);
+        }
+
+        const teamResponse = await api.get(`/equipos/${id}`, {
+          params: defaultOrgId ? { organizacion_id: defaultOrgId } : {}
+        });
+        setEquipo(teamResponse.data);
       } catch (error) {
-        console.error("Error al obtener los detalles del equipo:", error);
+        console.error("Error al obtener datos iniciales del equipo:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchEquipo();
+    fetchAllData();
   }, [id]);
 
-  const getImageUrl = (path) => {
+  const handleStatsOrgChange = async (orgId) => {
+    setStatsOrg(orgId);
+    setLoadingStats(true);
+    try {
+      const response = await api.get(`/equipos/${id}`, {
+        params: orgId ? { organizacion_id: orgId } : {}
+      });
+      setEquipo(prev => ({
+        ...prev,
+        estadisticas: response.data.estadisticas,
+        goleadores: response.data.goleadores,
+        asistentes: response.data.asistentes,
+        mejores_arqueros: response.data.mejores_arqueros,
+        mejores_defensores: response.data.mejores_defensores,
+        mejores_medios: response.data.mejores_medios,
+      }));
+    } catch (err) {
+      console.error("Error al cargar estadísticas filtradas:", err);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  // Helper selectors for historical filters
+  const uniqueHistoryOrgs = useMemo(() => {
+    if (!equipo || !equipo.historial_club) return [];
+    const map = {};
+    equipo.historial_club.forEach(h => {
+      if (h.organizacion_id) {
+        map[h.organizacion_id] = h.organizacion_nombre;
+      }
+    });
+    return Object.entries(map).map(([id, nombre]) => ({ id, nombre }));
+  }, [equipo]);
+
+  const uniqueHistorySeasons = useMemo(() => {
+    if (!equipo || !equipo.historial_club || historyOrg === 'todos') return [];
+    const map = {};
+    equipo.historial_club.forEach(h => {
+      if (h.organizacion_id?.toString() === historyOrg && h.temporada_id) {
+        map[h.temporada_id] = h.temporada_nombre;
+      }
+    });
+    return Object.entries(map).map(([id, nombre]) => ({ id, nombre }));
+  }, [equipo, historyOrg]);
+
+  const handleHistoryOrgChange = (val) => {
+    setHistoryOrg(val);
+    setHistorySeason('todos');
+  };
+
+  const filteredHistory = useMemo(() => {
+    if (!equipo || !equipo.historial_club) return [];
+    return equipo.historial_club.filter(h => {
+      if (historyOrg !== 'todos' && h.organizacion_id?.toString() !== historyOrg) return false;
+      if (historySeason !== 'todos' && h.temporada_id?.toString() !== historySeason) return false;
+      return true;
+    });
+  }, [equipo, historyOrg, historySeason]);
+
+  const getImageUrl = (path, fallbackType) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
     if (typeof window.mediaUrl === 'function') {
-      return window.mediaUrl(path);
+      return window.mediaUrl(path, fallbackType);
     }
-    return window.mediaUrl(path);
+    return window.mediaUrl(path, fallbackType);
   };
 
   if (loading) {
@@ -179,24 +343,31 @@ export default function DetalleEquipo() {
   const platCfg = getPlatDetails(equipo.plataforma);
 
   return (
-    <div className="relative min-h-screen bg-background pt-24 pb-16 overflow-hidden">
+    <div className="relative min-h-screen bg-background pb-16 overflow-hidden">
       {/* Resplandores ambientales e-sports */}
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[350px] md:w-[600px] h-[350px] md:h-[600px] bg-primary/5 blur-[130px] rounded-full pointer-events-none z-10"></div>
-      <div className="absolute bottom-1/3 right-1/4 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-primary/3 blur-[120px] rounded-full pointer-events-none z-10"></div>
+      <div className={`absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[350px] md:w-[600px] h-[350px] md:h-[600px] ${equipo.plataforma?.toUpperCase().includes('XBOX') ? 'bg-emerald-500/5' : equipo.plataforma?.toUpperCase().includes('PC') ? 'bg-amber-500/5' : 'bg-blue-500/5'} blur-[130px] rounded-full pointer-events-none z-10`}></div>
+      <div className={`absolute bottom-1/3 right-1/4 w-[300px] md:w-[500px] h-[300px] md:h-[500px] ${equipo.plataforma?.toUpperCase().includes('XBOX') ? 'bg-emerald-500/3' : equipo.plataforma?.toUpperCase().includes('PC') ? 'bg-amber-500/3' : 'bg-blue-500/3'} blur-[120px] rounded-full pointer-events-none z-10`}></div>
 
       {/* Banner Superior Inmersivo */}
-      <div className="h-64 md:h-80 relative z-0 overflow-hidden">
+      <div className="h-80 md:h-[460px] relative z-0 overflow-hidden bg-card">
         {equipo.banner ? (
           <div 
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url('${getImageUrl(equipo.banner)}')` }}
+            style={{ backgroundImage: `url('${getImageUrl(equipo.banner, 'team_banner')}')` }}
           />
         ) : (
-          <div className={`absolute inset-0 bg-gradient-to-br ${platCfg.gradient}`} />
+          <div 
+            className="absolute inset-0 bg-cover bg-center opacity-45 mix-blend-overlay"
+            style={{ backgroundImage: `url('${getImageUrl('default-team-banner', 'team_banner')}')` }}
+          />
+        )}
+        {/* platform theme gradient fallback */}
+        {!equipo.banner && (
+          <div className={`absolute inset-0 bg-gradient-to-br ${platCfg.gradient} opacity-90 -z-10`} />
         )}
         {/* Grid and scanline tech layers */}
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/20"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent"></div>
         
         {/* Floating tech banner elements */}
         <div className="absolute top-1/3 left-10 text-[6rem] md:text-[10rem] font-display font-black uppercase text-foreground/[0.015] select-none leading-none pointer-events-none font-extrabold tracking-tighter">
@@ -204,7 +375,7 @@ export default function DetalleEquipo() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 lg:px-10 relative z-10 -mt-24 md:-mt-32 space-y-8 animate-fade-in-up">
+      <div className="max-w-6xl mx-auto px-6 lg:px-10 relative z-10 -mt-20 md:-mt-28 space-y-8 animate-fade-in-up">
         
         {/* Cabecera del Equipo */}
         <div className="flex flex-col md:flex-row items-center md:items-end justify-between gap-6 pb-6 border-b border-border/40">
@@ -239,21 +410,36 @@ export default function DetalleEquipo() {
                   👑 Capitán: <span className="text-foreground">{equipo.capitan.name}</span> <span className="text-primary font-mono">({equipo.capitan.gamertag})</span>
                 </p>
               )}
+              {equipo.redes_sociales && Object.values(equipo.redes_sociales).some(Boolean) && (
+                <div className="flex flex-wrap items-center gap-2 mt-2 justify-center md:justify-start">
+                  {Object.entries(equipo.redes_sociales).map(([platform, value]) => {
+                    if (!value) return null;
+                    const url = getSocialLink(platform, value);
+                    if (!url) return null;
+                    const icon = SOCIAL_ICONS[platform.toLowerCase()];
+                    const theme = SOCIAL_THEMES[platform.toLowerCase()] || 'bg-muted/30 border-border/50 text-muted-foreground hover:bg-card';
+                    
+                    return (
+                      <a
+                        key={platform}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-mono font-bold uppercase transition-all duration-300 ${theme}`}
+                        title={`${platform}: ${value}`}
+                      >
+                        {icon}
+                        <span>{platform}</span>
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Social Links */}
           <div className="flex items-center gap-3 shrink-0">
-            {equipo.redes_sociales?.instagram && (
-              <a 
-                href={equipo.redes_sociales.instagram} 
-                target="_blank" 
-                rel="noreferrer" 
-                className="p-3 bg-card border border-border/50 rounded-xl hover:text-primary transition-colors text-sm font-bold uppercase tracking-wider"
-              >
-                📸 Instagram
-              </a>
-            )}
             <Link to="/equipos" className="px-4 py-2 bg-muted border border-border/50 rounded-xl text-xs font-black uppercase text-foreground hover:bg-card transition-all">
               🛡️ Directorio
             </Link>
@@ -274,8 +460,8 @@ export default function DetalleEquipo() {
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 min-w-[100px] py-3 px-4 text-xs font-condensed tracking-widest font-black uppercase rounded-xl transition-all duration-300 cursor-pointer whitespace-nowrap ${
                 activeTab === tab.id
-                  ? 'bg-primary text-primary-foreground shadow-[0_0_15px_hsla(var(--primary),0.3)]'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                  ? `${platCfg.bg} ${platCfg.color} ${platCfg.border} ${platCfg.glow}`
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30 border border-transparent'
               }`}
             >
               {tab.label}
@@ -287,7 +473,22 @@ export default function DetalleEquipo() {
         <div className="min-h-96 pt-4">
           {/* TAB 1: Roster separado por Posición */}
           {activeTab === 'roster' && (
-            <div className="space-y-12 animate-fade-in">
+            <div className="space-y-8 animate-fade-in">
+              {/* Selector de Organización para Roster */}
+              <div className="border border-border/50 bg-card/25 backdrop-blur-md rounded-2xl p-4.5 max-w-md mx-auto shadow-md flex flex-col gap-2">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block font-mono">🏢 FILTRAR POR ORGANIZACIÓN</span>
+                <select 
+                  value={rosterOrg}
+                  onChange={(e) => setRosterOrg(e.target.value)}
+                  className="input-premium uppercase"
+                >
+                  <option value="todos">🌎 Todas las organizaciones</option>
+                  {allOrgs.map(org => (
+                    <option key={org.id} value={org.id.toString()}>🏢 {org.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
               {(() => {
                 const groups = {
                   GK: { title: '🧤 Porteros / Arqueros', desc: 'Protectores de los tres palos bajo el arco', items: [] },
@@ -299,6 +500,9 @@ export default function DetalleEquipo() {
 
                 if (equipo.roster) {
                   equipo.roster.forEach(p => {
+                    if (rosterOrg !== 'todos' && (!p.organizacion || p.organizacion.id.toString() !== rosterOrg)) {
+                      return;
+                    }
                     const pos = (p.posicion || 'MC').toUpperCase();
                     if (['POR', 'GK', 'PO'].includes(pos)) {
                       groups.GK.items.push(p);
@@ -318,9 +522,9 @@ export default function DetalleEquipo() {
 
                 if (!hasPlayers) {
                   return (
-                    <div className="border border-border/50 bg-muted/10 rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3">
+                    <div className="border border-border/50 bg-muted/10 rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3 max-w-xl mx-auto shadow-md animate-fade-in-up">
                       <span className="text-2xl">👥</span>
-                      <p className="text-xs text-muted-foreground font-medium italic">No hay jugadores registrados en el roster oficial.</p>
+                      <p className="text-xs text-muted-foreground font-medium italic">No hay jugadores registrados en el roster oficial con los filtros aplicados.</p>
                     </div>
                   );
                 }
@@ -379,6 +583,11 @@ export default function DetalleEquipo() {
                                   <span className="text-[10px] text-muted-foreground font-sans block mt-0.5 truncate">
                                     {p.name}
                                   </span>
+                                  {rosterOrg === 'todos' && p.organizacion && (
+                                    <span className="text-[9px] text-primary/80 font-mono block mt-1 truncate">
+                                      🏢 {p.organizacion.nombre}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                               <div className="text-right shrink-0 z-10 flex flex-col items-end gap-1.5">
@@ -430,7 +639,7 @@ export default function DetalleEquipo() {
               </div>
 
               {/* Panel de Filtros para Traspasos */}
-              <div className="border border-border/50 bg-card/25 backdrop-blur-md rounded-2xl p-4.5 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl mx-auto shadow-md">
+              <div className="border border-border/50 bg-card/25 backdrop-blur-md rounded-2xl p-4.5 grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto shadow-md">
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block font-mono">🔍 BUSCAR JUGADOR</span>
                   <input 
@@ -440,6 +649,19 @@ export default function DetalleEquipo() {
                     placeholder="Escribe el nombre del jugador..."
                     className="input-premium"
                   />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block font-mono">🏢 ORGANIZACIÓN</span>
+                  <select 
+                    value={traspasosOrg}
+                    onChange={(e) => { setTraspasosOrg(e.target.value); setTraspasosPage(1); }}
+                    className="input-premium uppercase"
+                  >
+                    <option value="todos">🌎 Todas las organizaciones</option>
+                    {allOrgs.map(org => (
+                      <option key={org.id} value={org.id.toString()}>🏢 {org.nombre}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block font-mono">🔄 TIPO DE MOVIMIENTO</span>
@@ -463,6 +685,7 @@ export default function DetalleEquipo() {
                   
                   if (traspasosFiltro === 'alta' && isBaja) return false;
                   if (traspasosFiltro === 'baja' && !isBaja) return false;
+                  if (traspasosOrg !== 'todos' && (!t.organizacion || t.organizacion.id.toString() !== traspasosOrg)) return false;
                   return nameMatch;
                 });
 
@@ -472,7 +695,7 @@ export default function DetalleEquipo() {
 
                 if (list.length === 0) {
                   return (
-                    <div className="border border-border/50 bg-muted/10 rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3">
+                    <div className="border border-border/50 bg-muted/10 rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3 max-w-xl mx-auto shadow-md">
                       <span className="text-2xl">🔄</span>
                       <p className="text-xs text-muted-foreground font-medium italic">No se han registrado transferencias oficiales con los filtros aplicados.</p>
                     </div>
@@ -553,7 +776,7 @@ export default function DetalleEquipo() {
                                 <span>Incorporado procedente de <strong className="text-foreground transition-colors group-hover:text-primary">{t.equipo_origen?.nombre || 'Agente Libre'}</strong></span>
                               )}
                               <span className="text-[10px] text-muted-foreground/85 block font-bold mt-0.5 uppercase font-mono">
-                                💼 Circuito: {t.organizacion?.nombre || 'General'}
+                                🏢 Organización: {t.organizacion?.nombre || 'General'}
                               </span>
                             </div>
 
@@ -613,407 +836,430 @@ export default function DetalleEquipo() {
 
           {/* TAB 4: Estadísticas de Equipo y Rankings Internos */}
           {activeTab === 'estadisticas' && (
-            <div className="space-y-12 animate-fade-in">
-              
-              {/* Bloque 1: Estadísticas Tácticas de Equipo */}
-              <div className="space-y-6">
-                <h2 className="text-xl font-display font-black uppercase tracking-wider text-foreground border-b border-border/20 pb-2">
-                  Estadísticas de Temporada (Equipo)
-                </h2>
-                {equipo.estadisticas ? (
-                  (() => {
-                    const stats = equipo.estadisticas || {};
-                    const jugados = stats.jugados || 0;
-                    const victorias = stats.victorias || 0;
-                    const empates = stats.empates || 0;
-                    const derrotas = stats.derrotas || 0;
-                    const gf = stats.goles_favor || 0;
-                    const gc = stats.goles_contra || 0;
-                    const winRate = jugados > 0 ? Math.round((victorias / jugados) * 100) : 0;
-                    const dg = gf - gc;
-
-                    return (
-                      <div className="space-y-6">
-                        {/* KPIs de Rendimiento Avanzado */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                          {/* KPI: Win Rate */}
-                          <div className="relative overflow-hidden border border-primary/30 bg-primary/5 backdrop-blur-md rounded-2xl p-4 sm:p-5 flex items-center justify-between shadow-[0_0_15px_rgba(var(--primary),0.05)]">
-                            <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 border-primary pointer-events-none"></div>
-                            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-primary pointer-events-none"></div>
-                            <div className="space-y-1 pr-2 min-w-0">
-                              <span className="text-[9px] sm:text-[10px] font-mono font-black text-primary uppercase tracking-widest block">TASA DE VICTORIAS</span>
-                              <strong className="text-3xl sm:text-4xl font-display font-black block leading-none text-foreground">{winRate}%</strong>
-                              <span className="text-[9px] sm:text-[10px] text-muted-foreground block font-semibold mt-1 truncate">Efectividad en {jugados} partidos</span>
-                            </div>
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 relative flex items-center justify-center shrink-0">
-                              <svg className="w-full h-full transform -rotate-90">
-                                <circle cx="40" cy="40" r="32" className="stroke-muted/20" strokeWidth="5.5" fill="transparent" />
-                                <circle cx="40" cy="40" r="32" className="stroke-primary transition-all duration-1000" strokeWidth="5.5" fill="transparent"
-                                  strokeDasharray={2 * Math.PI * 32}
-                                  strokeDashoffset={2 * Math.PI * 32 * (1 - winRate / 100)}
-                                />
-                              </svg>
-                              <span className="absolute text-[10px] sm:text-xs font-mono font-black text-foreground">{winRate}%</span>
-                            </div>
-                          </div>
-
-                          {/* KPI: Diferencia de Goles */}
-                          <div className="relative overflow-hidden border border-border/40 bg-card/25 backdrop-blur-md rounded-2xl p-4 sm:p-5 flex items-center justify-between shadow-md">
-                            <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 border-border pointer-events-none"></div>
-                            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-border pointer-events-none"></div>
-                            <div className="space-y-1 pr-2 min-w-0">
-                              <span className="text-[9px] sm:text-[10px] font-mono font-black text-muted-foreground uppercase tracking-widest block">DIFERENCIA DE GOLES</span>
-                              <strong className={`text-3xl sm:text-4xl font-display font-black block leading-none ${dg >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
-                                {dg >= 0 ? `+${dg}` : dg}
-                              </strong>
-                              <span className="text-[9px] sm:text-[10px] text-muted-foreground block font-semibold mt-1 truncate">
-                                Balance ({gf} GF / {gc} GC)
-                              </span>
-                            </div>
-                            <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-xl sm:text-2xl font-black shrink-0 ${dg >= 0 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}`}>
-                              {dg >= 0 ? '📈' : '📉'}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Las 6 Tarjetas de Telemetría Táctica */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
-                          {[
-                            { label: 'Jugados', value: jugados, color: 'text-foreground', bg: 'bg-card/20 border-border/40' },
-                            { label: 'Victorias', value: victorias, color: 'text-primary', bg: 'bg-primary/5 border-primary/20 hover:border-primary/45' },
-                            { label: 'Empates', value: empates, color: 'text-muted-foreground', bg: 'bg-muted/5 border-border/30' },
-                            { label: 'Derrotas', value: derrotas, color: 'text-destructive', bg: 'bg-destructive/5 border-destructive/20 hover:border-destructive/45' },
-                            { label: 'Goles Favor', value: gf, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/45' },
-                            { label: 'Goles Contra', value: gc, color: 'text-rose-500', bg: 'bg-rose-500/5 border-rose-500/20 hover:border-rose-500/45' },
-                          ].map((stat, idx) => (
-                            <div key={idx} className={`relative overflow-hidden border backdrop-blur-md rounded-2xl p-3 sm:p-5 text-center space-y-1 shadow-md transition-all duration-300 hover:scale-[1.02] ${stat.bg}`}>
-                              <div className="absolute top-0 right-0 w-8 h-8 bg-foreground/[0.01] pointer-events-none"></div>
-                              <span className="text-[8px] sm:text-[9px] font-bold text-muted-foreground uppercase tracking-widest block leading-none font-mono">
-                                {stat.label}
-                              </span>
-                              <strong className={`text-2xl sm:text-3xl font-display font-black block leading-none pt-1 ${stat.color} font-mono`}>
-                                {stat.value}
-                              </strong>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()
-                ) : (
-                  <div className="border border-border/50 bg-muted/10 rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3">
-                    <span className="text-2xl">📊</span>
-                    <p className="text-xs text-muted-foreground font-medium italic">No hay estadísticas acumuladas en partidos finalizados.</p>
-                  </div>
-                )}
+            <div className="space-y-8 animate-fade-in">
+              {/* Selector de Organización para estadísticas */}
+              <div className="border border-border/50 bg-card/25 backdrop-blur-md rounded-2xl p-4.5 max-w-md mx-auto shadow-md flex flex-col gap-2">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block font-mono">🏢 FILTRAR POR ORGANIZACIÓN (EN CURSO)</span>
+                <select 
+                  value={statsOrg}
+                  onChange={(e) => handleStatsOrgChange(e.target.value)}
+                  className="input-premium uppercase"
+                >
+                  <option value="">🌎 Selecciona una organización</option>
+                  {allOrgs.map(org => (
+                    <option key={org.id} value={org.id.toString()}>🏢 {org.nombre}</option>
+                  ))}
+                </select>
               </div>
 
-              {/* Bloque 2: Rankings y Líderes del Club */}
-              <div className="space-y-8 animate-fade-in-up">
-                
-                {/* Fila 1: Líderes Ofensivos (Goleadores y Asistentes) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-                  
-                  {/* Ranking Goleadores del Club */}
-                  <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-4 sm:p-5 space-y-3 sm:space-y-4 shadow-lg">
-                    <h3 className="text-[10px] sm:text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2 flex items-center justify-between">
-                      <span>⚽ LÍDERES DE GOLEO (CLUB)</span>
-                      <span className="text-primary font-bold">TOP 5</span>
-                    </h3>
-
-                    {equipo.goleadores && equipo.goleadores.length > 0 ? (
-                      <div className="space-y-2.5 sm:space-y-3">
-                        {equipo.goleadores.map((g, idx) => {
-                          const rank = getRankBadge(idx);
-                          const posStyles = getPosStyles(g.posicion);
-                          const maxGoles = equipo.goleadores?.[0]?.total_goles || 1;
-                          const progress = (g.total_goles / maxGoles) * 100;
-
-                          return (
-                            <div key={g.id} className="relative group flex items-center justify-between gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl border border-border/30 bg-background/25 transition-all duration-300 hover:border-primary/30 overflow-hidden">
-                              <div className="absolute inset-y-0 left-0 bg-primary/[0.02] pointer-events-none transition-all duration-500" style={{ width: `${progress}%` }}></div>
-                              
-                              <div className="flex items-center gap-2 sm:gap-3 min-w-0 z-10">
-                                <span className={`text-[9px] sm:text-[10px] font-mono font-black px-1.5 sm:px-2 py-0.5 rounded border ${rank.style}`}>
-                                  {rank.label}
-                                </span>
-                                <div className={`w-8 h-8 sm:w-9 h-9 rounded-lg overflow-hidden border bg-card shrink-0 transition-transform duration-300 group-hover:scale-105 ${posStyles.avatarGlow}`}>
-                                  {g.foto ? (
-                                    <img src={getImageUrl(g.foto)} alt={g.name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-[10px] sm:text-xs uppercase shrink-0">
-                                      {(g.gamertag || g.name || '?').charAt(0)}
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="min-w-0">
-                                  <Link to={`/jugadores/${g.id}`} className="font-display font-bold text-[11px] sm:text-xs text-foreground hover:text-primary transition-colors truncate block">
-                                    🎮 {g.gamertag || 'EA ID'}
-                                  </Link>
-                                  <span className="text-[8px] sm:text-[9px] text-muted-foreground font-sans block truncate mt-0.5">
-                                    {g.name}
-                                  </span>
-                                </div>
-                              </div>
-
-                              <div className="text-right shrink-0 z-10 flex flex-col items-end gap-1">
-                                <strong className="text-[11px] sm:text-xs font-black text-emerald-500 font-mono">
-                                  {g.total_goles} {g.total_goles === 1 ? 'Gol' : 'Goles'}
-                                </strong>
-                                <span className={`text-[7px] sm:text-[8px] font-mono font-bold px-1 sm:px-1.5 py-0.2 rounded border ${posStyles.posColor}`}>
-                                  {g.posicion || 'DEL'}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground bg-muted/20 p-4 rounded-xl text-center italic border border-border/30">No se registran anotaciones por parte del roster oficial.</p>
-                    )}
-                  </div>
-
-                  {/* Ranking Asistentes del Club */}
-                  <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-4 sm:p-5 space-y-3 sm:space-y-4 shadow-lg">
-                    <h3 className="text-[10px] sm:text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2 flex items-center justify-between">
-                      <span>🅰️ ASISTENCIAS Y CREACIÓN (CLUB)</span>
-                      <span className="text-primary font-bold">TOP 5</span>
-                    </h3>
-
-                    {equipo.asistentes && equipo.asistentes.length > 0 ? (
-                      <div className="space-y-2.5 sm:space-y-3">
-                        {equipo.asistentes.map((a, idx) => {
-                          const rank = getRankBadge(idx);
-                          const posStyles = getPosStyles(a.posicion);
-                          const maxAsist = equipo.asistentes?.[0]?.total_asistencias || 1;
-                          const progress = (a.total_asistencias / maxAsist) * 100;
-
-                          return (
-                            <div key={a.id} className="relative group flex items-center justify-between gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl border border-border/30 bg-background/25 transition-all duration-300 hover:border-primary/30 overflow-hidden">
-                              <div className="absolute inset-y-0 left-0 bg-primary/[0.02] pointer-events-none transition-all duration-500" style={{ width: `${progress}%` }}></div>
-                              
-                              <div className="flex items-center gap-2 sm:gap-3 min-w-0 z-10">
-                                <span className={`text-[9px] sm:text-[10px] font-mono font-black px-1.5 sm:px-2 py-0.5 rounded border ${rank.style}`}>
-                                  {rank.label}
-                                </span>
-                                <div className={`w-8 h-8 sm:w-9 h-9 rounded-lg overflow-hidden border bg-card shrink-0 transition-transform duration-300 group-hover:scale-105 ${posStyles.avatarGlow}`}>
-                                  {a.foto ? (
-                                    <img src={getImageUrl(a.foto)} alt={a.name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-[10px] sm:text-xs uppercase shrink-0">
-                                      {(a.gamertag || a.name || '?').charAt(0)}
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="min-w-0">
-                                  <Link to={`/jugadores/${a.id}`} className="font-display font-bold text-[11px] sm:text-xs text-foreground hover:text-primary transition-colors truncate block">
-                                    🎮 {a.gamertag || 'EA ID'}
-                                  </Link>
-                                  <span className="text-[8px] sm:text-[9px] text-muted-foreground font-sans block truncate mt-0.5">
-                                    {a.name}
-                                  </span>
-                                </div>
-                              </div>
-
-                              <div className="text-right shrink-0 z-10 flex flex-col items-end gap-1">
-                                <strong className="text-[11px] sm:text-xs font-black text-primary font-mono">
-                                  {a.total_asistencias} {a.total_asistencias === 1 ? 'Asist.' : 'Asist.'}
-                                </strong>
-                                <span className={`text-[7px] sm:text-[8px] font-mono font-bold px-1 sm:px-1.5 py-0.2 rounded border ${posStyles.posColor}`}>
-                                  {a.posicion || 'MC'}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground bg-muted/20 p-4 rounded-xl text-center italic border border-border/30">No se registran asistencias oficiales de gol.</p>
-                    )}
-                  </div>
-
+              {loadingStats ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+                  <span className="text-xs text-muted-foreground font-mono uppercase tracking-widest">Actualizando estadísticas...</span>
                 </div>
+              ) : (
+                <div className="space-y-12">
+                  {/* Bloque 1: Estadísticas Tácticas de Equipo */}
+                  <div className="space-y-6">
+                    <h2 className="text-xl font-display font-black uppercase tracking-wider text-foreground border-b border-border/20 pb-2">
+                      Estadísticas de Temporada (Equipo)
+                    </h2>
+                    {equipo.estadisticas && equipo.estadisticas.jugados > 0 ? (
+                      (() => {
+                        const stats = equipo.estadisticas || {};
+                        const jugados = stats.jugados || 0;
+                        const victorias = stats.victorias || 0;
+                        const empates = stats.empates || 0;
+                        const derrotas = stats.derrotas || 0;
+                        const gf = stats.goles_favor || 0;
+                        const gc = stats.goles_contra || 0;
+                        const winRate = jugados > 0 ? Math.round((victorias / jugados) * 100) : 0;
+                        const dg = gf - gc;
 
-                {/* Fila 2: Mejores Jugadores por Posición Táctica (GK, DEF, MED) */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-                  
-                  {/* mejores arqueros */}
-                  <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-4 sm:p-5 space-y-3 sm:space-y-4 shadow-lg">
-                    <h3 className="text-[10px] sm:text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2 flex items-center justify-between">
-                      <span>🧤 MEJORES PORTEROS / ARQUEROS</span>
-                      <span className="text-primary font-bold">TOP 5</span>
-                    </h3>
-
-                    {equipo.mejores_arqueros && equipo.mejores_arqueros.length > 0 ? (
-                      <div className="space-y-2.5 sm:space-y-3">
-                        {equipo.mejores_arqueros.map((r, idx) => {
-                          const rank = getRankBadge(idx);
-                          const posStyles = getPosStyles(r.posicion);
-                          const progress = (r.avg_valoracion / 10) * 100;
-
-                          return (
-                            <div key={r.id} className="relative group flex items-center justify-between gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl border border-border/30 bg-background/25 transition-all duration-300 hover:border-primary/30 overflow-hidden">
-                              <div className="absolute inset-y-0 left-0 bg-primary/[0.02] pointer-events-none transition-all duration-500" style={{ width: `${progress}%` }}></div>
-                              
-                              <div className="flex items-center gap-2 sm:gap-3 min-w-0 z-10">
-                                <span className={`text-[9px] sm:text-[10px] font-mono font-black px-1.5 sm:px-2 py-0.5 rounded border ${rank.style}`}>
-                                  {rank.label}
-                                </span>
-                                <div className={`w-8 h-8 sm:w-9 h-9 rounded-lg overflow-hidden border bg-card shrink-0 transition-transform duration-300 group-hover:scale-105 ${posStyles.avatarGlow}`}>
-                                  {r.foto ? (
-                                    <img src={getImageUrl(r.foto)} alt={r.name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-[10px] sm:text-xs uppercase shrink-0">
-                                      {(r.gamertag || r.name || '?').charAt(0)}
-                                    </div>
-                                  )}
+                        return (
+                          <div className="space-y-6">
+                            {/* KPIs de Rendimiento Avanzado */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                              {/* KPI: Win Rate */}
+                              <div className="relative overflow-hidden border border-primary/30 bg-primary/5 backdrop-blur-md rounded-2xl p-4 sm:p-5 flex items-center justify-between shadow-[0_0_15px_rgba(var(--primary),0.05)]">
+                                <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 border-primary pointer-events-none"></div>
+                                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-primary pointer-events-none"></div>
+                                <div className="space-y-1 pr-2 min-w-0">
+                                  <span className="text-[9px] sm:text-[10px] font-mono font-black text-primary uppercase tracking-widest block">TASA DE VICTORIAS</span>
+                                  <strong className="text-3xl sm:text-4xl font-display font-black block leading-none text-foreground">{winRate}%</strong>
+                                  <span className="text-[9px] sm:text-[10px] text-muted-foreground block font-semibold mt-1 truncate">Efectividad en {jugados} partidos</span>
                                 </div>
-                                <div className="min-w-0">
-                                  <Link to={`/jugadores/${r.id}`} className="font-display font-bold text-[11px] sm:text-xs text-foreground hover:text-primary transition-colors truncate block">
-                                    🎮 {r.gamertag || 'EA ID'}
-                                  </Link>
-                                  <span className="text-[8px] sm:text-[9px] text-muted-foreground font-sans block truncate mt-0.5">
-                                    {r.name}
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 relative flex items-center justify-center shrink-0">
+                                  <svg className="w-full h-full transform -rotate-90">
+                                    <circle cx="40" cy="40" r="32" className="stroke-muted/20" strokeWidth="5.5" fill="transparent" />
+                                    <circle cx="40" cy="40" r="32" className="stroke-primary transition-all duration-1000" strokeWidth="5.5" fill="transparent"
+                                      strokeDasharray={2 * Math.PI * 32}
+                                      strokeDashoffset={2 * Math.PI * 32 * (1 - winRate / 100)}
+                                    />
+                                  </svg>
+                                  <span className="absolute text-[10px] sm:text-xs font-mono font-black text-foreground">{winRate}%</span>
+                                </div>
+                              </div>
+
+                              {/* KPI: Diferencia de Goles */}
+                              <div className="relative overflow-hidden border border-border/40 bg-card/25 backdrop-blur-md rounded-2xl p-4 sm:p-5 flex items-center justify-between shadow-md">
+                                <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 border-border pointer-events-none"></div>
+                                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-border pointer-events-none"></div>
+                                <div className="space-y-1 pr-2 min-w-0">
+                                  <span className="text-[9px] sm:text-[10px] font-mono font-black text-muted-foreground uppercase tracking-widest block">DIFERENCIA DE GOLES</span>
+                                  <strong className={`text-3xl sm:text-4xl font-display font-black block leading-none ${dg >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
+                                    {dg >= 0 ? `+${dg}` : dg}
+                                  </strong>
+                                  <span className="text-[9px] sm:text-[10px] text-muted-foreground block font-semibold mt-1 truncate">
+                                    Balance ({gf} GF / {gc} GC)
                                   </span>
                                 </div>
-                              </div>
-
-                              <div className="text-right shrink-0 z-10 flex flex-col items-end gap-1">
-                                <strong className="text-[11px] sm:text-xs font-black text-foreground font-mono">
-                                  ⭐ {r.avg_valoracion}
-                                </strong>
-                                <span className="text-[7px] sm:text-[8px] text-muted-foreground block font-bold font-mono">
-                                  🧤 {r.total_atajadas} Ataj. ({r.partidos} PJ)
-                                </span>
+                                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-xl sm:text-2xl font-black shrink-0 ${dg >= 0 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}`}>
+                                  {dg >= 0 ? '📈' : '📉'}
+                                </div>
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
+
+                            {/* Las 6 Tarjetas de Telemetría Táctica */}
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
+                              {[
+                                { label: 'Jugados', value: jugados, color: 'text-foreground', bg: 'bg-card/20 border-border/40' },
+                                { label: 'Victorias', value: victorias, color: 'text-primary', bg: 'bg-primary/5 border-primary/20 hover:border-primary/45' },
+                                { label: 'Empates', value: empates, color: 'text-muted-foreground', bg: 'bg-muted/5 border-border/30' },
+                                { label: 'Derrotas', value: derrotas, color: 'text-destructive', bg: 'bg-destructive/5 border-destructive/20 hover:border-destructive/45' },
+                                { label: 'Goles Favor', value: gf, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/45' },
+                                { label: 'Goles Contra', value: gc, color: 'text-rose-500', bg: 'bg-rose-500/5 border-rose-500/20 hover:border-rose-500/45' },
+                              ].map((stat, idx) => (
+                                <div key={idx} className={`relative overflow-hidden border backdrop-blur-md rounded-2xl p-3 sm:p-5 text-center space-y-1 shadow-md transition-all duration-300 hover:scale-[1.02] ${stat.bg}`}>
+                                  <div className="absolute top-0 right-0 w-8 h-8 bg-foreground/[0.01] pointer-events-none"></div>
+                                  <span className="text-[8px] sm:text-[9px] font-bold text-muted-foreground uppercase tracking-widest block leading-none font-mono">
+                                    {stat.label}
+                                  </span>
+                                  <strong className={`text-2xl sm:text-3xl font-display font-black block leading-none pt-1 ${stat.color} font-mono`}>
+                                    {stat.value}
+                                  </strong>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()
                     ) : (
-                      <p className="text-xs text-muted-foreground bg-muted/20 p-4 rounded-xl text-center italic border border-border/30">No se registran arqueros con estadísticas oficiales.</p>
+                      <div className="border border-border/50 bg-muted/10 rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3">
+                        <span className="text-2xl">📊</span>
+                        <p className="text-xs text-muted-foreground font-medium italic">No hay estadísticas acumuladas en partidos finalizados para competencias en progreso de esta organización.</p>
+                      </div>
                     )}
                   </div>
 
-                  {/* mejores defensores */}
-                  <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-4 sm:p-5 space-y-3 sm:space-y-4 shadow-lg">
-                    <h3 className="text-[10px] sm:text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2 flex items-center justify-between">
-                      <span>🛡️ MEJORES DEFENSORES</span>
-                      <span className="text-primary font-bold">TOP 5</span>
-                    </h3>
+                  {/* Bloque 2: Rankings y Líderes del Club */}
+                  <div className="space-y-8 animate-fade-in-up">
+                    
+                    {/* Fila 1: Líderes Ofensivos (Goleadores y Asistentes) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+                      
+                      {/* Ranking Goleadores del Club */}
+                      <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-4 sm:p-5 space-y-3 sm:space-y-4 shadow-lg">
+                        <h3 className="text-[10px] sm:text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2 flex items-center justify-between">
+                          <span>⚽ LÍDERES DE GOLEO (CLUB)</span>
+                          <span className="text-primary font-bold">TOP 5</span>
+                        </h3>
 
-                    {equipo.mejores_defensores && equipo.mejores_defensores.length > 0 ? (
-                      <div className="space-y-2.5 sm:space-y-3">
-                        {equipo.mejores_defensores.map((d, idx) => {
-                          const rank = getRankBadge(idx);
-                          const posStyles = getPosStyles(d.posicion);
-                          const progress = (d.avg_valoracion / 10) * 100;
+                        {equipo.goleadores && equipo.goleadores.length > 0 ? (
+                          <div className="space-y-2.5 sm:space-y-3">
+                            {equipo.goleadores.map((g, idx) => {
+                              const rank = getRankBadge(idx);
+                              const posStyles = getPosStyles(g.posicion);
+                              const maxGoles = equipo.goleadores?.[0]?.total_goles || 1;
+                              const progress = (g.total_goles / maxGoles) * 100;
 
-                          return (
-                            <div key={d.id} className="relative group flex items-center justify-between gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl border border-border/30 bg-background/25 transition-all duration-300 hover:border-primary/30 overflow-hidden">
-                              <div className="absolute inset-y-0 left-0 bg-primary/[0.02] pointer-events-none transition-all duration-500" style={{ width: `${progress}%` }}></div>
-                              
-                              <div className="flex items-center gap-2 sm:gap-3 min-w-0 z-10">
-                                <span className={`text-[9px] sm:text-[10px] font-mono font-black px-1.5 sm:px-2 py-0.5 rounded border ${rank.style}`}>
-                                  {rank.label}
-                                </span>
-                                <div className={`w-8 h-8 sm:w-9 h-9 rounded-lg overflow-hidden border bg-card shrink-0 transition-transform duration-300 group-hover:scale-105 ${posStyles.avatarGlow}`}>
-                                  {d.foto ? (
-                                    <img src={getImageUrl(d.foto)} alt={d.name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-[10px] sm:text-xs uppercase shrink-0">
-                                      {(d.gamertag || d.name || '?').charAt(0)}
+                              return (
+                                <div key={g.id} className="relative group flex items-center justify-between gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl border border-border/30 bg-background/25 transition-all duration-300 hover:border-primary/30 overflow-hidden">
+                                  <div className="absolute inset-y-0 left-0 bg-primary/[0.02] pointer-events-none transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                                  
+                                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 z-10">
+                                    <span className={`text-[9px] sm:text-[10px] font-mono font-black px-1.5 sm:px-2 py-0.5 rounded border ${rank.style}`}>
+                                      {rank.label}
+                                    </span>
+                                    <div className={`w-8 h-8 sm:w-9 h-9 rounded-lg overflow-hidden border bg-card shrink-0 transition-transform duration-300 group-hover:scale-105 ${posStyles.avatarGlow}`}>
+                                      {g.foto ? (
+                                        <img src={getImageUrl(g.foto)} alt={g.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-[10px] sm:text-xs uppercase shrink-0">
+                                          {(g.gamertag || g.name || '?').charAt(0)}
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
-                                </div>
-                                <div className="min-w-0">
-                                  <Link to={`/jugadores/${d.id}`} className="font-display font-bold text-[11px] sm:text-xs text-foreground hover:text-primary transition-colors truncate block">
-                                    🎮 {d.gamertag || 'EA ID'}
-                                  </Link>
-                                  <span className="text-[8px] sm:text-[9px] text-muted-foreground font-sans block truncate mt-0.5">
-                                    {d.name}
-                                  </span>
-                                </div>
-                              </div>
-
-                              <div className="text-right shrink-0 z-10 flex flex-col items-end gap-1">
-                                <strong className="text-[11px] sm:text-xs font-black text-foreground font-mono">
-                                  ⭐ {d.avg_valoracion}
-                                </strong>
-                                <span className="text-[7px] sm:text-[8px] text-muted-foreground block font-bold font-mono">
-                                  🛡️ {d.total_entradas} Entr. ({d.partidos} PJ)
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground bg-muted/20 p-4 rounded-xl text-center italic border border-border/30">No se registran defensores con estadísticas oficiales.</p>
-                    )}
-                  </div>
-
-                  {/* mejores mediocentros */}
-                  <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-4 sm:p-5 space-y-3 sm:space-y-4 shadow-lg">
-                    <h3 className="text-[10px] sm:text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2 flex items-center justify-between">
-                      <span>🧠 MEJORES MEDIOCENTROS</span>
-                      <span className="text-primary font-bold">TOP 5</span>
-                    </h3>
-
-                    {equipo.mejores_medios && equipo.mejores_medios.length > 0 ? (
-                      <div className="space-y-2.5 sm:space-y-3">
-                        {equipo.mejores_medios.map((m, idx) => {
-                          const rank = getRankBadge(idx);
-                          const posStyles = getPosStyles(m.posicion);
-                          const progress = (m.avg_valoracion / 10) * 100;
-
-                          return (
-                            <div key={m.id} className="relative group flex items-center justify-between gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl border border-border/30 bg-background/25 transition-all duration-300 hover:border-primary/30 overflow-hidden">
-                              <div className="absolute inset-y-0 left-0 bg-primary/[0.02] pointer-events-none transition-all duration-500" style={{ width: `${progress}%` }}></div>
-                              
-                              <div className="flex items-center gap-2 sm:gap-3 min-w-0 z-10">
-                                <span className={`text-[9px] sm:text-[10px] font-mono font-black px-1.5 sm:px-2 py-0.5 rounded border ${rank.style}`}>
-                                  {rank.label}
-                                </span>
-                                <div className={`w-8 h-8 sm:w-9 h-9 rounded-lg overflow-hidden border bg-card shrink-0 transition-transform duration-300 group-hover:scale-105 ${posStyles.avatarGlow}`}>
-                                  {m.foto ? (
-                                    <img src={getImageUrl(m.foto)} alt={m.name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-[10px] sm:text-xs uppercase shrink-0">
-                                      {(m.gamertag || m.name || '?').charAt(0)}
+                                    <div className="min-w-0">
+                                      <Link to={`/jugadores/${g.id}`} className="font-display font-bold text-[11px] sm:text-xs text-foreground hover:text-primary transition-colors truncate block">
+                                        🎮 {g.gamertag || 'EA ID'}
+                                      </Link>
+                                      <span className="text-[8px] sm:text-[9px] text-muted-foreground font-sans block truncate mt-0.5">
+                                        {g.name}
+                                      </span>
                                     </div>
-                                  )}
-                                </div>
-                                <div className="min-w-0">
-                                  <Link to={`/jugadores/${m.id}`} className="font-display font-bold text-[11px] sm:text-xs text-foreground hover:text-primary transition-colors truncate block">
-                                    🎮 {m.gamertag || 'EA ID'}
-                                  </Link>
-                                  <span className="text-[8px] sm:text-[9px] text-muted-foreground font-sans block truncate mt-0.5">
-                                    {m.name}
-                                  </span>
-                                </div>
-                              </div>
+                                  </div>
 
-                              <div className="text-right shrink-0 z-10 flex flex-col items-end gap-1">
-                                <strong className="text-[11px] sm:text-xs font-black text-foreground font-mono">
-                                  ⭐ {m.avg_valoracion}
-                                </strong>
-                                <span className="text-[7px] sm:text-[8px] text-muted-foreground block font-bold font-mono">
-                                  🧠 {m.total_asistencias} Asist. ({m.avg_precision_pases}%)
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
+                                  <div className="text-right shrink-0 z-10 flex flex-col items-end gap-1">
+                                    <strong className="text-[11px] sm:text-xs font-black text-primary font-mono">
+                                      {g.total_goles} {g.total_goles === 1 ? 'Gol' : 'Goles'}
+                                    </strong>
+                                    <span className={`text-[7px] sm:text-[8px] font-mono font-bold px-1 sm:px-1.5 py-0.2 rounded border ${posStyles.posColor}`}>
+                                      {g.posicion || 'MC'}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground bg-muted/20 p-4 rounded-xl text-center italic border border-border/30">No se registran goles oficiales anotados.</p>
+                        )}
                       </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground bg-muted/20 p-4 rounded-xl text-center italic border border-border/30">No se registran mediocentros con estadísticas oficiales.</p>
-                    )}
-                  </div>
 
+                      {/* Ranking Asistentes del Club */}
+                      <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-4 sm:p-5 space-y-3 sm:space-y-4 shadow-lg">
+                        <h3 className="text-[10px] sm:text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2 flex items-center justify-between">
+                          <span>🎯 LÍDERES DE ASISTENCIAS</span>
+                          <span className="text-primary font-bold">TOP 5</span>
+                        </h3>
+
+                        {equipo.asistentes && equipo.asistentes.length > 0 ? (
+                          <div className="space-y-2.5 sm:space-y-3">
+                            {equipo.asistentes.map((a, idx) => {
+                              const rank = getRankBadge(idx);
+                              const posStyles = getPosStyles(a.posicion);
+                              const maxAsist = equipo.asistentes?.[0]?.total_asistencias || 1;
+                              const progress = (a.total_asistencias / maxAsist) * 100;
+
+                              return (
+                                <div key={a.id} className="relative group flex items-center justify-between gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl border border-border/30 bg-background/25 transition-all duration-300 hover:border-primary/30 overflow-hidden">
+                                  <div className="absolute inset-y-0 left-0 bg-primary/[0.02] pointer-events-none transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                                  
+                                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 z-10">
+                                    <span className={`text-[9px] sm:text-[10px] font-mono font-black px-1.5 sm:px-2 py-0.5 rounded border ${rank.style}`}>
+                                      {rank.label}
+                                    </span>
+                                    <div className={`w-8 h-8 sm:w-9 h-9 rounded-lg overflow-hidden border bg-card shrink-0 transition-transform duration-300 group-hover:scale-105 ${posStyles.avatarGlow}`}>
+                                      {a.foto ? (
+                                        <img src={getImageUrl(a.foto)} alt={a.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-[10px] sm:text-xs uppercase shrink-0">
+                                          {(a.gamertag || a.name || '?').charAt(0)}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <Link to={`/jugadores/${a.id}`} className="font-display font-bold text-[11px] sm:text-xs text-foreground hover:text-primary transition-colors truncate block">
+                                        🎮 {a.gamertag || 'EA ID'}
+                                      </Link>
+                                      <span className="text-[8px] sm:text-[9px] text-muted-foreground font-sans block truncate mt-0.5">
+                                        {a.name}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="text-right shrink-0 z-10 flex flex-col items-end gap-1">
+                                    <strong className="text-[11px] sm:text-xs font-black text-primary font-mono">
+                                      {a.total_asistencias} {a.total_asistencias === 1 ? 'Asist.' : 'Asist.'}
+                                    </strong>
+                                    <span className={`text-[7px] sm:text-[8px] font-mono font-bold px-1 sm:px-1.5 py-0.2 rounded border ${posStyles.posColor}`}>
+                                      {a.posicion || 'MC'}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground bg-muted/20 p-4 rounded-xl text-center italic border border-border/30">No se registran asistencias oficiales de gol.</p>
+                        )}
+                      </div>
+
+                    </div>
+
+                    {/* Fila 2: Mejores Jugadores por Posición Táctica (GK, DEF, MED) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                      
+                      {/* mejores arqueros */}
+                      <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-4 sm:p-5 space-y-3 sm:space-y-4 shadow-lg">
+                        <h3 className="text-[10px] sm:text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2 flex items-center justify-between">
+                          <span>🧤 MEJORES PORTEROS / ARQUEROS</span>
+                          <span className="text-primary font-bold">TOP 5</span>
+                        </h3>
+
+                        {equipo.mejores_arqueros && equipo.mejores_arqueros.length > 0 ? (
+                          <div className="space-y-2.5 sm:space-y-3">
+                            {equipo.mejores_arqueros.map((r, idx) => {
+                              const rank = getRankBadge(idx);
+                              const posStyles = getPosStyles(r.posicion);
+                              const progress = (r.avg_valoracion / 10) * 100;
+
+                              return (
+                                <div key={r.id} className="relative group flex items-center justify-between gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl border border-border/30 bg-background/25 transition-all duration-300 hover:border-primary/30 overflow-hidden">
+                                  <div className="absolute inset-y-0 left-0 bg-primary/[0.02] pointer-events-none transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                                  
+                                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 z-10">
+                                    <span className={`text-[9px] sm:text-[10px] font-mono font-black px-1.5 sm:px-2 py-0.5 rounded border ${rank.style}`}>
+                                      {rank.label}
+                                    </span>
+                                    <div className={`w-8 h-8 sm:w-9 h-9 rounded-lg overflow-hidden border bg-card shrink-0 transition-transform duration-300 group-hover:scale-105 ${posStyles.avatarGlow}`}>
+                                      {r.foto ? (
+                                        <img src={getImageUrl(r.foto)} alt={r.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-[10px] sm:text-xs uppercase shrink-0">
+                                          {(r.gamertag || r.name || '?').charAt(0)}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <Link to={`/jugadores/${r.id}`} className="font-display font-bold text-[11px] sm:text-xs text-foreground hover:text-primary transition-colors truncate block">
+                                        🎮 {r.gamertag || 'EA ID'}
+                                      </Link>
+                                      <span className="text-[8px] sm:text-[9px] text-muted-foreground font-sans block truncate mt-0.5">
+                                        {r.name}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="text-right shrink-0 z-10 flex flex-col items-end gap-1">
+                                    <strong className="text-[11px] sm:text-xs font-black text-foreground font-mono">
+                                      ⭐ {r.avg_valoracion}
+                                    </strong>
+                                    <span className="text-[7px] sm:text-[8px] text-muted-foreground block font-bold font-mono">
+                                      🧤 {r.total_atajadas} Ataj. ({r.partidos} PJ)
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground bg-muted/20 p-4 rounded-xl text-center italic border border-border/30">No se registran arqueros con estadísticas oficiales.</p>
+                        )}
+                      </div>
+
+                      {/* mejores defensores */}
+                      <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-4 sm:p-5 space-y-3 sm:space-y-4 shadow-lg">
+                        <h3 className="text-[10px] sm:text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2 flex items-center justify-between">
+                          <span>🛡️ MEJORES DEFENSORES</span>
+                          <span className="text-primary font-bold">TOP 5</span>
+                        </h3>
+
+                        {equipo.mejores_defensores && equipo.mejores_defensores.length > 0 ? (
+                          <div className="space-y-2.5 sm:space-y-3">
+                            {equipo.mejores_defensores.map((d, idx) => {
+                              const rank = getRankBadge(idx);
+                              const posStyles = getPosStyles(d.posicion);
+                              const progress = (d.avg_valoracion / 10) * 100;
+
+                              return (
+                                <div key={d.id} className="relative group flex items-center justify-between gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl border border-border/30 bg-background/25 transition-all duration-300 hover:border-primary/30 overflow-hidden">
+                                  <div className="absolute inset-y-0 left-0 bg-primary/[0.02] pointer-events-none transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                                  
+                                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 z-10">
+                                    <span className={`text-[9px] sm:text-[10px] font-mono font-black px-1.5 sm:px-2 py-0.5 rounded border ${rank.style}`}>
+                                      {rank.label}
+                                    </span>
+                                    <div className={`w-8 h-8 sm:w-9 h-9 rounded-lg overflow-hidden border bg-card shrink-0 transition-transform duration-300 group-hover:scale-105 ${posStyles.avatarGlow}`}>
+                                      {d.foto ? (
+                                        <img src={getImageUrl(d.foto)} alt={d.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-[10px] sm:text-xs uppercase shrink-0">
+                                          {(d.gamertag || d.name || '?').charAt(0)}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <Link to={`/jugadores/${d.id}`} className="font-display font-bold text-[11px] sm:text-xs text-foreground hover:text-primary transition-colors truncate block">
+                                        🎮 {d.gamertag || 'EA ID'}
+                                      </Link>
+                                      <span className="text-[8px] sm:text-[9px] text-muted-foreground font-sans block truncate mt-0.5">
+                                        {d.name}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="text-right shrink-0 z-10 flex flex-col items-end gap-1">
+                                    <strong className="text-[11px] sm:text-xs font-black text-foreground font-mono">
+                                      ⭐ {d.avg_valoracion}
+                                    </strong>
+                                    <span className="text-[7px] sm:text-[8px] text-muted-foreground block font-bold font-mono">
+                                      🛡️ {d.total_entradas} Entr. ({d.partidos} PJ)
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground bg-muted/20 p-4 rounded-xl text-center italic border border-border/30">No se registran defensores con estadísticas oficiales.</p>
+                        )}
+                      </div>
+
+                      {/* mejores mediocentros */}
+                      <div className="border border-border/50 bg-card/20 backdrop-blur-sm rounded-2xl p-4 sm:p-5 space-y-3 sm:space-y-4 shadow-lg">
+                        <h3 className="text-[10px] sm:text-xs font-black tracking-widest text-muted-foreground uppercase font-mono border-b border-border/20 pb-2 flex items-center justify-between">
+                          <span>🧠 MEJORES MEDIOCENTROS</span>
+                          <span className="text-primary font-bold">TOP 5</span>
+                        </h3>
+
+                        {equipo.mejores_medios && equipo.mejores_medios.length > 0 ? (
+                          <div className="space-y-2.5 sm:space-y-3">
+                            {equipo.mejores_medios.map((m, idx) => {
+                              const rank = getRankBadge(idx);
+                              const posStyles = getPosStyles(m.posicion);
+                              const progress = (m.avg_valoracion / 10) * 100;
+
+                              return (
+                                <div key={m.id} className="relative group flex items-center justify-between gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl border border-border/30 bg-background/25 transition-all duration-300 hover:border-primary/30 overflow-hidden">
+                                  <div className="absolute inset-y-0 left-0 bg-primary/[0.02] pointer-events-none transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                                  
+                                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 z-10">
+                                    <span className={`text-[9px] sm:text-[10px] font-mono font-black px-1.5 sm:px-2 py-0.5 rounded border ${rank.style}`}>
+                                      {rank.label}
+                                    </span>
+                                    <div className={`w-8 h-8 sm:w-9 h-9 rounded-lg overflow-hidden border bg-card shrink-0 transition-transform duration-300 group-hover:scale-105 ${posStyles.avatarGlow}`}>
+                                      {m.foto ? (
+                                        <img src={getImageUrl(m.foto)} alt={m.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-[10px] sm:text-xs uppercase shrink-0">
+                                          {(m.gamertag || m.name || '?').charAt(0)}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <Link to={`/jugadores/${m.id}`} className="font-display font-bold text-[11px] sm:text-xs text-foreground hover:text-primary transition-colors truncate block">
+                                        🎮 {m.gamertag || 'EA ID'}
+                                      </Link>
+                                      <span className="text-[8px] sm:text-[9px] text-muted-foreground font-sans block truncate mt-0.5">
+                                        {m.name}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="text-right shrink-0 z-10 flex flex-col items-end gap-1">
+                                    <strong className="text-[11px] sm:text-xs font-black text-foreground font-mono">
+                                      ⭐ {m.avg_valoracion}
+                                    </strong>
+                                    <span className="text-[7px] sm:text-[8px] text-muted-foreground block font-bold font-mono">
+                                      🧠 {m.total_asistencias} Asist. ({m.avg_precision_pases}%)
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground bg-muted/20 p-4 rounded-xl text-center italic border border-border/30">No se registran mediocentros con estadísticas oficiales.</p>
+                        )}
+                      </div>
+
+                    </div>
+
+                  </div>
                 </div>
-
-              </div>
+              )}
             </div>
           )}
 
@@ -1029,9 +1275,40 @@ export default function DetalleEquipo() {
                 </p>
               </div>
 
-              {equipo.historial_club && equipo.historial_club.length > 0 ? (
+              {/* Panel de Filtros para Historial */}
+              <div className="border border-border/50 bg-card/25 backdrop-blur-md rounded-2xl p-4.5 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto shadow-md">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block font-mono">🏢 ORGANIZACIÓN</span>
+                  <select 
+                    value={historyOrg}
+                    onChange={(e) => handleHistoryOrgChange(e.target.value)}
+                    className="input-premium uppercase"
+                  >
+                    <option value="todos">🌎 Todas las organizaciones</option>
+                    {uniqueHistoryOrgs.map(org => (
+                      <option key={org.id} value={org.id}>🏢 {org.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block font-mono">🏆 TEMPORADA</span>
+                  <select 
+                    value={historySeason}
+                    onChange={(e) => setHistorySeason(e.target.value)}
+                    disabled={historyOrg === 'todos'}
+                    className="input-premium uppercase disabled:opacity-50"
+                  >
+                    <option value="todos">🏆 Todas las temporadas</option>
+                    {uniqueHistorySeasons.map(seas => (
+                      <option key={seas.id} value={seas.id}>🏆 {seas.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {filteredHistory && filteredHistory.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {equipo.historial_club.map((hist, idx) => {
+                  {filteredHistory.map((hist, idx) => {
                     const hJugados = hist.jugados || 0;
                     const hVictorias = hist.victorias || 0;
                     const hWinRate = hJugados > 0 ? Math.round((hVictorias / hJugados) * 100) : 0;
@@ -1105,10 +1382,10 @@ export default function DetalleEquipo() {
                   })}
                 </div>
               ) : (
-                <div className="border border-border/50 bg-muted/10 rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3">
+                <div className="border border-border/50 bg-muted/10 rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3 max-w-xl mx-auto shadow-md">
                   <span className="text-2xl">📜</span>
                   <p className="text-sm text-muted-foreground font-medium italic">
-                    No se registran datos ni participaciones de la escuadra en temporadas pasadas de forma oficial.
+                    No se registran datos ni participaciones de la escuadra con los filtros seleccionados.
                   </p>
                 </div>
               )}

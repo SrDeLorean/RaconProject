@@ -67,7 +67,7 @@ export default function Competencias() {
 
   const listadoCompetencias = activeTab === 'clubpro' 
     ? (temporada.competencias || []) 
-    : (temporada.competencias_ut || []);
+    : (temporada.competenciasUt || temporada.competencias_ut || []);
 
   return (
     <div className="relative min-h-screen bg-background text-foreground overflow-hidden selection:bg-primary/30 selection:text-primary font-sans">
@@ -156,7 +156,7 @@ export default function Competencias() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">TORNEOS PRO</h4>
-                    <span className="text-2xl font-display font-black text-foreground">{(temporada.competencias?.length || 0) + (temporada.competencias_ut?.length || 0)}</span>
+                    <span className="text-2xl font-display font-black text-foreground">{(temporada.competencias?.length || 0) + (temporada.competenciasUt?.length || temporada.competencias_ut?.length || 0)}</span>
                   </div>
                   <div>
                     <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">ESTADO</h4>

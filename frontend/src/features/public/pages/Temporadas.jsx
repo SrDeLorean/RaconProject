@@ -149,8 +149,10 @@ export default function Temporadas() {
 
   // Active Season
   const activeSeason = useMemo(() => {
-    if (!organizacion?.temporadas) return null;
-    return organizacion.temporadas.find(t => t.activa) || organizacion.temporadas[0];
+    if (!organizacion?.temporadas || organizacion.temporadas.length === 0) return null;
+    const active = organizacion.temporadas.find(t => t.activa);
+    if (active) return active;
+    return [...organizacion.temporadas].sort((a, b) => b.id - a.id)[0];
   }, [organizacion]);
 
   // Active Divisions/Competencias

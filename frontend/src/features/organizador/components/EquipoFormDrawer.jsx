@@ -135,7 +135,7 @@ export default function EquipoFormDrawer({
             ]} 
             required
           />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <Input 
               label="Enlace de Twitter (X)" 
               placeholder="Ej. realbetisesports" 
@@ -148,6 +148,34 @@ export default function EquipoFormDrawer({
               placeholder="Ej. realbetisesports" 
               value={formData.redes_sociales?.twitch || ''} 
               onChange={(e) => handleRedSocialChange('twitch', e.target.value)} 
+              disabled={isSaving} 
+            />
+            <Input 
+              label="Enlace de Instagram" 
+              placeholder="Ej. realbetisesports" 
+              value={formData.redes_sociales?.instagram || ''} 
+              onChange={(e) => handleRedSocialChange('instagram', e.target.value)} 
+              disabled={isSaving} 
+            />
+            <Input 
+              label="Enlace de YouTube" 
+              placeholder="Ej. youtube.com/@Club" 
+              value={formData.redes_sociales?.youtube || ''} 
+              onChange={(e) => handleRedSocialChange('youtube', e.target.value)} 
+              disabled={isSaving} 
+            />
+            <Input 
+              label="Enlace de TikTok" 
+              placeholder="Ej. realbetisesports" 
+              value={formData.redes_sociales?.tiktok || ''} 
+              onChange={(e) => handleRedSocialChange('tiktok', e.target.value)} 
+              disabled={isSaving} 
+            />
+            <Input 
+              label="WhatsApp" 
+              placeholder="Ej. +56912345678" 
+              value={formData.redes_sociales?.whatsapp || ''} 
+              onChange={(e) => handleRedSocialChange('whatsapp', e.target.value)} 
               disabled={isSaving} 
             />
           </div>

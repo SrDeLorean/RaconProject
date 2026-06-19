@@ -1,9 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '@/api/axios';
 import Badge from '@/components/ui/Badge';
 import Spinner from '@/components/ui/Spinner';
 import { useDebounce } from '@/hooks/useDebounce';
+import { CardTilt } from '@/components/ui/PlayerCard';
+
+import gkTemplate from '@/assets/images/cartas/gk.svg';
+import defTemplate from '@/assets/images/cartas/def.svg';
+import midTemplate from '@/assets/images/cartas/mid.svg';
+import delTemplate from '@/assets/images/cartas/del.svg';
 
 
 export default function Jugadores() {
@@ -66,50 +72,54 @@ export default function Jugadores() {
     switch(groupKey) {
       case 'GK':
         return {
-          glow: 'group-hover:shadow-[0_15px_40px_-12px_rgba(245,158,11,0.15)] group-hover:border-amber-500/40',
-          avatarGlow: 'border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.2)]',
-          bracketColor: 'border-amber-500/60',
-          tagBg: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+          glow: 'group-hover:shadow-[0_0_22px_rgba(245,158,11,0.5)]',
+          avatarBorder: 'border-amber-500/40 group-hover:border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.15)]',
+          tagBg: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
           accentText: 'text-amber-400',
-          gradient: 'from-amber-500/5 to-transparent'
+          ratingColor: 'text-amber-400'
         };
       case 'DEF':
         return {
-          glow: 'group-hover:shadow-[0_15px_40px_-12px_rgba(59,130,246,0.15)] group-hover:border-blue-500/40',
-          avatarGlow: 'border-blue-500/30 shadow-[0_0_12px_rgba(59,130,246,0.2)]',
-          bracketColor: 'border-blue-500/60',
-          tagBg: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
+          glow: 'group-hover:shadow-[0_0_22px_rgba(59,130,246,0.5)]',
+          avatarBorder: 'border-blue-500/40 group-hover:border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.15)]',
+          tagBg: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
           accentText: 'text-blue-400',
-          gradient: 'from-blue-500/5 to-transparent'
+          ratingColor: 'text-blue-400'
         };
       case 'MED':
         return {
-          glow: 'group-hover:shadow-[0_15px_40px_-12px_rgba(16,185,129,0.15)] group-hover:border-emerald-500/40',
-          avatarGlow: 'border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.2)]',
-          bracketColor: 'border-emerald-500/60',
-          tagBg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
+          glow: 'group-hover:shadow-[0_0_22px_rgba(16,185,129,0.5)]',
+          avatarBorder: 'border-emerald-500/40 group-hover:border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.15)]',
+          tagBg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
           accentText: 'text-emerald-400',
-          gradient: 'from-emerald-500/5 to-transparent'
+          ratingColor: 'text-emerald-400'
         };
       case 'DEL':
         return {
-          glow: 'group-hover:shadow-[0_15px_40px_-12px_rgba(239,68,68,0.15)] group-hover:border-primary/40',
-          avatarGlow: 'border-primary/30 shadow-[0_0_12px_hsla(var(--primary),0.2)]',
-          bracketColor: 'border-primary/60',
-          tagBg: 'bg-primary/10 border-primary/20 text-primary',
-          accentText: 'text-primary',
-          gradient: 'from-primary/5 to-transparent'
+          glow: 'group-hover:shadow-[0_0_22px_rgba(249,115,22,0.5)]',
+          avatarBorder: 'border-orange-500/40 group-hover:border-orange-400 shadow-[0_0_12px_rgba(249,115,22,0.15)]',
+          tagBg: 'bg-orange-500/10 border-orange-500/30 text-orange-400',
+          accentText: 'text-orange-400',
+          ratingColor: 'text-orange-400'
         };
       default:
         return {
-          glow: 'group-hover:shadow-[0_15px_40px_-12px_rgba(6,182,212,0.15)] group-hover:border-cyan-500/40',
-          avatarGlow: 'border-cyan-500/30 shadow-[0_0_12px_rgba(6,182,212,0.2)]',
-          bracketColor: 'border-cyan-500/60',
-          tagBg: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400',
+          glow: 'group-hover:shadow-[0_0_22px_rgba(6,182,212,0.5)]',
+          avatarBorder: 'border-cyan-500/40 group-hover:border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.15)]',
+          tagBg: 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400',
           accentText: 'text-cyan-400',
-          gradient: 'from-cyan-500/5 to-transparent'
+          ratingColor: 'text-cyan-400'
         };
     }
+  };
+
+  const getCardTemplate = (pos) => {
+    const p = (pos || 'MC').toUpperCase();
+    if (['POR', 'GK', 'PO', 'ARQ'].includes(p)) return gkTemplate;
+    if (['DFC', 'DFI', 'DFD', 'CB', 'LB', 'RB', 'DF', 'DEF'].includes(p)) return defTemplate;
+    if (['MC', 'MCO', 'MCD', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'MED'].includes(p)) return midTemplate;
+    if (['DEL', 'DC', 'EI', 'ED', 'ST', 'LW', 'RW', 'CF', 'DL'].includes(p)) return delTemplate;
+    return midTemplate;
   };
 
   return (
@@ -288,79 +298,126 @@ export default function Jugadores() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
                       {group.items.map((jugador, index) => {
                         const posStyles = getPosStyles(key);
+                        const belongsToClubs = jugador.equipos && jugador.equipos.length > 0;
                         return (
                           <Link 
                             to={`/jugadores/${jugador.id}`}
                             key={jugador.id} 
-                            className={`group relative overflow-hidden flex flex-col justify-between bg-card/25 backdrop-blur-md border border-border/40 p-5 rounded-2xl cursor-pointer transition-all duration-500 ${posStyles.glow} group-hover:-translate-y-2 group-hover:scale-[1.01] animate-fade-in-up`}
+                            className="group block cursor-pointer max-w-[200px] sm:max-w-[220px] md:max-w-[240px] mx-auto w-full animate-fade-in-up"
                             style={{ animationDelay: `${index * 0.06}s` }}
                           >
-                            {/* HUD Brackets - Light up on card hover */}
-                            <div className={`absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-transparent transition-colors duration-500 pointer-events-none rounded-tl-md group-hover:${posStyles.bracketColor}`}></div>
-                            <div className={`absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-transparent transition-colors duration-500 pointer-events-none rounded-tr-md group-hover:${posStyles.bracketColor}`}></div>
-                            <div className={`absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-transparent transition-colors duration-500 pointer-events-none rounded-bl-md group-hover:${posStyles.bracketColor}`}></div>
-                            <div className={`absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-transparent transition-colors duration-500 pointer-events-none rounded-br-md group-hover:${posStyles.bracketColor}`}></div>
+                            <CardTilt 
+                              className={`w-full aspect-[151/213] relative select-none pointer-events-auto transition-all duration-500 rounded-[12px] overflow-hidden ${posStyles.glow} group-hover:-translate-y-2 group-hover:scale-[1.03]`}
+                              style={{ containerType: 'inline-size' }}
+                            >
+                              {/* Background Card Template Image */}
+                              <img 
+                                src={getCardTemplate(jugador.posicion)} 
+                                alt="Card Template" 
+                                className="absolute inset-0 w-full h-full object-fill z-0 select-none pointer-events-none" 
+                              />
 
-                            {/* Position Chip floating on top-right */}
-                            <div className={`absolute top-3 right-3 z-10 px-2 py-0.5 rounded-md text-[9px] font-mono font-black border uppercase tracking-wider ${posStyles.tagBg}`}>
-                              {jugador.posicion || 'MC'}
-                            </div>
+                              {/* Overlay content */}
+                              <div className="w-full h-full absolute inset-0 z-20 pointer-events-none select-none">
+                                
+                                {/* Top-Left: Club Logo */}
+                                <div className="absolute top-[5%] left-[11%] w-[18%] h-[12%] z-20 flex items-center justify-start pointer-events-none">
+                                  {belongsToClubs ? (
+                                    <div className="flex items-center justify-start overflow-hidden max-w-full">
+                                      {(() => {
+                                        const eq = jugador.equipos[0];
+                                        return (
+                                          <div className="w-[14.5cqi] h-[14.5cqi] rounded-full bg-black/60 border border-white/20 flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(0,0,0,0.6)]" title={eq.nombre}>
+                                            {eq.logo ? (
+                                              <img 
+                                                src={eq.logo.startsWith('http') ? eq.logo : (typeof window.mediaUrl === 'function' ? window.mediaUrl(eq.logo) : window.mediaUrl(eq.logo))} 
+                                                alt={eq.nombre} 
+                                                className="w-[11.5cqi] h-[11.5cqi] object-contain rounded-full"
+                                                onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; e.target.parentElement.innerHTML = `<span class="text-[4.5cqi] font-black text-white">${eq.nombre?.charAt(0)}</span>`; }}
+                                              />
+                                            ) : (
+                                              <span className="text-[4.5cqi] font-black text-white">{eq.nombre?.charAt(0)}</span>
+                                            )}
+                                          </div>
+                                        );
+                                      })()}
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-[2cqi]">
+                                      <span className="w-[3cqi] h-[3cqi] rounded-full bg-rose-500/80 animate-pulse shrink-0" />
+                                      <span className="text-[3.5cqi] font-display font-black text-rose-400 uppercase tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                        LIBRE
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
 
-                            {/* Background blur highlight */}
-                            <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${posStyles.gradient} rounded-full blur-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700`}></div>
+                                {/* Top-Right: Circular Dorsal Badge with Jersey Icon */}
+                                <div className="absolute top-[26.5%] right-[5.4%] w-[12.5cqi] h-[12.5cqi] rounded-full bg-black flex items-center justify-center z-20 border border-white/10 overflow-hidden">
+                                  <svg viewBox="0 0 24 24" className={`w-[8cqi] h-[8cqi] absolute z-0 opacity-25 ${posStyles.accentText} fill-current`}>
+                                    <path d="M18 2h-3.25a3 3 0 0 0-5.5 0H6c-1.1 0-2 .9-2 2v5l2 1V6h1v14h10V6h1v4l2-1V4c0-1.1-.9-2-2-2z" />
+                                  </svg>
+                                  <span className="text-[5.5cqi] font-display font-black text-white leading-none mt-[0.5cqi] z-10 relative">
+                                    {jugador.dorsal || (jugador.contrato_activo?.dorsal) || (jugador.id % 99) || 10}
+                                  </span>
+                                </div>
 
-                            {/* Card Content */}
-                            <div className="space-y-4 z-10">
-                              
-                              {/* Avatar and Name row */}
-                              <div className="flex items-center gap-3.5">
-                                <div className={`w-12 h-12 rounded-xl overflow-hidden border-2 bg-card shrink-0 transition-all duration-500 ${posStyles.avatarGlow} group-hover:scale-105 relative`}>
-                                  <div className="absolute inset-0 border border-white/5 pointer-events-none rounded-lg"></div>
+                                {/* Center: Player photo cutout */}
+                                <div className="absolute top-[21.5%] left-[17%] w-[66%] h-[43%] overflow-hidden z-10 flex items-end justify-center">
                                   {jugador.foto ? (
                                     <img 
                                       src={jugador.foto.startsWith('http') ? jugador.foto : (typeof window.mediaUrl === 'function' ? window.mediaUrl(jugador.foto) : window.mediaUrl(jugador.foto))} 
-                                      alt={jugador.name} 
-                                      className="w-full h-full object-cover"
-                                      onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; e.target.parentElement.innerHTML = `<div class="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-base shadow-inner uppercase">${(jugador.gamertag || jugador.name || '?').charAt(0)}</div>`; }}
+                                      alt={jugador.gamertag} 
+                                      className="max-h-[92%] max-w-[105%] object-cover object-top drop-shadow-[0_4px_6px_rgba(0,0,0,0.65)] transition-transform duration-500 group-hover:scale-105"
+                                      style={{
+                                        maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 76%, rgba(0,0,0,0) 100%)',
+                                        WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 76%, rgba(0,0,0,0) 100%)'
+                                      }}
+                                      onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; e.target.parentElement.innerHTML = `<div class="opacity-[0.06] select-none text-[22cqi] font-black uppercase text-foreground leading-none">${(jugador.gamertag || jugador.name || '?').charAt(0)}</div>`; }}
                                     />
                                   ) : (
-                                    <div className="w-full h-full bg-gradient-to-tr from-card/30 to-background/50 flex items-center justify-center font-display font-black text-primary text-base shadow-inner uppercase">
+                                    <div className="opacity-[0.06] select-none text-[22cqi] font-black uppercase text-foreground leading-none">
                                       {(jugador.gamertag || jugador.name || '?').charAt(0)}
                                     </div>
                                   )}
                                 </div>
-                                
-                                <div className="min-w-0 flex-1">
-                                  <h3 className="font-display font-black text-base text-foreground tracking-wide truncate group-hover:text-primary transition-colors duration-300">
-                                    🎮 {jugador.gamertag || 'SIN GAMERTAG'}
+
+                                {/* Bottom stats overlay on card grey area */}
+                                <div className="absolute bottom-[20.5%] left-[21%] right-[21%] z-20 bg-black/65 backdrop-blur-[2px] border border-white/10 rounded-md py-[1.2cqi] px-[2cqi] flex justify-around text-[3.4cqi] font-mono font-black text-white">
+                                  <div className="flex flex-col items-center">
+                                    <span className="text-white/50 text-[2.6cqi] uppercase tracking-wider">Pos</span>
+                                    <span className={`font-black ${posStyles.accentText}`}>{jugador.posicion || 'MC'}</span>
+                                  </div>
+                                  <div className="w-px bg-white/10 my-0.5" />
+                                  <div className="flex flex-col items-center">
+                                    <span className="text-white/50 text-[2.6cqi] uppercase tracking-wider">Rol</span>
+                                    <span className="text-white font-black truncate max-w-[40px]">{jugador.role === 'jugador' ? 'JUG' : 'ORG'}</span>
+                                  </div>
+                                  <div className="w-px bg-white/10 my-0.5" />
+                                  <div className="flex flex-col items-center">
+                                    <span className="text-white/50 text-[2.6cqi] uppercase tracking-wider">Estado</span>
+                                    <span className={`font-black flex items-center gap-[0.5cqi] ${jugador.status === 'activo' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                      <span className={`w-[1.2cqi] h-[1.2cqi] rounded-full ${jugador.status === 'activo' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                                      {jugador.status === 'activo' ? 'ACT' : 'INA'}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Bottom Name Banner */}
+                                <div className="absolute bottom-[5.5%] left-0 right-0 text-center z-25 flex flex-col items-center justify-center h-[12%]">
+                                  <h3 className="text-white text-[6.4cqi] font-display font-black tracking-widest uppercase truncate max-w-[85%] leading-none">
+                                    {jugador.gamertag || 'SIN GAMERTAG'}
                                   </h3>
-                                  <span className="text-[10px] font-bold font-sans text-muted-foreground uppercase block truncate tracking-wide">
+                                  <span className="text-[3.2cqi] font-bold font-sans text-white/50 uppercase truncate max-w-[80%] mt-[2px] leading-none">
                                     {jugador.name}
                                   </span>
                                 </div>
-                              </div>
 
-                              <div className="h-px bg-border/25"></div>
-
-                              {/* Telemetry data grid */}
-                              <div className="space-y-2 text-[11px] text-muted-foreground font-sans">
-                                <div className="flex justify-between items-center bg-background/35 p-2 rounded-lg border border-border/10">
-                                  <span className="font-medium text-[10px] uppercase tracking-widest text-muted-foreground/80 font-mono">Dorsal / Posición</span>
-                                  <span className="text-foreground font-bold font-mono text-xs">{jugador.posicion || 'MC'}</span>
-                                </div>
-                                <div className="flex justify-between items-center bg-background/35 p-2 rounded-lg border border-border/10">
-                                  <span className="font-medium text-[10px] uppercase tracking-widest text-muted-foreground/80 font-mono">Licencia / Rol</span>
-                                  <span className="text-foreground capitalize font-bold text-xs">{jugador.role || jugador.rol || 'Jugador'}</span>
-                                </div>
-                                <div className="flex justify-between items-center bg-background/35 p-2 rounded-lg border border-border/10 min-w-0">
-                                  <span className="font-medium text-[10px] uppercase tracking-widest text-muted-foreground/80 font-mono shrink-0 mr-2">Email</span>
-                                  <span className="text-foreground truncate font-mono text-[10px] max-w-[110px]" title={jugador.email}>{jugador.email}</span>
-                                </div>
                               </div>
-                            </div>
+                            </CardTilt>
                           </Link>
                         );
                       })}

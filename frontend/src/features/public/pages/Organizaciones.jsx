@@ -61,7 +61,7 @@ export default function Organizaciones() {
       }
 
       // 2. Add competition logos from active season
-      const activeSeason = org.temporadas?.find(t => t.activa) || org.temporadas?.[0];
+      const activeSeason = org.temporadas?.find(t => t.activa) || (org.temporadas && [...org.temporadas].sort((a, b) => b.id - a.id)[0]);
       if (activeSeason) {
         const isTodas = tipoParam === 'todas';
         const is11v11 = tipoParam === '11v11';

@@ -17,7 +17,7 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::query();
+        $query = User::query()->with('equipos');
 
         // 1. Filtro de Búsqueda Ampliado (Ahora busca también por Gamertag y EA ID)
         $query->when($request->filled('search'), function ($q) use ($request) {
@@ -189,14 +189,16 @@ class UserController extends Controller
             $user->load('organizacion');
         }
 
-        // 1. Contrato Activo actual
-        $contratoActivo = DB::table('organizacion_equipo_usuario')
+        // 1. Contratos Activos actual
+        $contratosActivos = DB::table('organizacion_equipo_usuario')
             ->join('equipos', 'organizacion_equipo_usuario.equipo_id', '=', 'equipos.id')
             ->join('organizaciones', 'organizacion_equipo_usuario.organizacion_id', '=', 'organizaciones.id')
             ->where('organizacion_equipo_usuario.user_id', $user->id)
             ->where('organizacion_equipo_usuario.estado_fichaje', 'activo')
-            ->select('equipos.id as equipo_id', 'equipos.nombre as equipo_nombre', 'equipos.logo as equipo_logo', 'organizaciones.id as organizacion_id', 'organizaciones.nombre as organizacion_nombre', 'organizacion_equipo_usuario.dorsal', 'organizacion_equipo_usuario.posicion_bloque')
-            ->first();
+            ->select('equipos.id as equipo_id', 'equipos.nombre as equipo_nombre', 'equipos.logo as equipo_logo', 'equipos.banner as equipo_banner', 'organizaciones.id as organizacion_id', 'organizaciones.nombre as organizacion_nombre', 'organizacion_equipo_usuario.dorsal', 'organizacion_equipo_usuario.posicion_bloque')
+            ->get();
+
+        $contratoActivo = $contratosActivos->first();
 
         // 2. Historial de Traspasos Aprobados
         $traspasos = \App\Models\SolicitudFichaje::with([
@@ -461,7 +463,9 @@ class UserController extends Controller
             ->join('equipos', 'estadisticas_jugadores.equipo_id', '=', 'equipos.id')
             ->where('estadisticas_jugadores.jugador_id', $user->id)
             ->select(
+                'organizaciones.id as organizacion_id',
                 'organizaciones.nombre as organizacion_nombre',
+                'temporadas.id as temporada_id',
                 'temporadas.nombre as temporada_nombre',
                 'competencias.nombre as competencia_nombre',
                 'competencias.banner as competencia_logo',
@@ -474,7 +478,9 @@ class UserController extends Controller
                 DB::raw('SUM(estadisticas_jugadores.jugador_partido) as total_mvp')
             )
             ->groupBy(
+                'organizaciones.id',
                 'organizaciones.nombre',
+                'temporadas.id',
                 'temporadas.nombre',
                 'competencias.nombre',
                 'competencias.banner',
@@ -484,7 +490,9 @@ class UserController extends Controller
             ->get()
             ->map(function ($row) {
                 return [
+                    'organizacion_id' => $row->organizacion_id,
                     'organizacion_nombre' => $row->organizacion_nombre,
+                    'temporada_id' => $row->temporada_id,
                     'temporada_nombre' => $row->temporada_nombre,
                     'competencia_nombre' => $row->competencia_nombre,
                     'competencia_logo' => $row->competencia_logo,
@@ -501,6 +509,7 @@ class UserController extends Controller
         return response()->json([
             'user' => $user,
             'contrato_activo' => $contratoActivo,
+            'contratos_activos' => $contratosActivos,
             'traspasos' => $traspasos,
             'competencias' => $competencias,
             'historial_torneos' => $historialTorneos,

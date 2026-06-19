@@ -353,11 +353,13 @@ export default function PlayerCard({
             </span>
 
             {/* Club badge instead of generic SVG shield */}
-            <div className="mt-1 opacity-90 drop-shadow w-[19cqi] h-[19cqi] flex items-center justify-center">
+            <div className="mt-1 opacity-90 drop-shadow w-[15cqi] h-[15cqi] flex items-center justify-center">
               {clubBadge ? (
-                <img src={getImageUrl(clubBadge)} alt="Club Crest" className="w-[19cqi] h-[19cqi] object-contain" />
+                <div className="w-[15cqi] h-[15cqi] rounded-full overflow-hidden flex items-center justify-center">
+                  <img src={getImageUrl(clubBadge)} alt="Club Crest" className="w-full h-full object-cover" />
+                </div>
               ) : (
-                <div className={`w-[19cqi] h-[19cqi] rounded-full border flex items-center justify-center font-display font-black text-[5.8cqi] ${
+                <div className={`w-[15cqi] h-[15cqi] rounded-full border flex items-center justify-center font-display font-black text-[4.8cqi] ${
                   isTOTS ? 'bg-cyan-950/45 border-cyan-500/30 text-cyan-300' : 'bg-amber-950/45 border-amber-500/30 text-amber-400'
                 }`}>
                   FC
@@ -438,7 +440,9 @@ export default function PlayerCard({
 
             {/* Club badge */}
             {clubBadge ? (
-              <img src={getImageUrl(clubBadge)} alt="Crest" className="w-[7cqi] h-[7cqi] object-contain" />
+              <div className="w-[7cqi] h-[7cqi] rounded-full overflow-hidden flex items-center justify-center">
+                <img src={getImageUrl(clubBadge)} alt="Crest" className="w-full h-full object-cover" />
+              </div>
             ) : (
               <div className={`w-[7cqi] h-[7cqi] rounded-full border flex items-center justify-center font-display font-black text-[2.5cqi] ${
                 isTOTS ? 'bg-cyan-950/45 border-cyan-500/30 text-cyan-300' : 'bg-amber-950/45 border-amber-500/30 text-amber-400'

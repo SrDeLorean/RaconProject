@@ -20,7 +20,7 @@ export const useMiEquipo = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); 
   const [jugadorSeleccionado, setJugadorSeleccionado] = useState(null);
 
-  const defaultForm = { nombre: '', abreviatura: '', descripcion: '', plataforma: 'crossplay', club_id_ea: '', logo: '', banner: '', twitter: '', twitch: '' };
+  const defaultForm = { nombre: '', abreviatura: '', descripcion: '', plataforma: 'crossplay', club_id_ea: '', logo: '', banner: '', twitter: '', twitch: '', instagram: '', youtube: '', tiktok: '', whatsapp: '' };
   const [formData, setFormData] = useState(defaultForm);
   const [formErrors, setFormErrors] = useState({});
 
@@ -69,7 +69,11 @@ export const useMiEquipo = () => {
           logo: equipoData.logo || '',
           banner: equipoData.banner || '',
           twitter: equipoData.redes_sociales?.twitter || '',
-          twitch: equipoData.redes_sociales?.twitch || ''
+          twitch: equipoData.redes_sociales?.twitch || '',
+          instagram: equipoData.redes_sociales?.instagram || '',
+          youtube: equipoData.redes_sociales?.youtube || '',
+          tiktok: equipoData.redes_sociales?.tiktok || '',
+          whatsapp: equipoData.redes_sociales?.whatsapp || ''
         });
 
         // Obtener historial de transacciones/fichajes para el log
@@ -125,7 +129,14 @@ export const useMiEquipo = () => {
 
     const payload = {
       ...formData,
-      redes_sociales: { twitter: formData.twitter, twitch: formData.twitch }
+      redes_sociales: { 
+        twitter: formData.twitter, 
+        twitch: formData.twitch,
+        instagram: formData.instagram,
+        youtube: formData.youtube,
+        tiktok: formData.tiktok,
+        whatsapp: formData.whatsapp
+      }
     };
 
     try {

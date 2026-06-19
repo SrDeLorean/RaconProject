@@ -305,8 +305,8 @@ export default function CampeonatosJugadorUtPage() {
 
     const isEmpate = Number(statsScoreA) === Number(statsScoreB);
     if (isEmpate) {
-      if (!fotoPartido || !fotoJugadores || !fotoConectados) {
-        alert("⚠️ Para reportar un empate es obligatorio subir las 3 fotos (Estadísticas del partido, Estadísticas del jugador, y Jugadores conectados).");
+      if (!fotoPartido || !fotoConectados) {
+        alert("⚠️ Para reportar un empate es obligatorio subir las 2 fotos (Estadísticas del partido y Jugadores conectados).");
         return;
       }
     }
@@ -321,11 +321,11 @@ export default function CampeonatosJugadorUtPage() {
         goles_visitante: Number(statsScoreB),
         fotos: {
           partido: fotoPartido,
-          jugadores: fotoJugadores,
+          jugadores: null,
           conectados: fotoConectados
         },
         team_stats: teamManualStats,
-        player_stats: playerStats,
+        player_stats: [],
         side: isLocal ? 'local' : 'visitante'
       };
 
@@ -1124,27 +1124,19 @@ export default function CampeonatosJugadorUtPage() {
                     </p>
                     <p className="leading-relaxed text-[11px] text-muted-foreground">
                       Debido a que el encuentro finalizó en empate, el sistema exige que realices un reporte manual detallado.
-                      **Es obligatorio subir las 3 capturas del juego** (Estadísticas del partido, Estadísticas de jugadores, y Jugadores conectados).
+                      **Es obligatorio subir las 2 capturas del juego** (Estadísticas del partido y Jugadores conectados).
                     </p>
                   </div>
                 )}
 
                 {/* Subida de Fotos */}
                 {isEmpate && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border border-border/40 p-4 rounded-xl bg-muted/10">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border border-border/40 p-4 rounded-xl bg-muted/10">
                     <div className="space-y-1.5">
                       <ImageUploader 
                         label="Estadísticas Partido *" 
                         value={fotoPartido} 
                         onChange={setFotoPartido}
-                        folder="reportes"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <ImageUploader 
-                        label="Valoraciones Plantilla *" 
-                        value={fotoJugadores} 
-                        onChange={setFotoJugadores}
                         folder="reportes"
                       />
                     </div>
@@ -1162,7 +1154,7 @@ export default function CampeonatosJugadorUtPage() {
                 {/* Estadísticas de Equipo */}
                 {isEmpate && (
                   <div className="space-y-2 border-t border-border/30 pt-3">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Estadísticas del Club ({myTeamName})</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Estadísticas de {myTeamName}</h4>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div className="space-y-1">
                         <label className="text-[8px] font-black uppercase text-muted-foreground">Goles a Favor</label>
@@ -1211,45 +1203,6 @@ export default function CampeonatosJugadorUtPage() {
                     </div>
                   </div>
                 )}
-
-                {/* Estadísticas de Jugadores */}
-                <div className="space-y-3 border-t border-border/30 pt-3">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">Rendimiento de Plantilla ({myTeamName})</h4>
-                  {playerStats.length === 0 ? (
-                    <p className="text-[10px] text-muted-foreground text-center py-4">No hay jugadores registrados en el roster.</p>
-                  ) : (
-                    <div className="max-h-48 overflow-y-auto border border-border/40 rounded-xl bg-muted/5 divide-y divide-border/20 pr-1">
-                      {playerStats.map((p, idx) => (
-                        <div key={p.jugador_id || idx} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-2.5 gap-2 text-[11px] font-semibold">
-                          <span className="text-foreground font-bold truncate w-24 text-left">{p.name}</span>
-                          <div className="flex flex-wrap items-center gap-3">
-                            <div className="flex items-center gap-1">
-                              <span className="text-[8px] uppercase text-muted-foreground">Val:</span>
-                              <input type="number" min="0" max="10" step="0.1" value={p.valoracion} onChange={(e) => { const c = [...playerStats]; c[idx].valoracion = Number(e.target.value); setPlayerStats(c); }} className="w-11 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold text-foreground" />
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-[8px] uppercase text-muted-foreground">Goles:</span>
-                              <input type="number" min="0" value={p.goles} onChange={(e) => { const c = [...playerStats]; c[idx].goles = Number(e.target.value); setPlayerStats(c); }} className="w-9 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold text-foreground" />
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-[8px] uppercase text-muted-foreground">Asists:</span>
-                              <input type="number" min="0" value={p.asistencias} onChange={(e) => { const c = [...playerStats]; c[idx].asistencias = Number(e.target.value); setPlayerStats(c); }} className="w-9 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold text-foreground" />
-                            </div>
-                            <div className="flex gap-2">
-                              <label className="flex items-center gap-1 cursor-pointer">
-                                <input type="checkbox" checked={p.yellowCard} onChange={(e) => { const c = [...playerStats]; c[idx].yellowCard = e.target.checked; setPlayerStats(c); }} className="w-3.5 h-3.5 rounded border-border/60 text-primary" />
-                                <span className="text-[8px] font-black text-amber-500">🟨</span>
-                              </label>
-                              <label className="flex items-center gap-1 cursor-pointer">
-                                <input type="checkbox" checked={p.redCard} onChange={(e) => { const c = [...playerStats]; c[idx].redCard = e.target.checked; setPlayerStats(c); }} className="w-3.5 h-3.5 rounded border-border/60 text-primary" />
-                                <span className="text-[8px] font-black text-destructive">🟥</span>
-                              </label>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 <div className="flex gap-2 justify-end pt-3">
@@ -1277,9 +1230,8 @@ export default function CampeonatosJugadorUtPage() {
                 </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       <PageHelp 
         title="Campeonatos de Ultimate Team"

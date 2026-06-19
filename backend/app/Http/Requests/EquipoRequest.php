@@ -53,6 +53,10 @@ class EquipoRequest extends FormRequest
             'redes_sociales' => 'nullable|array',
             'redes_sociales.twitter' => 'nullable|string|max:255',
             'redes_sociales.twitch' => 'nullable|string|max:255',
+            'redes_sociales.instagram' => 'nullable|string|max:255',
+            'redes_sociales.youtube' => 'nullable|string|max:255',
+            'redes_sociales.tiktok' => 'nullable|string|max:255',
+            'redes_sociales.whatsapp' => 'nullable|string|max:255',
 
             // El estado en la migración es boolean, el frontend envía '1' o '0' (o true/false)
             'estado' => 'nullable|boolean',

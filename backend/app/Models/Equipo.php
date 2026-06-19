@@ -119,4 +119,19 @@ class Equipo extends Model
         return $this->partidosLocal->merge($this->partidosVisitante);
     }
 
+    public function campeonatos()
+    {
+        return $this->hasMany(Competencia::class, 'campeon_id');
+    }
+
+    public function subcampeonatos()
+    {
+        return $this->hasMany(Competencia::class, 'subcampeon_id');
+    }
+
+    public function terceros()
+    {
+        return $this->hasMany(Competencia::class, 'tercer_lugar_id');
+    }
+
 }

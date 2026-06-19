@@ -135,14 +135,22 @@ export const useEquipos = () => {
     setSelectedEquipo(equipo);
     setFormErrors({});
     if (equipo) {
-      let redes = { twitter: '', twitch: '' };
+      let redes = { twitter: '', twitch: '', instagram: '', youtube: '', tiktok: '', whatsapp: '' };
       if (equipo.redes_sociales) {
         try {
-          redes = typeof equipo.redes_sociales === 'string' 
+          const parsed = typeof equipo.redes_sociales === 'string' 
             ? JSON.parse(equipo.redes_sociales) 
-            : { twitter: equipo.redes_sociales.twitter || '', twitch: equipo.redes_sociales.twitch || '' };
+            : equipo.redes_sociales;
+          redes = {
+            twitter: parsed.twitter || '',
+            twitch: parsed.twitch || '',
+            instagram: parsed.instagram || '',
+            youtube: parsed.youtube || '',
+            tiktok: parsed.tiktok || '',
+            whatsapp: parsed.whatsapp || '',
+          };
         } catch (e) {
-          redes = { twitter: '', twitch: '' };
+          redes = { twitter: '', twitch: '', instagram: '', youtube: '', tiktok: '', whatsapp: '' };
         }
       }
       setFormData({
@@ -166,7 +174,7 @@ export const useEquipos = () => {
         banner: '',
         plataforma: 'crossplay',
         club_id_ea: '',
-        redes_sociales: { twitter: '', twitch: '' },
+        redes_sociales: { twitter: '', twitch: '', instagram: '', youtube: '', tiktok: '', whatsapp: '' },
         estado: true,
         id_capitan: ''
       });

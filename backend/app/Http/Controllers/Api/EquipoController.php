@@ -14,12 +14,26 @@ use Illuminate\Support\Facades\Cache;
 
 class EquipoController extends Controller
 {
+    protected function clearEquipoCache(Equipo $equipo): void
+    {
+        \Illuminate\Support\Facades\Cache::forget('equipo_show_' . $equipo->id);
+        try {
+            $orgIds = \App\Models\Organizacion::pluck('id');
+            foreach ($orgIds as $orgId) {
+                \Illuminate\Support\Facades\Cache::forget('equipo_show_' . $equipo->id . '_org_' . $orgId);
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
+    }
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        $query = Equipo::query()->with('capitan')->withCount('rosterOrganizacion');
+        $query = Equipo::query()
+            ->with(['capitan', 'competencias:id,nombre,logo'])
+            ->withCount(['rosterOrganizacion', 'campeonatos', 'subcampeonatos', 'terceros']);
 
         // Búsqueda por nombre o abreviatura
         $query->when($request->filled('search'), function ($q) use ($request) {
@@ -243,10 +257,11 @@ class EquipoController extends Controller
         return response()->json($equipo, 201);
     }
 
-    public function show(Equipo $equipo): JsonResponse
+    public function show(Request $request, Equipo $equipo): JsonResponse
     {
-        $cacheKey = 'equipo_show_' . $equipo->id;
-        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($equipo) {
+        $organizacionId = $request->query('organizacion_id');
+        $cacheKey = 'equipo_show_' . $equipo->id . ($organizacionId ? '_org_' . $organizacionId : '');
+        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($equipo, $organizacionId) {
             $equipo->load('capitan');
 
         $roster = \App\Models\OrganizacionEquipoUsuario::with(['jugador', 'organizacion'])
@@ -299,13 +314,15 @@ class EquipoController extends Controller
             'visitante:id,nombre,logo,abreviatura',
             'competencia:id,nombre'
         ])
-        ->where('equipo_local_id', $equipo->id)
-        ->orWhere('equipo_visitante_id', $equipo->id)
+        ->where(function($q) use ($equipo) {
+            $q->where('equipo_local_id', $equipo->id)
+              ->orWhere('equipo_visitante_id', $equipo->id);
+        })
         ->orderBy('fecha', 'desc')
         ->orderBy('hora', 'desc')
         ->get();
 
-        // Calcular Estadísticas Tácticas de los partidos finalizados
+        // Calcular Estadísticas Tácticas de los partidos finalizados filtrados por organizacion y que estén en progreso
         $stats = [
             'jugados' => 0,
             'victorias' => 0,
@@ -315,7 +332,25 @@ class EquipoController extends Controller
             'goles_contra' => 0,
         ];
 
-        foreach ($partidos as $partido) {
+        $statsPartidosQuery = \App\Models\Partido::query()
+            ->where(function($q) use ($equipo) {
+                $q->where('equipo_local_id', $equipo->id)
+                  ->orWhere('equipo_visitante_id', $equipo->id);
+            });
+
+        if ($organizacionId) {
+            $statsPartidosQuery->whereHas('competencia.temporada', function($q) use ($organizacionId) {
+                $q->where('organizacion_id', $organizacionId);
+            });
+        }
+        
+        $statsPartidosQuery->whereHas('competencia', function($q) {
+            $q->where('estado', 'en_progreso');
+        });
+
+        $statsPartidos = $statsPartidosQuery->get();
+
+        foreach ($statsPartidos as $partido) {
             $hasResult = $partido->goles_local !== null && $partido->goles_visitante !== null;
             if ($partido->estado === 'finalizado' || $hasResult) {
                 $stats['jugados']++;
@@ -336,10 +371,19 @@ class EquipoController extends Controller
             }
         }
 
-        // Top goleadores de la escuadra en el sistema
-        $goleadoresClub = \DB::table('estadisticas_jugadores')
+        // Top goleadores de la escuadra en el sistema (filtrado por organizacion y competencias en_progreso)
+        $goleadoresQuery = \DB::table('estadisticas_jugadores')
             ->join('users', 'estadisticas_jugadores.jugador_id', '=', 'users.id')
+            ->join('competencias', 'estadisticas_jugadores.competencia_id', '=', 'competencias.id')
+            ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
             ->where('estadisticas_jugadores.equipo_id', $equipo->id)
+            ->where('competencias.estado', 'en_progreso');
+
+        if ($organizacionId) {
+            $goleadoresQuery->where('temporadas.organizacion_id', $organizacionId);
+        }
+
+        $goleadoresClub = $goleadoresQuery
             ->select(
                 'users.id',
                 'users.name',
@@ -364,9 +408,18 @@ class EquipoController extends Controller
             });
 
         // Top asistentes de la escuadra en el sistema
-        $asistentesClub = \DB::table('estadisticas_jugadores')
+        $asistentesQuery = \DB::table('estadisticas_jugadores')
             ->join('users', 'estadisticas_jugadores.jugador_id', '=', 'users.id')
+            ->join('competencias', 'estadisticas_jugadores.competencia_id', '=', 'competencias.id')
+            ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
             ->where('estadisticas_jugadores.equipo_id', $equipo->id)
+            ->where('competencias.estado', 'en_progreso');
+
+        if ($organizacionId) {
+            $asistentesQuery->where('temporadas.organizacion_id', $organizacionId);
+        }
+
+        $asistentesClub = $asistentesQuery
             ->select(
                 'users.id',
                 'users.name',
@@ -391,10 +444,19 @@ class EquipoController extends Controller
             });
 
         // Mejores Arqueros (Top 5 en base a su valoración promedio)
-        $mejoresArqueros = \DB::table('estadisticas_jugadores')
+        $arquerosQuery = \DB::table('estadisticas_jugadores')
             ->join('users', 'estadisticas_jugadores.jugador_id', '=', 'users.id')
+            ->join('competencias', 'estadisticas_jugadores.competencia_id', '=', 'competencias.id')
+            ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
             ->where('estadisticas_jugadores.equipo_id', $equipo->id)
             ->whereIn('estadisticas_jugadores.posicion', ['POR', 'GK', 'PO', 'por', 'gk', 'po', 'goalkeeper', 'GOALKEEPER'])
+            ->where('competencias.estado', 'en_progreso');
+
+        if ($organizacionId) {
+            $arquerosQuery->where('temporadas.organizacion_id', $organizacionId);
+        }
+
+        $mejoresArqueros = $arquerosQuery
             ->select(
                 'users.id',
                 'users.name',
@@ -423,10 +485,19 @@ class EquipoController extends Controller
             });
 
         // Mejores Defensores (Top 5 en base a su valoración promedio)
-        $mejoresDefensores = \DB::table('estadisticas_jugadores')
+        $defensoresQuery = \DB::table('estadisticas_jugadores')
             ->join('users', 'estadisticas_jugadores.jugador_id', '=', 'users.id')
+            ->join('competencias', 'estadisticas_jugadores.competencia_id', '=', 'competencias.id')
+            ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
             ->where('estadisticas_jugadores.equipo_id', $equipo->id)
             ->whereIn('estadisticas_jugadores.posicion', ['DFC', 'DFI', 'DFD', 'CB', 'LB', 'RB', 'DF', 'DEF', 'dfc', 'dfi', 'dfd', 'cb', 'lb', 'rb', 'df', 'def', 'defender', 'DEFENDER'])
+            ->where('competencias.estado', 'en_progreso');
+
+        if ($organizacionId) {
+            $defensoresQuery->where('temporadas.organizacion_id', $organizacionId);
+        }
+
+        $mejoresDefensores = $defensoresQuery
             ->select(
                 'users.id',
                 'users.name',
@@ -455,10 +526,19 @@ class EquipoController extends Controller
             });
 
         // Mejores Mediocentros (Top 5 en base a su valoración promedio)
-        $mejoresMedios = \DB::table('estadisticas_jugadores')
+        $mediosQuery = \DB::table('estadisticas_jugadores')
             ->join('users', 'estadisticas_jugadores.jugador_id', '=', 'users.id')
+            ->join('competencias', 'estadisticas_jugadores.competencia_id', '=', 'competencias.id')
+            ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
             ->where('estadisticas_jugadores.equipo_id', $equipo->id)
             ->whereIn('estadisticas_jugadores.posicion', ['MC', 'MCO', 'MCD', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'MED', 'mc', 'mco', 'mcd', 'md', 'mi', 'cm', 'cam', 'cdm', 'lm', 'rm', 'med', 'midfielder', 'MIDFIELDER'])
+            ->where('competencias.estado', 'en_progreso');
+
+        if ($organizacionId) {
+            $mediosQuery->where('temporadas.organizacion_id', $organizacionId);
+        }
+
+        $mejoresMedios = $mediosQuery
             ->select(
                 'users.id',
                 'users.name',
@@ -495,7 +575,9 @@ class EquipoController extends Controller
             ->join('organizaciones', 'temporadas.organizacion_id', '=', 'organizaciones.id')
             ->where('estadisticas_equipos.equipo_id', $equipo->id)
             ->select(
+                'organizaciones.id as organizacion_id',
                 'organizaciones.nombre as organizacion_nombre',
+                'temporadas.id as temporada_id',
                 'temporadas.nombre as temporada_nombre',
                 'competencias.nombre as competencia_nombre',
                 'competencias.banner as competencia_logo',
@@ -507,7 +589,9 @@ class EquipoController extends Controller
                 \DB::raw('SUM(estadisticas_equipos.goles_en_contra) as goles_contra')
             )
             ->groupBy(
+                'organizaciones.id',
                 'organizaciones.nombre',
+                'temporadas.id',
                 'temporadas.nombre',
                 'competencias.nombre',
                 'competencias.banner'
@@ -515,7 +599,9 @@ class EquipoController extends Controller
             ->get()
             ->map(function ($row) {
                 return [
+                    'organizacion_id' => $row->organizacion_id,
                     'organizacion_nombre' => $row->organizacion_nombre,
+                    'temporada_id' => $row->temporada_id,
                     'temporada_nombre' => $row->temporada_nombre,
                     'competencia_nombre' => $row->competencia_nombre,
                     'competencia_logo' => $row->competencia_logo,
@@ -526,7 +612,7 @@ class EquipoController extends Controller
                     'goles_favor' => (int)$row->goles_favor,
                     'goles_contra' => (int)$row->goles_contra
                 ];
-              });
+            });
 
             return [
                 'id' => $equipo->id,
@@ -592,7 +678,7 @@ class EquipoController extends Controller
         }
 
         $equipo->update($datos);
-        Cache::forget('equipo_show_' . $equipo->id);
+        $this->clearEquipoCache($equipo);
 
         return response()->json(new EquipoResource($equipo));
     }
@@ -612,7 +698,7 @@ class EquipoController extends Controller
             ], 422);
         }
 
-        Cache::forget('equipo_show_' . $equipo->id);
+        $this->clearEquipoCache($equipo);
         $equipo->delete();
 
         return response()->noContent();
@@ -663,7 +749,7 @@ class EquipoController extends Controller
             'fecha_vinculacion' => now(),
         ]);
 
-        Cache::forget('equipo_show_' . $equipo->id);
+        $this->clearEquipoCache($equipo);
 
         return response()->json(['message' => 'Jugador incorporado exitosamente al roster de la organización.'], 200);
     }
@@ -706,7 +792,7 @@ class EquipoController extends Controller
 
             $rosterMember->delete();
 
-            Cache::forget('equipo_show_' . $equipo->id);
+            $this->clearEquipoCache($equipo);
 
             return response()->json(['message' => 'Jugador desvinculado del roster de la organización y registrado como libre.'], 200);
         }
@@ -748,7 +834,7 @@ class EquipoController extends Controller
             'posicion_bloque' => $request->posicion,
         ]);
 
-        Cache::forget('equipo_show_' . $equipo->id);
+        $this->clearEquipoCache($equipo);
 
         return response()->json(['message' => 'Ficha táctica actualizada con éxito.'], 200);
     }
