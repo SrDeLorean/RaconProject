@@ -17,7 +17,25 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::query()->with('equipos');
+        $query = User::query()->with('equipos')
+            ->select('users.*')
+            ->addSelect([
+                'partidos_jugados' => DB::table('estadisticas_jugadores')
+                    ->selectRaw('count(*)')
+                    ->whereColumn('jugador_id', 'users.id'),
+                'total_goles' => DB::table('estadisticas_jugadores')
+                    ->selectRaw('sum(goles)')
+                    ->whereColumn('jugador_id', 'users.id'),
+                'total_asistencias' => DB::table('estadisticas_jugadores')
+                    ->selectRaw('sum(asistencias)')
+                    ->whereColumn('jugador_id', 'users.id'),
+                'total_mvp' => DB::table('estadisticas_jugadores')
+                    ->selectRaw('sum(jugador_partido)')
+                    ->whereColumn('jugador_id', 'users.id'),
+                'promedio_valoracion' => DB::table('estadisticas_jugadores')
+                    ->selectRaw('avg(valoracion)')
+                    ->whereColumn('jugador_id', 'users.id')
+            ]);
 
         // 1. Filtro de Búsqueda Ampliado (Ahora busca también por Gamertag y EA ID)
         $query->when($request->filled('search'), function ($q) use ($request) {
@@ -923,6 +941,7 @@ class UserController extends Controller
             'u.name',
             'u.foto',
             'eq.nombre as equipo_nombre',
+              'eq.logo as clubBadge',
             DB::raw('SUM(ej.goles) as total_goles'),
             DB::raw('SUM(ej.asistencias) as total_asistencias'),
             DB::raw('AVG(ej.valoracion) as avg_valoracion'),
@@ -930,7 +949,7 @@ class UserController extends Controller
             DB::raw('SUM(ej.jugador_partido) as total_mvp'),
             DB::raw($isUt ? '0 as avg_precision_tiro' : 'AVG(ej.precision_tiro) as avg_precision_tiro')
         )
-        ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre')
+        ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre', 'eq.logo')
         ->orderByDesc('total_goles')
         ->take(25)
         ->get();
@@ -941,9 +960,10 @@ class UserController extends Controller
             'u.name',
             'u.foto',
             'eq.nombre as equipo_nombre',
+              'eq.logo as clubBadge',
             DB::raw('SUM(ej.asistencias) as total_asistencias')
         )
-        ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre')
+        ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre', 'eq.logo')
         ->orderByDesc('total_asistencias')
         ->take(25)
         ->get();
@@ -956,6 +976,7 @@ class UserController extends Controller
                 'u.name',
                 'u.foto',
                 'eq.nombre as equipo_nombre',
+              'eq.logo as clubBadge',
                 DB::raw('SUM(ej.goles) as total_goles'),
                 DB::raw('SUM(ej.asistencias) as total_asistencias'),
                 DB::raw($isUt ? '0 as avg_precision_tiro' : 'AVG(ej.precision_tiro) as avg_precision_tiro'),
@@ -965,7 +986,7 @@ class UserController extends Controller
                 DB::raw('SUM(ej.jugador_partido) as total_mvp'),
                 DB::raw('ROUND(AVG(ej.valoracion) * 5 + SUM(ej.goles) * 7 + SUM(ej.asistencias) * 4, 1) as score')
             )
-            ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre')
+            ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre', 'eq.logo')
             ->orderByDesc('score')
             ->take(25)
             ->get();
@@ -978,6 +999,7 @@ class UserController extends Controller
                 'u.name',
                 'u.foto',
                 'eq.nombre as equipo_nombre',
+              'eq.logo as clubBadge',
                 DB::raw('SUM(ej.goles) as total_goles'),
                 DB::raw('SUM(ej.asistencias) as total_asistencias'),
                 DB::raw('AVG(ej.precision_pases) as avg_precision_pases'),
@@ -987,7 +1009,7 @@ class UserController extends Controller
                 DB::raw('SUM(ej.jugador_partido) as total_mvp'),
                 DB::raw('ROUND(AVG(ej.valoracion) * 6 + SUM(ej.asistencias) * 8 + AVG(ej.precision_pases) * 0.2, 1) as score')
             )
-            ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre')
+            ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre', 'eq.logo')
             ->orderByDesc('score')
             ->take(25)
             ->get();
@@ -1000,6 +1022,7 @@ class UserController extends Controller
                 'u.name',
                 'u.foto',
                 'eq.nombre as equipo_nombre',
+              'eq.logo as clubBadge',
                 DB::raw('SUM(ej.goles) as total_goles'),
                 DB::raw('SUM(ej.asistencias) as total_asistencias'),
                 DB::raw('SUM(ej.entradas_exitosas) as total_entradas'),
@@ -1010,7 +1033,7 @@ class UserController extends Controller
                 DB::raw('SUM(ej.jugador_partido) as total_mvp'),
                 DB::raw('ROUND(AVG(ej.valoracion) * 8 + SUM(ej.entradas_exitosas) * 5 + AVG(ej.tasa_exito_entradas) * 0.15 - SUM(ej.tarjetas_rojas) * 5, 1) as score')
             )
-            ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre')
+            ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre', 'eq.logo')
             ->orderByDesc('score')
             ->take(25)
             ->get();
@@ -1025,6 +1048,7 @@ class UserController extends Controller
                 'u.name',
                 'u.foto',
                 'eq.nombre as equipo_nombre',
+              'eq.logo as clubBadge',
                 DB::raw('SUM(ej.goles) as total_goles'),
                 DB::raw('SUM(ej.asistencias) as total_asistencias'),
                 DB::raw($isUt ? '0 as total_atajadas' : 'SUM(ej.atajadas) as total_atajadas'),
@@ -1035,7 +1059,7 @@ class UserController extends Controller
                 DB::raw('SUM(ej.jugador_partido) as total_mvp'),
                 DB::raw("ROUND(AVG(ej.valoracion) * 10 + ({$atajadasSum}) * 4 - ({$golesRecibidosSum}) * 3, 1) as score")
             )
-            ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre')
+            ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre', 'eq.logo')
             ->orderByDesc('score')
             ->take(25)
             ->get();
@@ -1125,6 +1149,7 @@ class UserController extends Controller
                 'u.name',
                 'u.foto',
                 'eq.nombre as equipo_nombre',
+              'eq.logo as clubBadge',
                 'ej.posicion',
                 DB::raw('SUM(ej.goles) as total_goles'),
                 DB::raw('SUM(ej.asistencias) as total_asistencias'),
@@ -1151,7 +1176,7 @@ class UserController extends Controller
                 DB::raw($isUt ? '0 as total_desvios' : 'SUM(ej.desvios) as total_desvios'),
                 DB::raw('SUM(ej.segundos_jugados) as total_segundos_jugados')
             )
-            ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre', 'ej.posicion')
+            ->groupBy('u.id', 'u.name', 'u.foto', 'eq.nombre', 'eq.logo', 'ej.posicion')
             ->orderByDesc('avg_valoracion')
             ->get();
 

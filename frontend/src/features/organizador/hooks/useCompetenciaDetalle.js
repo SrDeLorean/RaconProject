@@ -105,6 +105,18 @@ export const useCompetenciaDetalle = (competenciaId) => {
     }
   };
 
+  const forzarRemoverEquipo = async (equipoId) => {
+    try {
+      await api.delete(`/competencias/${competenciaId}/equipos/${equipoId}?force=1`);
+      triggerNotification('success', 'Club eliminado forzosamente de la división y sus partidos han sido borrados.');
+      fetchInscritos();
+      fetchDisponibles();
+    } catch (error) {
+      triggerNotification('error', error.response?.data?.message || 'Error al eliminar el club de forma forzada.');
+      throw error;
+    }
+  };
+
   const darWOEquipo = async (equipoId) => {
     try {
       await api.post(`/competencias/${competenciaId}/equipos/${equipoId}/wo`);
@@ -146,9 +158,9 @@ export const useCompetenciaDetalle = (competenciaId) => {
     }
   };
 
-  return {
+    return {
     data: { competencia, equiposInscritos, equiposDisponibles, searchTerm },
     ui: { isFetchingInfo, isFetchingEquipos, isSearching, notification },
-    actions: { setSearchTerm, asignarEquipo, cambiarEstado, removerEquipo, darWOEquipo, reemplazarEquipo, setNotification, finalizarCompetencia, fetchCompetenciaInfo }
+    actions: { setSearchTerm, asignarEquipo, cambiarEstado, removerEquipo, forzarRemoverEquipo, darWOEquipo, reemplazarEquipo, setNotification, finalizarCompetencia, fetchCompetenciaInfo }
   };
 };

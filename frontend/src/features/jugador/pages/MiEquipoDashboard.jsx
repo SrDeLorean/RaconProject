@@ -30,6 +30,13 @@ export default function MiEquipoDashboard() {
     { id: 'configuracion', label: 'Oficina Directiva', icon: '⚙️' },
   ], []);
 
+  const transfersDisabled = useMemo(() => {
+    return (data.competencias || []).some(c => 
+      c.estado_inscripcion === 'aprobado' && 
+      c.config?.sin_transferencias === true
+    );
+  }, [data.competencias]);
+
   if (ui.isFetching) {
     return (
       <div className="min-h-[400px] flex flex-col items-center justify-center gap-3">
@@ -151,9 +158,9 @@ export default function MiEquipoDashboard() {
             </div>
           </div>
 
-          {/* BARRA DE NAVEGACIÓN HORIZONTAL (STICKY TABS) */}
-          <div className="sticky top-0 z-50 -mx-4 px-4 sm:-mx-6 sm:px-6 bg-background/95 backdrop-blur-md border-b border-border/30 shadow-[0_4px_20px_rgba(0,0,0,0.2)] py-1.5 transition-all">
-            <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth py-1.5">
+          {/* BARRA DE NAVEGACIÓN HORIZONTAL */}
+          <div className="-mx-4 px-4 sm:-mx-6 sm:px-6 bg-background/95 backdrop-blur-md border-b border-border/30 shadow-[0_4px_20px_rgba(0,0,0,0.2)] py-1.5 transition-all">
+            <nav className="flex items-center gap-2 overflow-x-auto mobile-scroll-indicator scroll-smooth pt-1.5 pb-2.5">
               {tabsConfig.map((tab) => {
                 const isActive = data.activeTab === tab.id;
                 return (
@@ -205,6 +212,7 @@ export default function MiEquipoDashboard() {
                   onUpdateRoster={actions.handleUpdateRosterJugador}
                   organizaciones={data.organizaciones}
                   historialFichajes={data.historialFichajes}
+                  transfersDisabled={transfersDisabled}
                 />
               )}
 

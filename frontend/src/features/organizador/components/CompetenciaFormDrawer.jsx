@@ -28,7 +28,7 @@ export default function CompetenciaFormDrawer({
       onClose={onClose}
       title={selectedCompetencia ? "Configurar Parámetros de División" : "Desplegar Nueva División"}
       footer={
-        <div className="flex gap-4 w-full mt-2">
+        <div className="flex flex-col-reverse sm:flex-row gap-4 w-full mt-2">
           <Button variant="outline" className="flex-1 h-12 border-border/60 text-foreground" onClick={onClose} disabled={isSaving}>Cancelar</Button>
           <Button onClick={onSave} isLoading={isSaving} className="flex-1 h-12 bg-gradient-to-r from-primary to-destructive text-primary-foreground font-display font-black uppercase shadow-lg">
             {selectedCompetencia ? "Guardar Ajustes" : "Crear División"}
@@ -186,6 +186,22 @@ export default function CompetenciaFormDrawer({
                 />
                 <label htmlFor="auto_avanzar_fase" className="text-sm font-medium text-foreground cursor-pointer select-none">
                   Auto-avanzar Fase Automático
+                </label>
+              </div>
+              <div className="flex items-center gap-2 mt-6">
+                <input
+                  id="sin_transferencias"
+                  type="checkbox"
+                  className="w-4 h-4 rounded text-primary focus:ring-primary border-border bg-background"
+                  checked={!!formData.config?.sin_transferencias}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    config: { ...(formData.config || {}), sin_transferencias: e.target.checked } 
+                  })}
+                  disabled={isSaving}
+                />
+                <label htmlFor="sin_transferencias" className="text-sm font-medium text-foreground cursor-pointer select-none">
+                  🚫 Trabajar sin Transferencias (Deshabilitar Fichajes)
                 </label>
               </div>
             </div>

@@ -32,7 +32,7 @@ export default function DeleteModal({
         </div>
 
         {/* Contenedor de Botones */}
-        <div className="flex gap-3 mt-4 w-full">
+        <div className="flex flex-col-reverse sm:flex-row gap-3 mt-4 w-full">
           <Button 
             variant="outline" 
             className="flex-1 border-border/50 text-foreground hover:bg-muted" 

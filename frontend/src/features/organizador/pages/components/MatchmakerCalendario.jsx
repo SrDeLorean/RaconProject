@@ -450,6 +450,88 @@ export default function MatchmakerCalendario({ equipos = [], competenciaId = nul
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [statsScoreA, setStatsScoreA] = useState(0);
   const [statsScoreB, setStatsScoreB] = useState(0);
+
+  // IA Vision
+  const [visionTeamStatsImg, setVisionTeamStatsImg] = useState(null);
+  const [visionPlayerStatsImg, setVisionPlayerStatsImg] = useState(null);
+  const [visionProcessing, setVisionProcessing] = useState(false);
+
+  const handleImageUpload = (e, setter) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setter(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleVisionExtract = async () => {
+    if (!visionTeamStatsImg || !visionPlayerStatsImg) {
+      alert("⚠️ Sube ambas fotos primero (Stats de Equipo y Rendimiento).");
+      return;
+    }
+    setVisionProcessing(true);
+    try {
+      const res = await api.post('/partidos/extract-vision', {
+        team_stats_image: visionTeamStatsImg,
+        player_stats_image: visionPlayerStatsImg
+      });
+      if (res.data && res.data.data) {
+        const data = res.data.data;
+        if (data.equipo_1) {
+           setStatsScoreA(data.equipo_1.goles_favor || 0);
+           setTeamAStats({
+              ...teamAStats,
+              possession: data.equipo_1.posesion || 0,
+              shots: data.equipo_1.tiros || 0,
+              passes: data.equipo_1.pases || 0,
+              tackles: data.equipo_1.entradas || 0,
+              corners: 0,
+              fouls: data.equipo_1.entradas || 0
+           });
+        }
+        if (data.equipo_2) {
+           setStatsScoreB(data.equipo_2.goles_favor || 0);
+           setTeamBStats({
+              ...teamBStats,
+              possession: data.equipo_2.posesion || 0,
+              shots: data.equipo_2.tiros || 0,
+              passes: data.equipo_2.pases || 0,
+              tackles: data.equipo_2.entradas || 0,
+              corners: 0,
+              fouls: data.equipo_2.entradas || 0
+           });
+        }
+        if (data.jugadores && Array.isArray(data.jugadores)) {
+           const updateRoster = (currentRoster) => {
+              const updated = [...currentRoster];
+              data.jugadores.forEach(extractedPlayer => {
+                 const matchedIdx = updated.findIndex(p => 
+                    p.name.toLowerCase().includes(extractedPlayer.nombre.toLowerCase()) || 
+                    extractedPlayer.nombre.toLowerCase().includes(p.name.toLowerCase())
+                 );
+                 if (matchedIdx !== -1) {
+                    updated[matchedIdx].goals = extractedPlayer.goles || 0;
+                    updated[matchedIdx].assists = extractedPlayer.asistencias || 0;
+                    updated[matchedIdx].yellowCard = extractedPlayer.tarjetas_amarillas > 0;
+                    updated[matchedIdx].redCard = extractedPlayer.tarjetas_rojas > 0;
+                 }
+              });
+              return updated;
+           };
+           setLocalPlayersList(updateRoster(localPlayersList));
+           setVisitantePlayersList(updateRoster(visitantePlayersList));
+        }
+        alert("✨ Estadísticas extraídas con IA. Por favor revisa y corrige si es necesario antes de enviar.");
+      }
+    } catch (err) {
+      alert("❌ Error al extraer estadísticas con IA: " + (err.response?.data?.message || err.message));
+    } finally {
+      setVisionProcessing(false);
+    }
+  };
   const [teamAStats, setTeamAStats] = useState({ shots: 10, possession: 50, corners: 4, fouls: 5 });
   const [teamBStats, setTeamBStats] = useState({ shots: 8, possession: 50, corners: 3, fouls: 6 });
   const [playerStats, setPlayerStats] = useState([
@@ -473,21 +555,27 @@ export default function MatchmakerCalendario({ equipos = [], competenciaId = nul
     const hourSlot = matchIndex % hoursCount;
     const dayIndexOffset = Math.floor(matchIndex / hoursCount);
     
-    let date = new Date(currentDate);
-    let matchedDays = 0;
+    const [year, month, day] = currentDate.split('-');
+    let date = new Date(year, month - 1, day, 12, 0, 0); // 12 PM to avoid daylight saving issues
     
-    // Avanzar días hasta que coincida con los días de la semana seleccionados
-    while (matchedDays < dayIndexOffset || !daysArray.includes(dayOfWeekNames[date.getDay()])) {
+    // 1. Encontrar el primer día válido a partir de la fecha de inicio
+    while (!daysArray.includes(dayOfWeekNames[date.getDay()])) {
+      date.setDate(date.getDate() + 1);
+    }
+    
+    // 2. Avanzar "dayIndexOffset" días válidos
+    let addedDays = 0;
+    while (addedDays < dayIndexOffset) {
+      date.setDate(date.getDate() + 1);
       if (daysArray.includes(dayOfWeekNames[date.getDay()])) {
-        matchedDays++;
-      }
-      if (matchedDays < dayIndexOffset || !daysArray.includes(dayOfWeekNames[date.getDay()])) {
-        date.setDate(date.getDate() + 1);
+        addedDays++;
       }
     }
     
+    const localDateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    
     return {
-      dateString: date.toISOString().split('T')[0],
+      dateString: localDateString,
       hourString: hoursArray[hourSlot].trim()
     };
   };
@@ -1906,25 +1994,71 @@ export default function MatchmakerCalendario({ equipos = [], competenciaId = nul
               </div>
 
               {/* TABS DE MÉTODO DE REPORTE */}
-              <div className="flex gap-1 bg-muted/40 p-1 rounded-lg border border-border/40 shrink-0">
+              <div className="flex flex-wrap gap-1 bg-muted/40 p-1 rounded-lg border border-border/40 shrink-0">
+                <button 
+                  onClick={() => setReportMethod('ea')}
+                  className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-1 ${reportMethod === 'ea' ? 'bg-background text-primary shadow-sm border border-border/20' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  🎮 EA API
+                </button>
+                <button 
+                  onClick={() => setReportMethod('ia')}
+                  className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-1 ${reportMethod === 'ia' ? 'bg-background text-primary shadow-sm border border-border/20' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  ✨ IA Vision
+                </button>
                 <button 
                   onClick={() => setReportMethod('manual')}
                   className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-colors ${reportMethod === 'manual' ? 'bg-background text-primary shadow-sm border border-border/20' : 'text-muted-foreground hover:text-foreground'}`}
                 >
                   📝 Manual
                 </button>
-                <button 
-                  onClick={() => setReportMethod('ea')}
-                  className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-1 ${reportMethod === 'ea' ? 'bg-background text-primary shadow-sm border border-border/20' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  🎮 EA Sports API
-                </button>
               </div>
             </div>
 
-            {reportMethod === 'manual' ? (
-              /* --- MÉTODO MANUAL (EXISTENTE) --- */
+            {(reportMethod === 'manual' || reportMethod === 'ia') ? (
+              /* --- MÉTODO MANUAL O IA VISION --- */
               <div className="space-y-6">
+                
+                {reportMethod === 'ia' && (
+                  <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
+                    <h4 className="text-[11px] font-black uppercase text-primary mb-2 flex items-center gap-1.5">
+                      ✨ Autocompletar con IA (Gemini Vision)
+                    </h4>
+                    <p className="text-[10px] text-muted-foreground mb-3">
+                      Sube las capturas de pantalla del partido (Estadísticas del Equipo y Rendimiento de Jugadores) para extraer los datos automáticamente.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold uppercase text-muted-foreground">Foto: Stats de Equipo</label>
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={(e) => handleImageUpload(e, setVisionTeamStatsImg)}
+                          className="w-full text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold uppercase text-muted-foreground">Foto: Rendimiento Jugadores</label>
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={(e) => handleImageUpload(e, setVisionPlayerStatsImg)}
+                          className="w-full text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                        />
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={handleVisionExtract}
+                      isLoading={visionProcessing}
+                      disabled={!visionTeamStatsImg || !visionPlayerStatsImg}
+                      className="w-full h-8 text-[10px] bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black uppercase tracking-wider shadow border-none"
+                    >
+                      🚀 Extraer Estadísticas
+                    </Button>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-2 gap-6">
                   {/* Local */}
                   <div className="space-y-4">

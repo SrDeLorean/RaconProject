@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '@/api/axios';
 import Badge from '@/components/ui/Badge';
@@ -11,6 +11,7 @@ export default function JugadoresUt() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalJugadores, setTotalJugadores] = useState(0);
 
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 400);
@@ -49,6 +50,7 @@ export default function JugadoresUt() {
         const resData = response.data;
         setJugadores(resData.data || resData || []);
         setTotalPages(resData.meta?.last_page || resData.last_page || 1);
+        setTotalJugadores(resData.meta?.total || resData.total || 0);
       } catch (error) {
         console.error("Error al obtener lista de competidores UT:", error);
       } finally {
@@ -57,6 +59,19 @@ export default function JugadoresUt() {
     };
     fetchJugadoresUt();
   }, [currentPage, debouncedSearch, posicion, tipoUt]);
+
+  const pageNumbers = useMemo(() => {
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(1, currentPage - 2);
+    let end = Math.min(totalPages, start + maxVisible - 1);
+
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+    for (let i = start; i <= end; i++) pages.push(i);
+    return pages;
+  }, [currentPage, totalPages]);
 
 
   const getPosClass = (groupKey) => {
@@ -73,12 +88,12 @@ export default function JugadoresUt() {
     switch(groupKey) {
       case 'GK':
         return {
-          glow: 'group-hover:shadow-[0_15px_40px_-12px_rgba(245,158,11,0.15)] group-hover:border-amber-500/40',
-          avatarGlow: 'border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.2)]',
-          bracketColor: 'border-amber-500/60',
-          tagBg: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
-          accentText: 'text-amber-400',
-          gradient: 'from-amber-500/5 to-transparent'
+          glow: 'group-hover:shadow-[0_15px_40px_-12px_rgba(168,85,247,0.15)] group-hover:border-purple-500/40',
+          avatarGlow: 'border-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.2)]',
+          bracketColor: 'border-purple-500/60',
+          tagBg: 'bg-purple-500/10 border-purple-500/20 text-purple-400',
+          accentText: 'text-purple-400',
+          gradient: 'from-purple-500/5 to-transparent'
         };
       case 'DEF':
         return {
@@ -150,7 +165,7 @@ export default function JugadoresUt() {
             
             {/* Número gigante transparente de fondo */}
             <div className="absolute -top-16 -left-12 text-[15rem] md:text-[23rem] font-display font-black text-foreground/[0.035] dark:text-foreground/[0.045] select-none leading-none pointer-events-none font-extrabold tracking-tighter">
-              {jugadores.length || 24}
+              {totalJugadores || 24}
             </div>
 
             <Badge 
@@ -184,7 +199,7 @@ export default function JugadoresUt() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">JUGADORES UT</h4>
-                  <span className="text-3xl font-display font-black text-foreground">{jugadores.length}</span>
+                  <span className="text-3xl font-display font-black text-foreground">{totalJugadores}</span>
                 </div>
                 <div>
                   <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">FILTRADO POR</h4>
@@ -399,14 +414,15 @@ export default function JugadoresUt() {
 
             {/* Paginación */}
             {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-3 pt-4 animate-fade-in-up">
+              <div className="flex justify-center items-center gap-2 sm:gap-3 pt-8 animate-fade-in-up flex-wrap">
+                {/* Botón Anterior */}
                 <button 
                   disabled={currentPage === 1 || loading}
                   onClick={() => {
                     setCurrentPage(prev => Math.max(prev - 1, 1));
                     window.scrollTo({ top: 350, behavior: 'smooth' });
                   }}
-                  className="pagination-btn flex items-center gap-1.5"
+                  className="pagination-btn flex items-center gap-1.5 px-3 py-2 text-xs"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -414,23 +430,64 @@ export default function JugadoresUt() {
                   <span className="hidden sm:inline">Anterior</span>
                 </button>
                 
-                {/* Desktop: Page indicator style */}
-                <div className="hidden sm:flex px-4 py-2 rounded-xl bg-card/30 border border-border/40 text-xs font-mono font-bold text-muted-foreground select-none">
-                  Página <span className="text-foreground mx-1">{currentPage}</span> de <span className="text-foreground ml-1">{totalPages}</span>
+                {/* Selector Numérico (1, 2, 3, 4 ... totalPages) */}
+                <div className="flex items-center gap-1 flex-wrap justify-center">
+                  {pageNumbers[0] > 1 && (
+                    <>
+                      <button 
+                        onClick={() => {
+                          setCurrentPage(1);
+                          window.scrollTo({ top: 350, behavior: 'smooth' });
+                        }} 
+                        className="px-3.5 py-2 text-xs font-bold uppercase rounded-xl border border-border/40 bg-card/30 text-muted-foreground hover:border-border hover:text-foreground transition-all duration-300 cursor-pointer"
+                      >
+                        1
+                      </button>
+                      {pageNumbers[0] > 2 && <span className="text-muted-foreground text-xs px-1 select-none font-mono">···</span>}
+                    </>
+                  )}
+
+                  {pageNumbers.map(num => (
+                    <button
+                      key={num}
+                      onClick={() => {
+                        setCurrentPage(num);
+                        window.scrollTo({ top: 350, behavior: 'smooth' });
+                      }}
+                      className={`px-3.5 py-2 text-xs font-bold uppercase rounded-xl border transition-all duration-300 cursor-pointer ${
+                        num === currentPage
+                          ? 'bg-primary/20 border-primary/50 text-primary shadow-[0_0_15px_hsla(var(--primary),0.2)] font-black scale-105'
+                          : 'bg-card/30 border-border/40 text-muted-foreground hover:border-border hover:text-foreground'
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+
+                  {pageNumbers[pageNumbers.length - 1] < totalPages && (
+                    <>
+                      {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && <span className="text-muted-foreground text-xs px-1 select-none font-mono">···</span>}
+                      <button 
+                        onClick={() => {
+                          setCurrentPage(totalPages);
+                          window.scrollTo({ top: 350, behavior: 'smooth' });
+                        }} 
+                        className="px-3.5 py-2 text-xs font-bold uppercase rounded-xl border border-border/40 bg-card/30 text-muted-foreground hover:border-border hover:text-foreground transition-all duration-300 cursor-pointer"
+                      >
+                        {totalPages}
+                      </button>
+                    </>
+                  )}
                 </div>
 
-                {/* Mobile: Mini indicator */}
-                <div className="flex sm:hidden px-3 py-1.5 rounded-lg bg-card/30 border border-border/40 text-[10px] font-mono font-bold text-muted-foreground select-none">
-                  Pág. <span className="text-foreground mx-0.5">{currentPage}</span> / <span className="text-foreground ml-0.5">{totalPages}</span>
-                </div>
-
+                {/* Botón Siguiente */}
                 <button 
                   disabled={currentPage === totalPages || loading}
                   onClick={() => {
                     setCurrentPage(prev => Math.min(prev + 1, totalPages));
                     window.scrollTo({ top: 350, behavior: 'smooth' });
                   }}
-                  className="pagination-btn flex items-center gap-1.5"
+                  className="pagination-btn flex items-center gap-1.5 px-3 py-2 text-xs"
                 >
                   <span className="hidden sm:inline">Siguiente</span>
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -20,7 +20,7 @@ class AuthController extends Controller
     private function sendVerificationEmail($user)
     {
         $verificationToken = $user->verification_token;
-        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+        $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
         $verificationUrl = "{$frontendUrl}/verificar-correo?token={$verificationToken}";
 
         try {
@@ -292,7 +292,6 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Se ha enviado un enlace de recuperación de contraseña a tu correo electrónico.',
-            'token' => $token,
             'email' => $request->email
         ], 200);
     }

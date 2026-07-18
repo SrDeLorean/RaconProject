@@ -21,7 +21,12 @@ export default function Modal({
   if (!isOpen) return null;
 
   return (
-    <div className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4 sm:p-6`}>
+    <div
+      className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4 sm:p-6`}
+      role="dialog"
+      aria-modal="true"
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+    >
 
       {/* Telón de fondo (Backdrop) altamente desenfocado para destacar el modal */}
       <div 

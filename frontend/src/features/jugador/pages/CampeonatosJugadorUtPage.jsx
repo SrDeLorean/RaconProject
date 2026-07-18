@@ -303,12 +303,9 @@ export default function CampeonatosJugadorUtPage() {
       return;
     }
 
-    const isEmpate = Number(statsScoreA) === Number(statsScoreB);
-    if (isEmpate) {
-      if (!fotoPartido || !fotoConectados) {
-        alert("⚠️ Para reportar un empate es obligatorio subir las 2 fotos (Estadísticas del partido y Jugadores conectados).");
-        return;
-      }
+    if (!fotoPartido || !fotoConectados) {
+      alert("⚠️ Es obligatorio subir las 2 fotos (Estadísticas del partido y Jugadores conectados) para completar el reporte.");
+      return;
     }
 
     setReportLoading(true);
@@ -1084,7 +1081,7 @@ export default function CampeonatosJugadorUtPage() {
               )}
 
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4 bg-muted/10 p-4 rounded-xl border border-border/40">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-muted/10 p-4 rounded-xl border border-border/40">
                   {/* Local */}
                   <div className="space-y-2">
                     <h4 className="text-xs font-black text-primary uppercase truncate">{selectedReportMatch.local?.nombre || 'Local'}</h4>
@@ -1116,40 +1113,25 @@ export default function CampeonatosJugadorUtPage() {
                   </div>
                 </div>
 
-                {/* Alerta de Empate / Obligación Manual */}
-                {isEmpate && (
-                  <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 p-4 rounded-xl text-xs space-y-1 animate-pulse">
-                    <p className="font-bold flex items-center gap-1.5 text-amber-300">
-                      ⚠️ Empate Detectado - Reporte Manual Requerido
-                    </p>
-                    <p className="leading-relaxed text-[11px] text-muted-foreground">
-                      Debido a que el encuentro finalizó en empate, el sistema exige que realices un reporte manual detallado.
-                      **Es obligatorio subir las 2 capturas del juego** (Estadísticas del partido y Jugadores conectados).
-                    </p>
-                  </div>
-                )}
-
                 {/* Subida de Fotos */}
-                {isEmpate && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border border-border/40 p-4 rounded-xl bg-muted/10">
-                    <div className="space-y-1.5">
-                      <ImageUploader 
-                        label="Estadísticas Partido *" 
-                        value={fotoPartido} 
-                        onChange={setFotoPartido}
-                        folder="reportes"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <ImageUploader 
-                        label="Jugadores Conectados *" 
-                        value={fotoConectados} 
-                        onChange={setFotoConectados}
-                        folder="reportes"
-                      />
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border border-border/40 p-4 rounded-xl bg-muted/10">
+                  <div className="space-y-1.5">
+                    <ImageUploader 
+                      label="Estadísticas Partido *" 
+                      value={fotoPartido} 
+                      onChange={setFotoPartido}
+                      folder="reportes"
+                    />
                   </div>
-                )}
+                  <div className="space-y-1.5">
+                    <ImageUploader 
+                      label="Jugadores Conectados *" 
+                      value={fotoConectados} 
+                      onChange={setFotoConectados}
+                      folder="reportes"
+                    />
+                  </div>
+                </div>
 
                 {/* Estadísticas de Equipo */}
                 {isEmpate && (
@@ -1273,51 +1255,53 @@ function StandingsTable({ standings, title }) {
           <span className="text-xs font-black uppercase tracking-widest text-primary">{title}</span>
         </div>
       )}
-      <table className="w-full text-sm text-left border-collapse">
-        <thead>
-          <tr className="border-b border-border/50 bg-muted/30 text-[9px] uppercase font-black text-muted-foreground tracking-widest font-mono">
-            <th className="px-4 py-3 text-center w-10">#</th>
-            <th className="px-4 py-3">Participante</th>
-            <th className="px-4 py-3 text-center w-12">PJ</th>
-            <th className="hidden sm:table-cell px-4 py-3 text-center w-12 text-emerald-400">PG</th>
-            <th className="hidden sm:table-cell px-4 py-3 text-center w-12">PE</th>
-            <th className="hidden sm:table-cell px-4 py-3 text-center w-12 text-destructive">PP</th>
-            <th className="hidden md:table-cell px-4 py-3 text-center w-12">GF</th>
-            <th className="hidden md:table-cell px-4 py-3 text-center w-12">GC</th>
-            <th className="px-4 py-3 text-center w-14">DG</th>
-            <th className="px-4 py-3 text-center w-16 text-primary">Pts</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border/30 text-xs font-semibold">
-          {standings.length === 0 ? (
-            <tr>
-              <td colSpan={10} className="px-5 py-8 text-center text-muted-foreground italic">Sin resultados registrados</td>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm text-left border-collapse">
+          <thead>
+            <tr className="border-b border-border/50 bg-muted/30 text-[9px] uppercase font-black text-muted-foreground tracking-widest font-mono">
+              <th className="px-4 py-3 text-center w-10">#</th>
+              <th className="px-4 py-3">Participante</th>
+              <th className="px-4 py-3 text-center w-12">PJ</th>
+              <th className="hidden sm:table-cell px-4 py-3 text-center w-12 text-emerald-400">PG</th>
+              <th className="hidden sm:table-cell px-4 py-3 text-center w-12">PE</th>
+              <th className="hidden sm:table-cell px-4 py-3 text-center w-12 text-destructive">PP</th>
+              <th className="hidden md:table-cell px-4 py-3 text-center w-12">GF</th>
+              <th className="hidden md:table-cell px-4 py-3 text-center w-12">GC</th>
+              <th className="px-4 py-3 text-center w-14">DG</th>
+              <th className="px-4 py-3 text-center w-16 text-primary">Pts</th>
             </tr>
-          ) : standings.map((s, idx) => (
-            <tr key={s.id} className="hover:bg-primary/5 transition-colors">
-              <td className="px-4 py-3 text-center">
-                <span className={`inline-flex items-center justify-center w-6 h-6 rounded font-black font-mono text-[10px] ${
-                  idx === 0 ? 'bg-gradient-to-tr from-amber-400 to-yellow-600 text-slate-950 shadow' :
-                  idx === 1 ? 'bg-gradient-to-tr from-slate-300 to-slate-500 text-slate-950' :
-                  idx === 2 ? 'bg-gradient-to-tr from-amber-700 to-amber-900 text-amber-100' :
-                  'bg-muted text-foreground'
-                }`}>{idx + 1}</span>
-              </td>
-              <td className="px-4 py-3 font-bold text-foreground uppercase">{s.nombre}</td>
-              <td className="px-4 py-3 text-center font-mono">{s.pj}</td>
-              <td className="hidden sm:table-cell px-4 py-3 text-center font-mono text-emerald-400">{s.pg}</td>
-              <td className="hidden sm:table-cell px-4 py-3 text-center font-mono text-muted-foreground">{s.pe}</td>
-              <td className="hidden sm:table-cell px-4 py-3 text-center font-mono text-destructive">{s.pp}</td>
-              <td className="hidden md:table-cell px-4 py-3 text-center font-mono">{s.gf}</td>
-              <td className="hidden md:table-cell px-4 py-3 text-center font-mono">{s.gc}</td>
-              <td className={`px-4 py-3 text-center font-mono ${s.gf - s.gc >= 0 ? 'text-emerald-400' : 'text-destructive'}`}>
-                {s.gf - s.gc > 0 ? `+${s.gf - s.gc}` : s.gf - s.gc}
-              </td>
-              <td className="px-4 py-3 text-center font-mono text-primary font-black">{s.pts}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-border/30 text-xs font-semibold">
+            {standings.length === 0 ? (
+              <tr>
+                <td colSpan={10} className="px-5 py-8 text-center text-muted-foreground italic">Sin resultados registrados</td>
+              </tr>
+            ) : standings.map((s, idx) => (
+              <tr key={s.id} className="hover:bg-primary/5 transition-colors">
+                <td className="px-4 py-3 text-center">
+                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded font-black font-mono text-[10px] ${
+                    idx === 0 ? 'bg-gradient-to-tr from-amber-400 to-yellow-600 text-slate-950 shadow' :
+                    idx === 1 ? 'bg-gradient-to-tr from-slate-300 to-slate-500 text-slate-950' :
+                    idx === 2 ? 'bg-gradient-to-tr from-amber-700 to-amber-900 text-amber-100' :
+                    'bg-muted text-foreground'
+                  }`}>{idx + 1}</span>
+                </td>
+                <td className="px-4 py-3 font-bold text-foreground uppercase">{s.nombre}</td>
+                <td className="px-4 py-3 text-center font-mono">{s.pj}</td>
+                <td className="hidden sm:table-cell px-4 py-3 text-center font-mono text-emerald-400">{s.pg}</td>
+                <td className="hidden sm:table-cell px-4 py-3 text-center font-mono text-muted-foreground">{s.pe}</td>
+                <td className="hidden sm:table-cell px-4 py-3 text-center font-mono text-destructive">{s.pp}</td>
+                <td className="hidden md:table-cell px-4 py-3 text-center font-mono">{s.gf}</td>
+                <td className="hidden md:table-cell px-4 py-3 text-center font-mono">{s.gc}</td>
+                <td className={`px-4 py-3 text-center font-mono ${s.gf - s.gc >= 0 ? 'text-emerald-400' : 'text-destructive'}`}>
+                  {s.gf - s.gc > 0 ? `+${s.gf - s.gc}` : s.gf - s.gc}
+                </td>
+                <td className="px-4 py-3 text-center font-mono text-primary font-black">{s.pts}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -1547,6 +1531,8 @@ function PartidoUtCard({ partido, user, navigate, openReportModal }) {
   const localWinner = isFinished && partido.goles_local > partido.goles_visitante;
   const visitaWinner = isFinished && partido.goles_visitante > partido.goles_local;
   const isCapitan = user && (partido.local?.id_capitan === user.id || partido.visitante?.id_capitan === user.id);
+  const isLocal = user && (partido.local?.id_capitan === user.id || partido.local?.id_companero === user.id);
+  const yaReportadoPorMi = (isLocal && partido.reporte_local_completado) || (!isLocal && partido.reporte_visitante_completado);
 
   return (
     <>
@@ -1573,6 +1559,10 @@ function PartidoUtCard({ partido, user, navigate, openReportModal }) {
             ) : isFinished ? (
               <span className="inline-flex items-center gap-1.5 text-[9px] font-condensed font-black tracking-widest text-muted-foreground bg-muted border border-border/50 px-3 py-1 rounded">
                 FINALIZADO
+              </span>
+            ) : yaReportadoPorMi ? (
+              <span className="inline-flex items-center gap-1.5 text-[9px] font-condensed font-black tracking-widest text-blue-400 bg-blue-500/10 border border-blue-500/30 px-3 py-1 rounded">
+                EN REVISIÓN
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 text-[9px] font-condensed font-black tracking-widest text-primary/95 bg-primary/5 border border-primary/20 px-3 py-1 rounded">
@@ -1617,12 +1607,21 @@ function PartidoUtCard({ partido, user, navigate, openReportModal }) {
             {isLive ? '🔴 VER DUELO' : isFinished ? 'ANALIZAR' : 'VER DETALLES'}
           </button>
           {!isFinished && isCapitan && (
-            <button
-              onClick={() => openReportModal(partido)}
-              className="w-32 py-2 px-4 text-[10px] font-condensed font-black tracking-widest uppercase bg-amber-500/10 text-amber-500 border border-amber-500/30 rounded-xl hover:bg-amber-500 hover:text-black transition-all duration-300 cursor-pointer font-black text-center animate-pulse"
-            >
-              📝 REPORTAR
-            </button>
+            yaReportadoPorMi ? (
+              <button
+                disabled
+                className="w-32 py-2 px-4 text-[10px] font-condensed font-black tracking-widest uppercase bg-blue-600/10 text-blue-400 border border-blue-500/20 rounded-xl cursor-not-allowed text-center"
+              >
+                ⏳ EN REVISIÓN
+              </button>
+            ) : (
+              <button
+                onClick={() => openReportModal(partido)}
+                className="w-32 py-2 px-4 text-[10px] font-condensed font-black tracking-widest uppercase bg-amber-500/10 text-amber-500 border border-amber-500/30 rounded-xl hover:bg-amber-500 hover:text-black transition-all duration-300 cursor-pointer font-black text-center animate-pulse"
+              >
+                📝 REPORTAR
+              </button>
+            )
           )}
         </div>
       </div>
@@ -1647,6 +1646,10 @@ function PartidoUtCard({ partido, user, navigate, openReportModal }) {
             ) : isFinished ? (
               <span className="inline-flex items-center gap-0.5 text-[7.5px] font-condensed font-black tracking-wider text-muted-foreground bg-muted border border-border/30 px-1 py-0.5 rounded uppercase leading-none">
                 FIN
+              </span>
+            ) : yaReportadoPorMi ? (
+              <span className="inline-flex items-center gap-0.5 text-[7.5px] font-condensed font-black tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1 py-0.5 rounded uppercase leading-none">
+                REV
               </span>
             ) : (
               <span className="inline-flex items-center gap-0.5 text-[7.5px] font-condensed font-black tracking-wider text-primary/80 bg-primary/5 border border-primary/15 px-1 py-0.5 rounded uppercase leading-none">
@@ -1686,12 +1689,21 @@ function PartidoUtCard({ partido, user, navigate, openReportModal }) {
             {isFinished ? 'Analizar' : 'Ficha'}
           </button>
           {!isFinished && isCapitan && (
-            <button
-              onClick={() => openReportModal(partido)}
-              className="w-full py-1 text-[8px] font-condensed font-black tracking-wider uppercase bg-amber-500/10 text-amber-500 border border-amber-500/30 rounded-lg hover:bg-amber-500 hover:text-black transition-all duration-300 cursor-pointer text-center font-black animate-pulse"
-            >
-              Reportar
-            </button>
+            yaReportadoPorMi ? (
+              <button
+                disabled
+                className="w-full py-1 text-[8px] font-condensed font-black tracking-wider uppercase bg-blue-600/10 text-blue-400 border border-blue-500/20 rounded-lg cursor-not-allowed text-center"
+              >
+                Revisión
+              </button>
+            ) : (
+              <button
+                onClick={() => openReportModal(partido)}
+                className="w-full py-1 text-[8px] font-condensed font-black tracking-wider uppercase bg-amber-500/10 text-amber-500 border border-amber-500/30 rounded-lg hover:bg-amber-500 hover:text-black transition-all duration-300 cursor-pointer text-center font-black animate-pulse"
+              >
+                Reportar
+              </button>
+            )
           )}
         </div>
       </div>

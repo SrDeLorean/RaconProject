@@ -7,6 +7,32 @@ import Badge from '@/components/ui/Badge';
 import api from '@/api/axios';
 import ImageUploader from '@/components/ui/ImageUploader';
 
+const translatePosition = (pos) => {
+  if (!pos) return '—';
+  const p = pos.toUpperCase();
+  const map = {
+    'GK': 'POR',
+    'PO': 'POR',
+    'CB': 'DFC',
+    'LB': 'LI',
+    'RB': 'LD',
+    'LWB': 'CAR',
+    'RWB': 'CAD',
+    'CDM': 'MCD',
+    'CM': 'MC',
+    'CAM': 'MCO',
+    'LM': 'MI',
+    'RM': 'MD',
+    'LW': 'EI',
+    'RW': 'ED',
+    'CF': 'SD',
+    'ST': 'DC',
+    'DF': 'DFC',
+    'DL': 'DC'
+  };
+  return map[p] || p;
+};
+
 export default function MiPerfil() {
   const { user, setUser } = useAuthStore();
   const [isSaving, setIsSaving] = useState(false);
@@ -329,7 +355,7 @@ export default function MiPerfil() {
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Peso</p>
         </div>
         <div className="bg-background/50 p-3 rounded-xl border border-border/50 text-center">
-          <p className="text-xl font-display font-black text-primary">{formData.posicion}</p>
+          <p className="text-xl font-display font-black text-primary">{translatePosition(formData.posicion)}</p>
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Posición</p>
         </div>
       </div>
@@ -553,25 +579,60 @@ export default function MiPerfil() {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <Input 
-                      label="Discord" 
+                      label="Discord de la Org." 
                       value={orgData.discord_url} 
                       onChange={(e) => setOrgData({ ...orgData, discord_url: e.target.value })} 
                       placeholder="https://discord.gg/invitacion"
                       icon={<span className="opacity-70">💬</span>}
                     />
                     <Input 
-                      label="Twitter" 
+                      label="Twitter (X) de la Org." 
                       value={orgData.twitter_url} 
                       onChange={(e) => setOrgData({ ...orgData, twitter_url: e.target.value })} 
                       placeholder="https://twitter.com/cuenta"
                       icon={<span className="opacity-70">🐦</span>}
                     />
                     <Input 
-                      label="Twitch" 
+                      label="Twitch de la Org." 
                       value={orgData.twitch_url} 
                       onChange={(e) => setOrgData({ ...orgData, twitch_url: e.target.value })} 
                       placeholder="https://twitch.tv/canal"
                       icon={<span className="opacity-70">🎮</span>}
+                    />
+                    <Input 
+                      label="Instagram de la Org." 
+                      value={orgData.instagram_url} 
+                      onChange={(e) => setOrgData({ ...orgData, instagram_url: e.target.value })} 
+                      placeholder="https://instagram.com/cuenta"
+                      icon={<span className="opacity-70">📸</span>}
+                    />
+                    <Input 
+                      label="Facebook de la Org." 
+                      value={orgData.facebook_url} 
+                      onChange={(e) => setOrgData({ ...orgData, facebook_url: e.target.value })} 
+                      placeholder="https://facebook.com/cuenta"
+                      icon={<span className="opacity-70">👥</span>}
+                    />
+                    <Input 
+                      label="YouTube de la Org." 
+                      value={orgData.youtube_url} 
+                      onChange={(e) => setOrgData({ ...orgData, youtube_url: e.target.value })} 
+                      placeholder="https://youtube.com/@cuenta"
+                      icon={<span className="opacity-70">📺</span>}
+                    />
+                    <Input 
+                      label="TikTok de la Org." 
+                      value={orgData.tiktok_url} 
+                      onChange={(e) => setOrgData({ ...orgData, tiktok_url: e.target.value })} 
+                      placeholder="https://tiktok.com/@cuenta"
+                      icon={<span className="opacity-70">🎵</span>}
+                    />
+                    <Input 
+                      label="WhatsApp de la Org." 
+                      value={orgData.whatsapp} 
+                      onChange={(e) => setOrgData({ ...orgData, whatsapp: e.target.value })} 
+                      placeholder="+56912345678"
+                      icon={<span className="opacity-70">📱</span>}
                     />
                   </div>
 
@@ -646,10 +707,18 @@ export default function MiPerfil() {
                       value={formData.posicion} 
                       onChange={(e) => setFormData({...formData, posicion: e.target.value})} 
                       options={[
-                        { value: 'PO', label: 'Portero (PO)' },
-                        { value: 'DF', label: 'Defensa (DF)' },
-                        { value: 'MC', label: 'Centrocampista (MC)' },
-                        { value: 'DL', label: 'Delantero (DL)' }
+                        { value: 'POR', label: 'Portero (POR / GK)' },
+                        { value: 'DFC', label: 'Defensa Central (DFC / CB)' },
+                        { value: 'LD', label: 'Lateral Derecho (LD / RB)' },
+                        { value: 'LI', label: 'Lateral Izquierdo (LI / LB)' },
+                        { value: 'MCD', label: 'Pivote Defensivo (MCD / CDM)' },
+                        { value: 'MC', label: 'Mediocentro (MC / CM)' },
+                        { value: 'MCO', label: 'Mediocentro Ofensivo (MCO / CAM)' },
+                        { value: 'MI', label: 'Volante Izquierdo (MI / LM)' },
+                        { value: 'MD', label: 'Volante Derecho (MD / RM)' },
+                        { value: 'EI', label: 'Extremo Izquierdo (EI / LW)' },
+                        { value: 'ED', label: 'Extremo Derecho (ED / RW)' },
+                        { value: 'DC', label: 'Delantero Centro (DC / ST)' }
                       ]}
                     />
                     <Input 
@@ -705,7 +774,7 @@ export default function MiPerfil() {
               {/* Sección 4: Redes Sociales */}
               <div>
                 <h3 className="text-lg font-display font-bold text-foreground uppercase tracking-wider mb-4 border-b border-border/30 pb-2">
-                  Redes Sociales
+                  Tus Redes Sociales Personales
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input 
@@ -723,26 +792,53 @@ export default function MiPerfil() {
                     icon={<span className="opacity-70">👥</span>}
                   />
                   <Input 
-                    label="Twitch" 
+                    label="Twitch Personal" 
                     value={formData.twitch} 
                     onChange={(e) => setFormData({...formData, twitch: e.target.value})} 
                     placeholder="https://twitch.tv/tu_canal"
                     icon={<span className="opacity-70">🎮</span>}
                   />
                   <Input 
-                    label="YouTube" 
+                    label="YouTube Personal" 
                     value={formData.youtube} 
                     onChange={(e) => setFormData({...formData, youtube: e.target.value})} 
                     placeholder="https://youtube.com/@tu_canal"
                     icon={<span className="opacity-70">📺</span>}
                   />
                   <Input 
-                    label="TikTok" 
+                    label="TikTok Personal" 
                     value={formData.tiktok} 
                     onChange={(e) => setFormData({...formData, tiktok: e.target.value})} 
                     placeholder="https://tiktok.com/@tu_usuario"
                     icon={<span className="opacity-70">🎵</span>}
-                    className="md:col-span-2"
+                  />
+                  <Input 
+                    label="Discord Personal" 
+                    value={formData.discord} 
+                    onChange={(e) => setFormData({...formData, discord: e.target.value})} 
+                    placeholder="Usuario de Discord"
+                    icon={<span className="opacity-70">💬</span>}
+                  />
+                  <Input 
+                    label="Twitter (X) Personal" 
+                    value={formData.twitter} 
+                    onChange={(e) => setFormData({...formData, twitter: e.target.value})} 
+                    placeholder="https://twitter.com/tu_usuario"
+                    icon={<span className="opacity-70">🐦</span>}
+                  />
+                  <Input 
+                    label="Sitio Web Personal" 
+                    value={formData.website} 
+                    onChange={(e) => setFormData({...formData, website: e.target.value})} 
+                    placeholder="https://misitio.com"
+                    icon={<span className="opacity-70">🌐</span>}
+                  />
+                  <Input 
+                    label="WhatsApp Personal" 
+                    value={formData.whatsapp} 
+                    onChange={(e) => setFormData({...formData, whatsapp: e.target.value})} 
+                    placeholder="+56912345678"
+                    icon={<span className="opacity-70">📱</span>}
                   />
                 </div>
               </div>

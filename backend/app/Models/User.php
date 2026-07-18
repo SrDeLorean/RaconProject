@@ -60,6 +60,10 @@ class User extends Authenticatable
         'twitch',
         'youtube',
         'tiktok',
+        'discord',
+        'twitter',
+        'website',
+        'whatsapp',
         'last_login_at'
     ];
 
@@ -90,7 +94,10 @@ class User extends Authenticatable
      * Los equipos a los que pertenece el jugador a lo largo de la organización
      */
     public function equipos() {
-        return $this->belongsToMany(Equipo::class, 'organizacion_equipo_usuario'); // ¿Este nombre es EXACTAMENTE el mismo que tienes en tu base de datos?
+        return $this->belongsToMany(Equipo::class, 'organizacion_equipo_usuario')
+            ->withPivot('id', 'organizacion_id', 'dorsal', 'posicion_bloque', 'estado_fichaje')
+            ->join('organizaciones', 'organizacion_equipo_usuario.organizacion_id', '=', 'organizaciones.id')
+            ->select('equipos.*', 'organizaciones.nombre as organizacion_nombre');
     }
 
     public function organizacion()
@@ -113,7 +120,7 @@ class User extends Authenticatable
      */
     public function plantillas()
     {
-        return $this->hasMany(\App\Models\Plantilla::class, 'id', 'id_usuario');
+        return $this->hasMany(\App\Models\Plantilla::class, 'id_usuario', 'id');
     }
 
     /**

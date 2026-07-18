@@ -254,6 +254,8 @@ export const translatePosition = (pos) => {
     'DC': 'DC',
     'DEL': 'DC',
     'FORWARD': 'DC',
+    'DEFENDER': 'DFC',
+    'MIDFIELDER': 'MC',
     'LW': 'EI',
     'EI': 'EI',
     'RW': 'ED',
@@ -285,11 +287,14 @@ export default function PlayerCard({
   } = player;
 
   // Safe Image resolution helper
-  const getImageUrl = (path) => {
-    if (!path) return null;
-    if (path.includes('default-user.png')) {
-      return '/images/users/default-user.png';
-    }
+  const getImageUrl = (path, type = 'user') => {
+      if (!path) return null;
+      if (path.includes('default-user.png') || (path === 'default.png' && type === 'user')) {
+        return '/images/users/default-user.png?v=2';
+      }
+      if (path === 'default.png' && type === 'team') {
+        return '/images/default-team-logo.svg';
+      }
     if (path.startsWith('http')) {
       return path;
     }
@@ -356,7 +361,7 @@ export default function PlayerCard({
             <div className="mt-1 opacity-90 drop-shadow w-[15cqi] h-[15cqi] flex items-center justify-center">
               {clubBadge ? (
                 <div className="w-[15cqi] h-[15cqi] rounded-full overflow-hidden flex items-center justify-center">
-                  <img src={getImageUrl(clubBadge)} alt="Club Crest" className="w-full h-full object-cover" />
+                  <img src={getImageUrl(clubBadge, 'team')} alt="Club Crest" className="w-full h-full object-cover" />
                 </div>
               ) : (
                 <div className={`w-[15cqi] h-[15cqi] rounded-full border flex items-center justify-center font-display font-black text-[4.8cqi] ${
@@ -441,7 +446,7 @@ export default function PlayerCard({
             {/* Club badge */}
             {clubBadge ? (
               <div className="w-[7cqi] h-[7cqi] rounded-full overflow-hidden flex items-center justify-center">
-                <img src={getImageUrl(clubBadge)} alt="Crest" className="w-full h-full object-cover" />
+                <img src={getImageUrl(clubBadge, 'team')} alt="Crest" className="w-full h-full object-cover" />
               </div>
             ) : (
               <div className={`w-[7cqi] h-[7cqi] rounded-full border flex items-center justify-center font-display font-black text-[2.5cqi] ${

@@ -16,22 +16,26 @@ use App\Http\Controllers\Api\PartidoUtController;
 use App\Http\Controllers\Api\ReporteUtController;
 use App\Http\Controllers\Api\InscripcionUTController;
 
-// 1. Rutas Públicas (No requieren token)
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-Route::post('/reset-password', [AuthController::class, 'resetPassword']);
-Route::post('/verify-email', [AuthController::class, 'verifyEmail']);
-Route::post('/resend-verification', [AuthController::class, 'resendVerification']);
+// 1. Rutas Públicas (No requieren token) - Con rate limiting de seguridad
+Route::middleware('throttle:5,1')->group(function () {
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('/verify-email', [AuthController::class, 'verifyEmail']);
+    Route::post('/resend-verification', [AuthController::class, 'resendVerification']);
+});
 
 // Rutas de consulta pública (lectura sin token)
 Route::get('/organizaciones', [OrganizacionController::class, 'index']);
 Route::get('/organizaciones/{organizacion}', [OrganizacionController::class, 'show']);
 Route::get('/equipos', [EquipoController::class, 'index']);
 Route::get('/equipos/{equipo}', [EquipoController::class, 'show']);
-Route::get('/users', [UserController::class, 'index']);
+
 Route::get('/usuarios', [UserController::class, 'index']);
+Route::get('/users', [UserController::class, 'index']); // Alias para frontend
 Route::get('/usuarios/{usuario}', [UserController::class, 'show'])->whereNumber('usuario');
+Route::get('/users/{usuario}', [UserController::class, 'show'])->whereNumber('usuario'); // Alias para frontend
 Route::get('/competencias', [CompetenciaController::class, 'index']);
 Route::get('/competencias/{competencia}', [CompetenciaController::class, 'show']);
 Route::get('/traspasos/aprobados', [SolicitudFichajeController::class, 'aprobados']);
@@ -94,8 +98,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('equipos', EquipoController::class)->except(['index', 'show']);
     Route::get('/usuarios/auditoria', [UserController::class, 'auditoriaGamerTAGs']);
     Route::post('/usuarios/disponibles', [UserController::class, 'disponibles']);
-    Route::apiResource('users', UserController::class)->except(['index', 'show']);
+
     Route::apiResource('usuarios', UserController::class)->except(['index', 'show']);
+    Route::apiResource('users', UserController::class)->except(['index', 'show']); // Alias para frontend
 
     Route::apiResource('competencias', CompetenciaController::class)->except(['index', 'show']);
     Route::apiResource('equipo-jugador', EquipoJugadorController::class);
@@ -121,6 +126,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('partidos', \App\Http\Controllers\Api\PartidoController::class)->except(['index', 'show']);
 
     // Reporte de Partidos vía EA Pro Clubs API & Manual
+    Route::post('/partidos/extract-vision', [\App\Http\Controllers\Api\MatchVisionController::class, 'extractStats']);
     Route::get('/partidos/{partido}/ea-matches', [\App\Http\Controllers\Api\ReporteController::class, 'getEaMatches']);
     Route::post('/partidos/{partido}/ea-report', [\App\Http\Controllers\Api\ReporteController::class, 'storeEaReport']);
     Route::post('/partidos/{partido}/manual-report', [\App\Http\Controllers\Api\ReporteController::class, 'submitManualReport']);

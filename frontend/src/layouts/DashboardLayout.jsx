@@ -55,7 +55,7 @@ export default function DashboardLayout({ menuItems = [], profile }) {
   const displayName = user?.name || profile?.name || 'Administrador';
   const displayRole = user?.role || user?.rol || profile?.role || profile?.rol || 'Super Admin';
   const displayEmail = user?.email || profile?.email || 'admin@torneosprofc.com';
-  const displayAvatar = user?.profile_photo_url || profile?.avatar;
+  const displayAvatar = user?.foto || user?.profile_photo_url || profile?.avatar;
 
   const getRolePrefix = () => {
     const r = user?.role || user?.rol || 'jugador';

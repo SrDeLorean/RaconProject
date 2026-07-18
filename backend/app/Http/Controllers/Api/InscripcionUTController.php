@@ -48,16 +48,25 @@ class InscripcionUTController extends Controller
     /**
      * Eliminar (dar de baja) una inscripción y el equipo UT.
      */
-    public function destroy($id): JsonResponse
+    public function destroy(\Illuminate\Http\Request $request, $id): JsonResponse
     {
         $pivot = DB::table('competencia_equipo_ut')->where('equipo_ut_id', $id)->first();
         
         if ($pivot) {
             $competenciaUt = \App\Models\CompetenciaUt::find($pivot->competencia_ut_id);
-            if ($competenciaUt && $competenciaUt->partidos()->exists()) {
+            if ($competenciaUt && $competenciaUt->partidos()->exists() && !$request->boolean('force')) {
                 return response()->json([
                     'message' => 'No se puede dar de baja directamente porque el torneo ya tiene un calendario generado. Utiliza las opciones de WO o Reemplazo.'
                 ], 422);
+            }
+            
+            if ($competenciaUt && $request->boolean('force')) {
+                \App\Models\PartidoUt::where('competencia_ut_id', $competenciaUt->id)
+                    ->where(function ($q) use ($id) {
+                        $q->where('equipo_local_id', $id)
+                          ->orWhere('equipo_visitante_id', $id);
+                    })
+                    ->delete();
             }
             Cache::forget('competencia_ut_show_' . $pivot->competencia_ut_id);
         }

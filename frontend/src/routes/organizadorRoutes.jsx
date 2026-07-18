@@ -1,5 +1,7 @@
-import { lazy } from 'react';
-import OrganizadorLayout from '@/layouts/OrganizadorLayout';
+import { lazy, Suspense } from 'react';
+import PageLoader from '@/components/ui/PageLoader';
+
+const OrganizadorLayout = lazy(() => import('@/layouts/OrganizadorLayout'));
 
 // Features
 const DashboardOrganizador = lazy(() => import('@/features/organizador/pages/DashboardOrganizador'));
@@ -14,18 +16,23 @@ const TraspasosCRUD = lazy(() => import('@/features/organizador/pages/TraspasosC
 const PartidosCRUD = lazy(() => import('@/features/organizador/pages/PartidosCRUD'));
 const PartidosUtCRUD = lazy(() => import('@/features/organizador/pages/PartidosUtCRUD'));
 
+const OrganizadorGestionPlantilla = lazy(() => import('@/features/organizador/pages/OrganizadorGestionPlantilla'));
+
 // Shared
 const MiPerfil = lazy(() => import('@/features/shared/MiPerfil'));
 const Configuracion = lazy(() => import('@/features/shared/Configuracion'));
 
 export const organizadorRoutes = {
   path: '/organizador',
-  element: <OrganizadorLayout />,
+  element: <Suspense fallback={<PageLoader />}><OrganizadorLayout /></Suspense>,
   children: [
     { index: true, element: <DashboardOrganizador /> },
     {
       path: 'equipos',
-      element: <EquiposCRUD />
+      children: [
+        { index: true, element: <EquiposCRUD /> },
+        { path: ':id/plantilla', element: <OrganizadorGestionPlantilla /> }
+      ]
     },
     {
       path: 'competencias',

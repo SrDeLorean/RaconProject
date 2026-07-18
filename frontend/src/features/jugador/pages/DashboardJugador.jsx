@@ -144,7 +144,7 @@ export default function DashboardJugador() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8 items-start">
           
           {/* Sidebar Menú Lateral */}
-          <div className="lg:col-span-1 border border-border/40 bg-card/30 backdrop-blur-md rounded-3xl p-5 shadow-xl sticky top-24 space-y-6 flex flex-col">
+          <div className="lg:col-span-1 border border-border/40 bg-card/30 backdrop-blur-md rounded-3xl p-5 shadow-xl space-y-6 flex flex-col">
             <div className="hidden lg:block border-b border-border/30 pb-4">
               <h2 className="text-sm font-display font-black text-foreground uppercase tracking-wider flex items-center gap-2">
                 <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -155,7 +155,7 @@ export default function DashboardJugador() {
             </div>
 
             {/* Menú de Navegación */}
-            <div className="flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 scrollbar-hide">
+            <div className="flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-3.5 lg:pb-0 mobile-scroll-indicator">
               {tabsConfig.map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (

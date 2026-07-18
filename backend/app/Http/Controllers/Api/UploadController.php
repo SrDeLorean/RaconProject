@@ -5,15 +5,16 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class UploadController extends Controller
 {
     public function upload(Request $request)
     {
-        $user = auth()->user();
-        $isPowerUser = $user && ($user->role === 'administrador' || $user->role === 'organizador');
-        $maxSize = $isPowerUser ? 8192 : 4096;
-        $maxSizeMb = $isPowerUser ? '8MB' : '4MB';
+        // Limite global de 12 MB (12288 KB)
+        $maxSize = 12288;
+        $maxSizeMb = '12MB';
 
         $request->validate([
             'file' => "required|image|mimes:jpeg,png,jpg,gif,svg,webp|max:{$maxSize}",
@@ -30,10 +31,7 @@ class UploadController extends Controller
             $folder = $request->input('folder', 'general');
             
             // Obtener extensión original del archivo
-            $extension = $file->getClientOriginalExtension();
-            
-            // Generar un nombre de archivo único para evitar colisiones
-            $filename = Str::random(20) . '_' . time() . '.' . $extension;
+            $extension = strtolower($file->getClientOriginalExtension());
             
             // Carpeta destino dentro de la carpeta public del backend (compatible con XAMPP y cPanel)
             $destinationPath = public_path("uploads/{$folder}");
@@ -41,17 +39,55 @@ class UploadController extends Controller
             if (!file_exists($destinationPath)) {
                 mkdir($destinationPath, 0755, true);
             }
-            
-            // Mover el archivo original tal cual (preservando el fondo e info original)
-            $file->move($destinationPath, $filename);
-            
-            // URL relativa para guardar en BD (ej: /uploads/equipos/xxx.png)
-            $url = "/uploads/{$folder}/{$filename}";
 
-            return response()->json([
-                'url' => $url,
-                'message' => '¡Imagen subida correctamente!'
-            ], 200);
+            // Si es SVG, simplemente moverlo sin procesar porque Intervention no maneja vectores
+            if ($extension === 'svg') {
+                $filename = Str::random(20) . '_' . time() . '.svg';
+                $file->move($destinationPath, $filename);
+                $url = "/uploads/{$folder}/{$filename}";
+                
+                return response()->json([
+                    'url' => $url,
+                    'message' => '¡Imagen SVG subida correctamente!'
+                ], 200);
+            }
+
+            try {
+                // Generar un nombre de archivo único con extensión .webp para las imágenes comprimidas
+                $filename = Str::random(20) . '_' . time() . '.webp';
+
+                // Crear el manager de Intervention con el driver GD
+                $manager = new ImageManager(new Driver());
+                
+                // Leer la imagen temporal subida
+                $image = $manager->read($file->getRealPath());
+
+                // Se solicitó mantener la resolución original de las fotos (especialmente banners), 
+                // así que solo aplicaremos la compresión de peso a WebP sin alterar los píxeles.
+
+                // Convertir a WebP con calidad 80 y guardar
+                $image->toWebp(80)->save("{$destinationPath}/{$filename}");
+
+                // URL relativa para guardar en BD
+                $url = "/uploads/{$folder}/{$filename}";
+
+                return response()->json([
+                    'url' => $url,
+                    'message' => '¡Imagen subida y comprimida correctamente!'
+                ], 200);
+
+            } catch (\Exception $e) {
+                // Como fallback si falla Intervention (ej. formato corrupto), simplemente la guardamos normal
+                $fallbackFilename = Str::random(20) . '_' . time() . '.' . $extension;
+                $file->move($destinationPath, $fallbackFilename);
+                $url = "/uploads/{$folder}/{$fallbackFilename}";
+
+                return response()->json([
+                    'url' => $url,
+                    'message' => '¡Imagen subida sin compresión (hubo un problema procesándola)!',
+                    'error_debug' => $e->getMessage()
+                ], 200);
+            }
         }
 
         return response()->json(['message' => 'No se detectó ningún archivo en la petición.'], 400);

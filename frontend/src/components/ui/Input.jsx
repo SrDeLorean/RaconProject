@@ -4,14 +4,17 @@ const Input = forwardRef(({
   label, 
   error, 
   icon,
+  id,
   className = '', 
   ...props 
 }, ref) => {
+  const inputId = id || (label ? `input-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined);
+
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
       {label && (
         // Tipografía técnica con ligera transparencia y sombra suave
-        <label className="text-technical text-muted-foreground ml-1 drop-shadow-sm">
+        <label htmlFor={inputId} className="text-technical text-muted-foreground ml-1 drop-shadow-sm">
           {label}
         </label>
       )}
@@ -29,6 +32,7 @@ const Input = forwardRef(({
 
         <input 
           ref={ref}
+          id={inputId}
           className={`
             relative w-full text-foreground border rounded-xl px-4 py-3 
             transition-all duration-300 outline-none

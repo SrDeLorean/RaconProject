@@ -67,7 +67,7 @@ export default function DataTable({
               }
             />
           </div>
-          {actions && <div className="flex shrink-0 gap-2 w-full sm:w-auto">{actions}</div>}
+          {actions && <div className="flex flex-wrap shrink-0 gap-2 w-full sm:w-auto mt-2 sm:mt-0">{actions}</div>}
         </div>
       </div>
 

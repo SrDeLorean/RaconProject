@@ -94,6 +94,17 @@ class SolicitudFichajeService
         $creadas = 0;
 
         foreach ($data['organizacion_ids'] as $orgId) {
+            // Check if there is a competition in this organization where transfers are disabled
+            $hasDisabledTransfers = \App\Models\Competencia::whereHas('temporada', function ($query) use ($orgId) {
+                $query->where('organizacion_id', $orgId);
+            })->get()->contains(function ($comp) {
+                return isset($comp->config['sin_transferencias']) && $comp->config['sin_transferencias'] == true;
+            });
+
+            if ($hasDisabledTransfers) {
+                throw new Exception('Las transferencias están deshabilitadas en esta competencia/organización.', 403);
+            }
+
             // Verificar si ya pertenece a NUESTRO club en esa organización
             $yaFichadoEnNuestroClub = OrganizacionEquipoUsuario::where('organizacion_id', $orgId)
                 ->where('equipo_id', $equipo->id)
@@ -283,6 +294,98 @@ class SolicitudFichajeService
         ]);
 
         return ['message' => 'Fichaje aprobado de manera administrativa. Jugador incorporado al roster.'];
+    }
+
+    /**
+     * Fichar a un jugador directamente (Sin aprobación, por parte del Organizador).
+     *
+     * @param User $admin
+     * @param int $equipoId
+     * @param int $jugadorId
+     * @param array $datosFichaje
+     * @return array
+     * @throws Exception
+     */
+    public function ficharDirectoAdministrativo(User $admin, int $equipoId, int $jugadorId, array $datosFichaje): array
+    {
+        $roleLower = strtolower($admin->role);
+        if ($roleLower !== 'admin' && $roleLower !== 'administrador' && $roleLower !== 'organizador' && $roleLower !== 'organizer') {
+            throw new Exception('Acceso denegado. Solo administradores u organizadores pueden fichar directamente.', 403);
+        }
+
+        $equipo = Equipo::find($equipoId);
+        if (!$equipo) {
+            throw new Exception('El equipo no existe.', 404);
+        }
+
+        $jugador = User::find($jugadorId);
+        if (!$jugador || strtolower($jugador->role) !== 'jugador') {
+            throw new Exception('El usuario no existe o no es un jugador.', 404);
+        }
+
+        if ($jugador->status === 'suspendido') {
+            throw new Exception('El jugador está suspendido y no puede ser fichado.', 400);
+        }
+
+        $organizacionId = $equipo->organizacion_id; // Depende de cómo esté la BD, pero OrganizacionEquipoUsuario lo necesita.
+        // Si no está en equipo, sacamos la orgId de los datos del request o del owner.
+        // Pero el equipo debe pertenecer a la organización del Organizador.
+        if ($roleLower === 'organizador' || $roleLower === 'organizer') {
+            $org = \App\Models\Organizacion::where('owner_id', $admin->id)->first();
+            if (!$org) {
+                throw new Exception('No se encontró una organización asociada a tu cuenta.', 404);
+            }
+            $organizacionId = $org->id;
+        } else {
+            // Administrador global, asume que se pasa en los datos o que el equipo ya está vinculado
+            // Por simplicidad, tomamos el del owner
+            $organizacionId = $datosFichaje['organizacion_id'] ?? 1; // Fallback
+        }
+
+        // Revisar si ya pertenece a OTRO equipo en esta organización
+        $yaTieneClubEnOrg = OrganizacionEquipoUsuario::where('organizacion_id', $organizacionId)
+            ->where('user_id', $jugador->id)
+            ->first();
+            
+        $equipoOrigenId = $yaTieneClubEnOrg ? $yaTieneClubEnOrg->equipo_id : null;
+
+        if ($yaTieneClubEnOrg && (int)$yaTieneClubEnOrg->equipo_id === (int)$equipoId) {
+            throw new Exception('El jugador ya pertenece a este equipo.', 400);
+        }
+
+        $temporada = Temporada::where('organizacion_id', $organizacionId)
+            ->where('activa', true)
+            ->first();
+
+        // Crear la Solicitud (Aprobada)
+        $this->repository->create([
+            'organizacion_id' => $organizacionId,
+            'temporada_id' => $temporada ? $temporada->id : null,
+            'equipo_id' => $equipoId,
+            'equipo_origen_id' => $equipoOrigenId,
+            'user_id' => $jugador->id,
+            'dorsal' => $datosFichaje['dorsal'] ?? null,
+            'posicion' => $datosFichaje['posicion'] ?? null,
+            'estado' => 'aprobado',
+            'observaciones_admin' => 'Fichado administrativamente por la Organización'
+        ]);
+
+        // Insertar/Actualizar en el roster
+        OrganizacionEquipoUsuario::updateOrCreate(
+            [
+                'organizacion_id' => $organizacionId,
+                'user_id' => $jugador->id,
+            ],
+            [
+                'equipo_id' => $equipoId,
+                'dorsal' => $datosFichaje['dorsal'] ?? null,
+                'posicion_bloque' => $datosFichaje['posicion'] ?? null,
+                'estado_fichaje' => 'activo',
+                'fecha_vinculacion' => now(),
+            ]
+        );
+
+        return ['message' => 'Fichaje directo realizado con éxito. El jugador ha sido incorporado al roster.'];
     }
 
     /**

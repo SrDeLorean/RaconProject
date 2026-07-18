@@ -238,7 +238,7 @@ export default function ResumenJugadorTab({ profileData, solicitudes, navigate, 
             </h3>
           </div>
 
-          <div className="border border-border/30 bg-card/60 backdrop-blur-xl p-8 rounded-3xl space-y-6 shadow-xl relative overflow-hidden text-center hover:border-primary/40 transition-all duration-500 group">
+          <div className="border border-border/30 bg-card/60 backdrop-blur-xl p-4 sm:p-8 rounded-3xl space-y-6 shadow-xl relative overflow-hidden text-center hover:border-primary/40 transition-all duration-500 group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700 delay-100"></div>
             

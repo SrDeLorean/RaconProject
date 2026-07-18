@@ -1,5 +1,7 @@
-import { lazy } from 'react';
-import JugadorLayout from '@/layouts/JugadorLayout'; 
+import { lazy, Suspense } from 'react';
+import PageLoader from '@/components/ui/PageLoader';
+
+const JugadorLayout = lazy(() => import('@/layouts/JugadorLayout')); 
 
 const DashboardJugador = lazy(() => import('@/features/jugador/pages/DashboardJugador'));
 const MiEquipoDashboard = lazy(() => import('@/features/jugador/pages/MiEquipoDashboard'));
@@ -13,7 +15,7 @@ const Configuracion = lazy(() => import('@/features/shared/Configuracion'));
 
 export const jugadorRoutes = {
   path: '/jugador',
-  element: <JugadorLayout />,
+  element: <Suspense fallback={<PageLoader />}><JugadorLayout /></Suspense>,
   children: [
     { index: true, element: <DashboardJugador /> },
     { path: 'miequipo', element: <MiEquipoDashboard /> },

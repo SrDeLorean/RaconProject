@@ -46,6 +46,7 @@ const JugadoresUt = lazy(() => import('@/features/public/pages/JugadoresUt'));
 const InfografiaUt = lazy(() => import('@/features/public/pages/InfografiaUt'));
 const DatosUt = lazy(() => import('@/features/public/pages/DatosUt'));
 const Terms = lazy(() => import('@/features/public/pages/Terms'));
+const NotFound = lazy(() => import('@/features/public/pages/NotFound'));
 
 
 import PageLoader from '@/components/ui/PageLoader';
@@ -112,5 +113,11 @@ export const router = createBrowserRouter([
     element: <Suspense fallback={<PageLoader />}><ProtectedRoute allowedRoles={['jugador']} /></Suspense>,
     errorElement: <ErrorBoundary />,
     children: [jugadorRoutes],
+  },
+
+  // 404 Catch-all
+  {
+    path: '*',
+    element: <Suspense fallback={<PageLoader />}><NotFound /></Suspense>,
   }
 ]);

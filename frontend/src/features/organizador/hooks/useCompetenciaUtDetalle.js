@@ -129,6 +129,17 @@ export const useCompetenciaUtDetalle = (id) => {
     }
   };
 
+  const forzarRemoverEquipo = async (equipoUtId) => {
+    try {
+      await api.delete(`/inscripciones-ut/${equipoUtId}?force=1`);
+      triggerNotification('success', 'Participante eliminado forzosamente y sus partidos han sido borrados.');
+      await fetchCompetenciaInfo();
+    } catch (error) {
+      triggerNotification('error', error.response?.data?.message || 'Error al eliminar el participante.');
+      throw error;
+    }
+  };
+
   const darWOEquipo = async (equipoUtId) => {
     try {
       await api.post(`/competencias-ut/${id}/equipos/${equipoUtId}/wo`);
@@ -168,6 +179,6 @@ export const useCompetenciaUtDetalle = (id) => {
   return {
     data: { competencia, equiposInscritos, usuariosDisponibles, searchTerm },
     ui: { isFetchingInfo, isFetchingEquipos, isSearching, notification },
-    actions: { setSearchTerm, triggerNotification, setNotification, inscribirManual, cambiarEstado, removerEquipo, darWOEquipo, reemplazarEquipo, fetchCompetenciaInfo, finalizarCompetencia }
+    actions: { setSearchTerm, triggerNotification, setNotification, inscribirManual, cambiarEstado, removerEquipo, forzarRemoverEquipo, darWOEquipo, reemplazarEquipo, fetchCompetenciaInfo, finalizarCompetencia }
   };
 };

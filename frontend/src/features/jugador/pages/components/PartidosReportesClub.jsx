@@ -58,6 +58,11 @@ export default function PartidosReportesClub({ equipo, roster }) {
   const [fotoPartido, setFotoPartido] = useState('');
   const [fotoJugadores, setFotoJugadores] = useState('');
   const [fotoConectados, setFotoConectados] = useState('');
+  const [alertConfig, setAlertConfig] = useState({ isOpen: false, variant: 'neutral', message: '', title: '' });
+
+  const showAlert = (message, variant = 'error', title = 'Aviso del Sistema') => {
+      setAlertConfig({ isOpen: true, variant, message, title });
+  };
 
   // Estadísticas del propio equipo para reporte manual
   const [teamManualStats, setTeamManualStats] = useState({
@@ -71,10 +76,176 @@ export default function PartidosReportesClub({ equipo, roster }) {
     entradas_exitosas: 0,
     tarjetas_rojas: 0,
     tarjetas_amarillas: 0,
-    atajadas: 0
+    atajadas: 0,
+    posesion: 0,
+    recuperaciones: 0,
+    fueras_lugar: 0,
+    tiros_esquina: 0,
+    tiros_libres: 0,
+    penales: 0,
+    faltas_cometidas: 0,
+    precision_tiros: 0,
+    tasa_exito_regates: 0
   });
 
   const isDraw = statsScoreLocal !== '' && statsScoreVisitante !== '' && Number(statsScoreLocal) === Number(statsScoreVisitante);
+
+  // IA Vision
+  const [visionTeamStatsImg, setVisionTeamStatsImg] = useState(null);
+  const [visionPlayerStatsImg, setVisionPlayerStatsImg] = useState(null);
+  const [visionProcessing, setVisionProcessing] = useState(false);
+  const [uploadingTeam, setUploadingTeam] = useState(false);
+  const [uploadingPlayer, setUploadingPlayer] = useState(false);
+
+  const handleImageUpload = async (e, setter, type) => {
+    const file = e.target.files[0];
+    if (file) {
+      // 1. Convert to base64 for IA extraction
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setter(reader.result);
+      };
+      reader.readAsDataURL(file);
+
+      // 2. Upload file to server in background to satisfy screenshot requirements
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'reportes');
+
+      if (type === 'team') setUploadingTeam(true);
+      if (type === 'player') setUploadingPlayer(true);
+
+      try {
+        const response = await api.post('/upload', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        if (response.data && response.data.url) {
+          if (type === 'team') {
+            setFotoPartido(response.data.url);
+          } else if (type === 'player') {
+            setFotoJugadores(response.data.url);
+          }
+        }
+      } catch (err) {
+        console.error("Error al subir archivo de respaldo de IA:", err);
+      } finally {
+        if (type === 'team') setUploadingTeam(false);
+        if (type === 'player') setUploadingPlayer(false);
+      }
+    }
+  };
+
+  const handleVisionExtract = async () => {
+    if (!visionTeamStatsImg || !visionPlayerStatsImg) {
+      showAlert("⚠️ Sube ambas fotos primero (Stats de Equipo y Rendimiento).", "warning");
+      return;
+    }
+    setVisionProcessing(true);
+    try {
+      const res = await api.post('/partidos/extract-vision', {
+        team_stats_image: visionTeamStatsImg,
+        player_stats_image: visionPlayerStatsImg
+      });
+      if (res.data && res.data.data) {
+        const data = res.data.data;
+        const miNombre = equipo.nombre.toLowerCase();
+        const isLocal = selectedMatch.equipo_local_id === equipo.id;
+        let misStats = null;
+        let statsLocal = null;
+        let statsVisitante = null;
+
+        if (data.equipo_1?.nombre?.toLowerCase()?.includes(miNombre)) {
+            misStats = data.equipo_1;
+            if (isLocal) {
+                statsLocal = data.equipo_1?.goles || 0;
+                statsVisitante = data.equipo_2?.goles || 0;
+            } else {
+                statsVisitante = data.equipo_1?.goles || 0;
+                statsLocal = data.equipo_2?.goles || 0;
+            }
+        } else if (data.equipo_2?.nombre?.toLowerCase()?.includes(miNombre)) {
+            misStats = data.equipo_2;
+            if (isLocal) {
+                statsLocal = data.equipo_2?.goles || 0;
+                statsVisitante = data.equipo_1?.goles || 0;
+            } else {
+                statsVisitante = data.equipo_2?.goles || 0;
+                statsLocal = data.equipo_1?.goles || 0;
+            }
+        } else {
+            misStats = data.equipo_1;
+            statsLocal = data.equipo_1?.goles || 0;
+            statsVisitante = data.equipo_2?.goles || 0;
+        }
+
+        setStatsScoreLocal(statsLocal);
+        setStatsScoreVisitante(statsVisitante);
+
+        if (misStats) {
+           setTeamManualStats({
+              ...teamManualStats,
+              goles_favor: misStats.goles || 0,
+              goles_en_contra: data.equipo_1?.goles === misStats.goles ? (data.equipo_2?.goles || 0) : (data.equipo_1?.goles || 0),
+              tiros: misStats.tiros || 0,
+              pases_intentados: misStats.pases || 0,
+              entradas_intentadas: misStats.entradas || 0,
+              posesion: misStats.posesion || 0,
+              recuperaciones: misStats.recuperaciones || 0,
+              fueras_lugar: misStats.fueras_lugar || 0,
+              tiros_esquina: misStats.tiros_esquina || 0,
+              tiros_libres: misStats.tiros_libres || 0,
+              penales: misStats.penales || 0,
+              faltas_cometidas: misStats.faltas_cometidas || 0,
+              precision_tiros: misStats.precision_tiros || 0,
+              tasa_exito_regates: misStats.tasa_exito_regates || 0,
+              tarjetas_amarillas: misStats.tarjetas_amarillas || 0,
+              tarjetas_rojas: misStats.tarjetas_rojas || 0,
+              precision_pases: misStats.precision_pases || 0,
+              entradas_exitosas: misStats.entradas_exitosas || 0,
+              atajadas: misStats.atajadas || 0,
+              asistencias: misStats.asistencias || 0,
+           });
+        }
+        
+        if (data.jugadores && Array.isArray(data.jugadores)) {
+             const updated = [...playerStats];
+             
+             const normalize = (str) => str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim() : "";
+
+             data.jugadores.forEach(extractedPlayer => {
+                const normExt = normalize(extractedPlayer.nombre);
+                
+                const matchedIdx = updated.findIndex(p => {
+                   const normGamertag = normalize(p.name);
+                   if (normGamertag && (normGamertag.includes(normExt) || normExt.includes(normGamertag))) return true;
+                   return false;
+                });
+                if (matchedIdx !== -1) {
+                   updated[matchedIdx].goles = extractedPlayer.goles || 0;
+                   updated[matchedIdx].asistencias = extractedPlayer.asistencias || 0;
+                   updated[matchedIdx].valoracion = extractedPlayer.valoracion || 0;
+                   updated[matchedIdx].yellowCard = extractedPlayer.tarjetas_amarillas > 0;
+                   updated[matchedIdx].redCard = extractedPlayer.tarjetas_rojas > 0;
+                   updated[matchedIdx].jugo = true;
+                }
+             });
+             setPlayerStats(updated);
+        }
+        showAlert("✨ Estadísticas extraídas con IA. Por favor revisa y corrige si es necesario antes de enviar.", "success", "Extracción Exitosa");
+      }
+    } catch (err) {
+        const errorMsg = err.response?.data?.message || err.message;
+        if (errorMsg.includes('503') || err.response?.status === 503) {
+          showAlert("⚠️ Actualmente los servidores externos de Inteligencia Artificial (Google Gemini) se encuentran saturados debido a una alta demanda global.\n\nEste no es un error de la aplicación, por favor inténtalo de nuevo en unos minutos.", "warning", "Servidores IA Saturados");
+        } else {
+          showAlert("❌ Error al extraer estadísticas con IA: " + errorMsg, "error", "Error de Extracción");
+        }
+      } finally {
+      setVisionProcessing(false);
+    }
+  };
 
   useEffect(() => {
     if (isDraw) {
@@ -108,6 +279,7 @@ export default function PartidosReportesClub({ equipo, roster }) {
     { id: 'todos', label: 'Todos los Partidos', icon: '🏟️' },
     { id: 'por_reportar', label: 'Por Reportar', icon: '🚨' },
     { id: 'pendiente', label: 'Pendientes / Calendario', icon: '⏳' },
+    { id: 'en_revision', label: 'En Revisión', icon: '🔍' },
     { id: 'finalizado', label: 'Finalizados / Reportes', icon: '🟢' },
   ], []);
 
@@ -143,11 +315,30 @@ export default function PartidosReportesClub({ equipo, roster }) {
     return partidos.filter(p => {
       // Filtro de Pestaña
       const yaReportado = p.goles_local !== null && p.goles_visitante !== null;
-      if (activeTab === 'pendiente' && yaReportado) return false;
-      if (activeTab === 'finalizado' && !yaReportado) return false;
+      const isLocal = p.equipo_local_id === equipo?.id;
+      const yaReportadoPorMi = (isLocal && p.reporte_local_completado) || (!isLocal && p.reporte_visitante_completado);
 
+      // Pestaña: En Revisión
+      if (activeTab === 'en_revision') {
+        if (yaReportado) return false;
+        if (!yaReportadoPorMi) return false;
+      }
+
+      // Pestaña: Finalizados
+      if (activeTab === 'finalizado') {
+        if (!yaReportado) return false;
+      }
+
+      // Pestaña: Pendientes / Calendario
+      if (activeTab === 'pendiente') {
+        if (yaReportado) return false;
+        if (yaReportadoPorMi) return false;
+      }
+
+      // Pestaña: Por Reportar
       if (activeTab === 'por_reportar') {
         if (yaReportado) return false;
+        if (yaReportadoPorMi) return false;
         if (!p.fecha) return false;
         const today = new Date();
         const year = today.getFullYear();
@@ -177,7 +368,7 @@ export default function PartidosReportesClub({ equipo, roster }) {
 
       return localNom.includes(q) || visitNom.includes(q) || compNom.includes(q) || jornadaNom.includes(q);
     });
-  }, [partidos, activeTab, selectedTemporada, selectedCompetencia, searchTerm]);
+  }, [partidos, activeTab, selectedTemporada, selectedCompetencia, searchTerm, equipo]);
 
   // Paginación manual en el cliente
   const paginatedData = useMemo(() => {
@@ -231,7 +422,7 @@ export default function PartidosReportesClub({ equipo, roster }) {
         });
       }
       if (existingReport.player_stats) {
-        setPlayerStats(existingReport.player_stats);
+        setPlayerStats(existingReport.player_stats.map(p => ({ ...p, jugo: true })));
       }
     } else {
       setTeamManualStats({
@@ -245,7 +436,16 @@ export default function PartidosReportesClub({ equipo, roster }) {
         entradas_exitosas: 0,
         tarjetas_rojas: 0,
         tarjetas_amarillas: 0,
-        atajadas: 0
+        atajadas: 0,
+        posesion: 0,
+        recuperaciones: 0,
+        fueras_lugar: 0,
+        tiros_esquina: 0,
+        tiros_libres: 0,
+        penales: 0,
+        faltas_cometidas: 0,
+        precision_tiros: 0,
+        tasa_exito_regates: 0
       });
 
       // Inicializar estadísticas manuales vacías de jugadores
@@ -259,7 +459,8 @@ export default function PartidosReportesClub({ equipo, roster }) {
           asistencias: 0,
           pases: 0,
           yellowCard: false,
-          redCard: false
+          redCard: false,
+          jugo: false
         };
       });
       setPlayerStats(mappedPlayers);
@@ -302,7 +503,7 @@ export default function PartidosReportesClub({ equipo, roster }) {
   // Enviar Reporte de EA Sports API
   const handleEaReportSubmit = async (forceReport = false) => {
     if (!selectedEaMatchId || !eaClubLocalId || !eaClubVisitanteId) {
-      alert("⚠️ Selecciona un partido de EA y confirma los IDs de Club.");
+      showAlert("⚠️ Selecciona un partido de EA y confirma los IDs de Club.", "warning");
       return;
     }
 
@@ -354,7 +555,7 @@ export default function PartidosReportesClub({ equipo, roster }) {
       if (err.response?.status === 422 && err.response?.data?.code === 'VALIDATION_WARNING') {
         setEaWarnings(err.response.data.players);
       } else {
-        alert("❌ Error al procesar reporte de EA: " + (err.response?.data?.message || err.message));
+        showAlert("❌ Error al procesar reporte de EA: " + (err.response?.data?.message || err.message), "error");
       }
     } finally {
       setEaProcessing(false);
@@ -362,23 +563,23 @@ export default function PartidosReportesClub({ equipo, roster }) {
   };
 
   // Enviar Reporte Manual
-  const handleManualReportSubmit = async () => {
+  const handleManualReportSubmit = async (e) => {
+    e.preventDefault();
+
     if (statsScoreLocal === '' || statsScoreVisitante === '') {
-      alert("⚠️ Por favor ingresa los goles del partido.");
+      showAlert("⚠️ Por favor ingresa los goles del partido.", "warning");
       return;
     }
 
-    const isEmpate = Number(statsScoreLocal) === Number(statsScoreVisitante);
-    if (isEmpate) {
-      if (!fotoPartido || !fotoJugadores || !fotoConectados) {
-        alert("⚠️ Para reportar un empate es obligatorio subir las 3 fotos (Estadísticas del partido, Estadísticas del jugador, y Jugadores conectados).");
-        return;
-      }
+    if (!fotoPartido || !fotoJugadores || !fotoConectados) {
+      showAlert("⚠️ Es obligatorio subir las 3 fotos (Estadísticas del partido, Estadísticas del jugador, y Jugadores conectados) para completar el reporte.", "warning", "Fotos Incompletas");
+      return;
     }
 
     setManualProcessing(true);
     try {
       const isLocal = selectedMatch.equipo_local_id === equipo.id;
+      const statsDisabled = selectedMatch.competencia?.config?.sin_transferencias === true;
       const res = await api.post(`/partidos/${selectedMatch.id}/manual-report`, {
         goles_local: Number(statsScoreLocal),
         goles_visitante: Number(statsScoreVisitante),
@@ -388,7 +589,7 @@ export default function PartidosReportesClub({ equipo, roster }) {
           conectados: fotoConectados
         },
         team_stats: teamManualStats,
-        player_stats: playerStats,
+        player_stats: statsDisabled ? [] : playerStats.filter(p => p.jugo),
         side: isLocal ? 'local' : 'visitante'
       });
 
@@ -398,7 +599,7 @@ export default function PartidosReportesClub({ equipo, roster }) {
         fetchPartidos();
       }
     } catch (err) {
-      alert("❌ Error al enviar el reporte manual: " + (err.response?.data?.message || err.message));
+      showAlert("❌ Error al enviar el reporte manual: " + (err.response?.data?.message || err.message), "error");
     } finally {
       setManualProcessing(false);
     }
@@ -468,34 +669,50 @@ export default function PartidosReportesClub({ equipo, roster }) {
       header: 'Estado',
       render: (row) => {
         const yaRep = row.goles_local !== null && row.goles_visitante !== null;
-        return (
-          <Badge variant={yaRep ? 'success' : 'warning'}>
-            {yaRep ? 'Finalizado' : 'Pendiente'}
-          </Badge>
-        );
+        const yaReportadoPorMi = (row.equipo_local_id === equipo.id && row.reporte_local_completado) || (row.equipo_visitante_id === equipo.id && row.reporte_visitante_completado);
+        if (yaRep) {
+          return <Badge variant="success">Finalizado</Badge>;
+        }
+        if (yaReportadoPorMi) {
+          return (
+            <Badge variant="primary" className="border border-blue-500/20 bg-blue-500/10 text-blue-400">
+              En Revisión
+            </Badge>
+          );
+        }
+        return <Badge variant="warning">Pendiente</Badge>;
       }
     },
     {
       header: 'Acciones',
       render: (row) => {
         const yaRep = row.goles_local !== null && row.goles_visitante !== null;
+        const yaReportadoPorMi = (row.equipo_local_id === equipo.id && row.reporte_local_completado) || (row.equipo_visitante_id === equipo.id && row.reporte_visitante_completado);
         return (
           <div className="flex items-center gap-2">
-            {!yaRep ? (
+            {yaRep ? (
+              <Button
+                size="sm"
+                disabled
+                className="h-8 px-3 text-[10px] bg-emerald-600/10 text-emerald-400 border border-emerald-500/20 font-display font-black uppercase tracking-wider cursor-not-allowed whitespace-nowrap shrink-0"
+              >
+                ✅ Finalizado
+              </Button>
+            ) : yaReportadoPorMi ? (
+              <Button
+                size="sm"
+                disabled
+                className="h-8 px-3 text-[10px] bg-blue-600/10 text-blue-400 border border-blue-500/20 font-display font-black uppercase tracking-wider cursor-not-allowed whitespace-nowrap shrink-0 animate-pulse"
+              >
+                ⏳ En Revisión
+              </Button>
+            ) : (
               <Button
                 size="sm"
                 onClick={() => openReportModal(row)}
                 className="h-8 px-3 text-[10px] bg-gradient-to-r from-primary to-destructive text-primary-foreground border-none font-display font-black uppercase tracking-wider shadow-md whitespace-nowrap shrink-0"
               >
                 🛡️ Ficha / Reportar
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                disabled
-                className="h-8 px-3 text-[10px] bg-emerald-600/10 text-emerald-400 border border-emerald-500/20 font-display font-black uppercase tracking-wider cursor-not-allowed whitespace-nowrap shrink-0"
-              >
-                ✅ Reportado
               </Button>
             )}
             <Button
@@ -513,7 +730,7 @@ export default function PartidosReportesClub({ equipo, roster }) {
         );
       }
     }
-  ], [navigate]);
+  ], [navigate, equipo]);
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in relative">
@@ -617,20 +834,26 @@ export default function PartidosReportesClub({ equipo, roster }) {
               </div>
 
               {/* Selector de Pestañas del Reporte */}
-              <div className="flex gap-1 bg-muted/40 p-1 rounded-lg border border-border/40 shrink-0">
+              <div className="flex flex-wrap gap-1 bg-muted/40 p-1 rounded-lg border border-border/40 shrink-0">
                 <button 
                   disabled={isDraw}
                   onClick={() => setReportMethod('ea')}
                   className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-1 ${reportMethod === 'ea' ? 'bg-background text-primary shadow-sm border border-border/20' : 'text-muted-foreground hover:text-foreground'} ${isDraw ? 'opacity-50 cursor-not-allowed' : ''}`}
                   title={isDraw ? "Los empates requieren reporte manual obligatorio" : ""}
                 >
-                  🎮 EA Sports API
+                  🎮 EA API
+                </button>
+                <button 
+                  onClick={() => setReportMethod('ia')}
+                  className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-1 ${reportMethod === 'ia' ? 'bg-background text-primary shadow-sm border border-border/20' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  ✨ IA Vision
                 </button>
                 <button 
                   onClick={() => setReportMethod('manual')}
                   className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-colors ${reportMethod === 'manual' ? 'bg-background text-primary shadow-sm border border-border/20' : 'text-muted-foreground hover:text-foreground'}`}
                 >
-                  📝 Entrada Manual
+                  📝 Manual
                 </button>
               </div>
             </div>
@@ -827,8 +1050,54 @@ export default function PartidosReportesClub({ equipo, roster }) {
               </div>
             )}
 
-            {reportMethod === 'manual' && (
+            {(reportMethod === 'manual' || reportMethod === 'ia') && (
               <div className="space-y-5">
+                
+                {reportMethod === 'ia' && (
+                  <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
+                    <h4 className="text-[11px] font-black uppercase text-primary mb-2 flex items-center gap-1.5">
+                      ✨ Autocompletar con IA (Gemini Vision)
+                    </h4>
+                    <p className="text-[10px] text-muted-foreground mb-3">
+                      Sube las capturas de pantalla del partido (Estadísticas del Equipo y Rendimiento de Jugadores) para extraer los datos automáticamente.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold uppercase text-muted-foreground">
+                          Foto: Stats de Equipo {fotoPartido && <span className="text-emerald-500 font-bold ml-1">✓ Cargada</span>}
+                        </label>
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={(e) => handleImageUpload(e, setVisionTeamStatsImg, 'team')}
+                          className="w-full text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                        />
+                        {uploadingTeam && <p className="text-[9px] text-amber-500 animate-pulse font-semibold">Subiendo copia al servidor...</p>}
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold uppercase text-muted-foreground">
+                          Foto: Rendimiento Jugadores {fotoJugadores && <span className="text-emerald-500 font-bold ml-1">✓ Cargada</span>}
+                        </label>
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={(e) => handleImageUpload(e, setVisionPlayerStatsImg, 'player')}
+                          className="w-full text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                        />
+                        {uploadingPlayer && <p className="text-[9px] text-amber-500 animate-pulse font-semibold">Subiendo copia al servidor...</p>}
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={handleVisionExtract}
+                      isLoading={visionProcessing}
+                      disabled={!visionTeamStatsImg || !visionPlayerStatsImg}
+                      className="w-full h-8 text-[10px] bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black uppercase tracking-wider shadow border-none"
+                    >
+                      🚀 Extraer Estadísticas
+                    </Button>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[10px] text-primary font-black uppercase tracking-wider block truncate">Goles {selectedMatch.local.nombre} (Local)</label>
@@ -840,37 +1109,30 @@ export default function PartidosReportesClub({ equipo, roster }) {
                   </div>
                 </div>
 
-                {/* Alerta de Empate / Obligación Manual */}
-                {isDraw && (
-                  <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 p-4 rounded-xl text-xs space-y-1 animate-pulse">
-                    <p className="font-bold flex items-center gap-1.5 text-amber-300">
-                      ⚠️ Empate Detectado - Reporte Manual Requerido
-                    </p>
-                    <p className="leading-relaxed text-[11px] text-muted-foreground">
-                      Debido a que el encuentro finalizó en empate, el sistema exige que realices un reporte manual detallado.
-                      **Es obligatorio subir las 3 capturas del juego** (Estadísticas del partido, Estadísticas de jugadores, y Jugadores conectados).
-                    </p>
-                  </div>
-                )}
+
 
                 {/* Subida de Fotos */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border border-border/40 p-4 rounded-xl bg-muted/10">
-                  <div className="space-y-1.5">
-                    <ImageUploader 
-                      label="Estadísticas Partido *" 
-                      value={fotoPartido} 
-                      onChange={setFotoPartido}
-                      folder="reportes"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <ImageUploader 
-                      label="Valoraciones Plantilla *" 
-                      value={fotoJugadores} 
-                      onChange={setFotoJugadores}
-                      folder="reportes"
-                    />
-                  </div>
+                <div className={`grid grid-cols-1 ${reportMethod === 'manual' ? 'sm:grid-cols-3' : 'sm:grid-cols-1'} gap-4 border border-border/40 p-4 rounded-xl bg-muted/10`}>
+                  {reportMethod === 'manual' && (
+                    <>
+                      <div className="space-y-1.5">
+                        <ImageUploader 
+                          label="Estadísticas Partido *" 
+                          value={fotoPartido} 
+                          onChange={setFotoPartido}
+                          folder="reportes"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <ImageUploader 
+                          label="Valoraciones Plantilla *" 
+                          value={fotoJugadores} 
+                          onChange={setFotoJugadores}
+                          folder="reportes"
+                        />
+                      </div>
+                    </>
+                  )}
                   <div className="space-y-1.5">
                     <ImageUploader 
                       label="Jugadores Conectados *" 
@@ -932,45 +1194,60 @@ export default function PartidosReportesClub({ equipo, roster }) {
                   </div>
                 </div>
 
-                {/* Estadísticas de Plantilla */}
-                <div className="space-y-2 border-t border-border/30 pt-3">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">Rendimiento de Plantilla ({equipo.nombre})</h4>
-                  <div className="max-h-48 overflow-y-auto border border-border/40 rounded-xl bg-muted/5 divide-y divide-border/20 pr-1">
-                    {playerStats.length === 0 ? (
-                      <p className="text-[10px] text-muted-foreground text-center py-4">No hay jugadores registrados en el roster.</p>
-                    ) : (
-                      playerStats.map((p, idx) => (
-                        <div key={p.jugador_id || p.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-2.5 gap-2 text-[11px] font-semibold">
-                          <span className="text-foreground font-bold truncate w-24 text-left">{p.name}</span>
-                          <div className="flex flex-wrap items-center gap-3">
-                            <div className="flex items-center gap-1">
-                              <span className="text-[8px] uppercase text-muted-foreground">Val:</span>
-                              <input type="number" min="0" max="10" step="0.1" value={p.valoracion} onChange={(e) => { const c = [...playerStats]; c[idx].valoracion = Number(e.target.value); setPlayerStats(c); }} className="w-11 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold" />
+                {/* Estadísticas de Plantilla (Condicionado a sin_transferencias) */}
+                {selectedMatch?.competencia?.config?.sin_transferencias === true ? (
+                  <div className="border border-border/40 bg-muted/5 rounded-xl p-3.5 text-center text-xs space-y-1">
+                    <span className="text-sm">🚫</span>
+                    <p className="font-bold text-muted-foreground">Estadísticas Individuales Deshabilitadas</p>
+                    <p className="text-[10px] text-muted-foreground/80 leading-relaxed font-light">
+                      En competencias sin transferencias, no se permite ingresar estadísticas individuales de jugadores en reportes manuales o por foto.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 border-t border-border/30 pt-3">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">Rendimiento de Plantilla ({equipo.nombre})</h4>
+                    <div className="max-h-48 overflow-y-auto border border-border/40 rounded-xl bg-muted/5 divide-y divide-border/20 pr-1">
+                      {playerStats.length === 0 ? (
+                        <p className="text-[10px] text-muted-foreground text-center py-4">No hay jugadores registrados en el roster.</p>
+                      ) : (
+                        playerStats.map((p, idx) => (
+                          <div key={p.jugador_id || p.id} className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-2.5 gap-2 text-[11px] font-semibold transition-colors ${!p.jugo ? 'opacity-50 grayscale' : ''}`}>
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                <label className="flex items-center gap-1 cursor-pointer shrink-0">
+                                  <input type="checkbox" checked={p.jugo} onChange={(e) => { const c = [...playerStats]; c[idx].jugo = e.target.checked; setPlayerStats(c); }} className="w-3.5 h-3.5 rounded border-border/60 text-primary" />
+                                </label>
+                                <span className="text-foreground font-bold truncate w-24 text-left">{p.name}</span>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-[8px] uppercase text-muted-foreground">Goles:</span>
-                              <input type="number" min="0" value={p.goles} onChange={(e) => { const c = [...playerStats]; c[idx].goles = Number(e.target.value); setPlayerStats(c); }} className="w-9 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold" />
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-[8px] uppercase text-muted-foreground">Asists:</span>
-                              <input type="number" min="0" value={p.asistencias} onChange={(e) => { const c = [...playerStats]; c[idx].asistencias = Number(e.target.value); setPlayerStats(c); }} className="w-9 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold" />
-                            </div>
-                            <div className="flex gap-2">
-                              <label className="flex items-center gap-1 cursor-pointer">
-                                <input type="checkbox" checked={p.yellowCard} onChange={(e) => { const c = [...playerStats]; c[idx].yellowCard = e.target.checked; setPlayerStats(c); }} className="w-3.5 h-3.5 rounded border-border/60 text-primary" />
-                                <span className="text-[8px] font-black text-amber-500">🟨</span>
-                              </label>
-                              <label className="flex items-center gap-1 cursor-pointer">
-                                <input type="checkbox" checked={p.redCard} onChange={(e) => { const c = [...playerStats]; c[idx].redCard = e.target.checked; setPlayerStats(c); }} className="w-3.5 h-3.5 rounded border-border/60 text-primary" />
-                                <span className="text-[8px] font-black text-destructive">🟥</span>
-                              </label>
+                            <div className="flex flex-wrap items-center gap-3">
+                              <div className="flex items-center gap-1">
+                                <span className="text-[8px] uppercase text-muted-foreground">Val:</span>
+                                <input disabled={!p.jugo} type="number" min="0" max="10" step="0.1" value={p.valoracion} onChange={(e) => { const c = [...playerStats]; c[idx].valoracion = Number(e.target.value); setPlayerStats(c); }} className="w-11 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold" />
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[8px] uppercase text-muted-foreground">Goles:</span>
+                                <input disabled={!p.jugo} type="number" min="0" value={p.goles} onChange={(e) => { const c = [...playerStats]; c[idx].goles = Number(e.target.value); setPlayerStats(c); }} className="w-9 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold" />
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[8px] uppercase text-muted-foreground">Asists:</span>
+                                <input disabled={!p.jugo} type="number" min="0" value={p.asistencias} onChange={(e) => { const c = [...playerStats]; c[idx].asistencias = Number(e.target.value); setPlayerStats(c); }} className="w-9 h-7 text-center rounded bg-background border border-border/60 font-mono font-bold" />
+                              </div>
+                              <div className="flex gap-2">
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                  <input disabled={!p.jugo} type="checkbox" checked={p.yellowCard} onChange={(e) => { const c = [...playerStats]; c[idx].yellowCard = e.target.checked; setPlayerStats(c); }} className="w-3.5 h-3.5 rounded border-border/60 text-primary" />
+                                  <span className="text-[8px] font-black text-amber-500">🟨</span>
+                                </label>
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                  <input disabled={!p.jugo} type="checkbox" checked={p.redCard} onChange={(e) => { const c = [...playerStats]; c[idx].redCard = e.target.checked; setPlayerStats(c); }} className="w-3.5 h-3.5 rounded border-border/60 text-primary" />
+                                  <span className="text-[8px] font-black text-destructive">🟥</span>
+                                </label>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
-                    )}
+                        ))
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="flex gap-2 justify-end pt-3">
                   <Button onClick={() => setIsStatsModalOpen(false)} variant="outline" className="h-10 text-[10px]">Cancelar</Button>
@@ -1082,6 +1359,23 @@ export default function PartidosReportesClub({ equipo, roster }) {
             >
               Entendido
             </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de Alertas del Sistema */}
+      <Modal isOpen={alertConfig.isOpen} onClose={() => setAlertConfig({ ...alertConfig, isOpen: false })} title={alertConfig.title} maxWidth="max-w-md" zIndex="z-[200]">
+        <div className="p-4 sm:p-6 space-y-4">
+          <Alert variant={alertConfig.variant}>
+            {alertConfig.message.split('\n').map((line, i) => (
+              <React.Fragment key={i}>
+                {line}
+                {i !== alertConfig.message.split('\n').length - 1 && <br />}
+              </React.Fragment>
+            ))}
+          </Alert>
+          <div className="flex justify-end pt-2">
+            <Button onClick={() => setAlertConfig({ ...alertConfig, isOpen: false })} className="w-full sm:w-auto h-10 text-[11px] bg-primary text-primary-foreground font-black uppercase tracking-wider">Entendido</Button>
           </div>
         </div>
       </Modal>

@@ -90,7 +90,31 @@ class CompetenciaController extends Controller
 
     public function update(CompetenciaRequest $request, Competencia $competencia): JsonResponse
     {
-        $competencia->update($request->validated());
+        $validated = $request->validated();
+
+        // Delete old logo if updated
+        if (array_key_exists('logo', $validated) && $validated['logo'] !== $competencia->logo) {
+            $oldLogo = $competencia->logo;
+            if ($oldLogo && str_contains($oldLogo, 'uploads/') && !str_starts_with($oldLogo, 'http')) {
+                $fullPath = public_path(ltrim($oldLogo, '/'));
+                if (file_exists($fullPath) && is_file($fullPath)) {
+                    @unlink($fullPath);
+                }
+            }
+        }
+
+        // Delete old banner if updated
+        if (array_key_exists('banner', $validated) && $validated['banner'] !== $competencia->banner) {
+            $oldBanner = $competencia->banner;
+            if ($oldBanner && str_contains($oldBanner, 'uploads/') && !str_starts_with($oldBanner, 'http')) {
+                $fullPath = public_path(ltrim($oldBanner, '/'));
+                if (file_exists($fullPath) && is_file($fullPath)) {
+                    @unlink($fullPath);
+                }
+            }
+        }
+
+        $competencia->update($validated);
         Cache::forget('competencia_show_' . $competencia->id);
         return response()->json(new CompetenciaResource($competencia));
     }

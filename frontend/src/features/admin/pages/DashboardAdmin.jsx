@@ -275,7 +275,7 @@ export default function DashboardAdmin() {
       <div className="flex flex-col xl:flex-row gap-8 items-start relative">
         
         {/* SIDEBAR TÁCTICO (Navegación Admin) */}
-        <div className="w-full xl:w-80 shrink-0 xl:sticky xl:top-24 flex flex-col gap-6 z-40">
+        <div className="w-full xl:w-80 shrink-0 flex flex-col gap-6 z-40">
           <Card padding="p-5" className="shadow-xl border-t-[3px] border-t-fuchsia-500/50" hoverLift={false}>
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-4 ml-2">Módulos Administrativos</h3>
             <nav className="flex flex-row xl:flex-col gap-2 overflow-x-auto xl:overflow-visible pb-2 xl:pb-0 no-scrollbar">

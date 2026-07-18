@@ -579,7 +579,12 @@ export default function TacticVisualizer3D({ players = [], activeTab = 'totw', c
 
         // Club badge instead of generic SVG shield
         if (loadedBadgeImg) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(120, 322, 44, 0, Math.PI * 2);
+          ctx.clip();
           ctx.drawImage(loadedBadgeImg, 76, 278, 88, 88);
+          ctx.restore();
         } else {
           ctx.save();
           ctx.translate(120, 322);
@@ -641,7 +646,7 @@ export default function TacticVisualizer3D({ players = [], activeTab = 'totw', c
         ctx.fillStyle = '#ffffff';
         ctx.font = '900 42px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(p.name?.substring(0, 14).toUpperCase() || 'PLAYER', 256, 438);
+        ctx.fillText(p.name?.substring(0, 14).toUpperCase() || 'PLAYER', 256, 438, 420);
         ctx.shadowBlur = 0;
 
         // Stats Values Drawing directly on background - dynamically sized layout
@@ -663,15 +668,15 @@ export default function TacticVisualizer3D({ players = [], activeTab = 'totw', c
         });
 
         // Bottom Logos: Flag, League logo, Club badge (Raised & Compacted)
-        // Country Flag (X: 165, Y: 574, W: 36, H: 22)
+        // Country Flag (X: 175, Y: 574, W: 36, H: 22)
         if (loadedFlagImg) {
-          ctx.drawImage(loadedFlagImg, 165, 574, 36, 22);
+          ctx.drawImage(loadedFlagImg, 175, 574, 36, 22);
         } else {
           ctx.fillStyle = '#1e293b';
-          ctx.fillRect(165, 574, 36, 22);
+          ctx.fillRect(175, 574, 36, 22);
           ctx.fillStyle = '#ffffff';
           ctx.font = 'bold 10px sans-serif';
-          ctx.fillText('CL', 183, 589);
+          ctx.fillText('CL', 193, 589);
         }
 
         // League Icon (Center: X: 256, Y: 593)
@@ -679,20 +684,25 @@ export default function TacticVisualizer3D({ players = [], activeTab = 'totw', c
         ctx.font = '22px sans-serif';
         ctx.fillText('⚽', 256, 593);
 
-        // Club Crest (X: 310, Y: 572, W: 26, H: 26)
+        // Club Crest (X: 306, Y: 572, W: 26, H: 26)
         if (loadedBadgeImg) {
-          ctx.drawImage(loadedBadgeImg, 310, 572, 26, 26);
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(319, 585, 13, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.drawImage(loadedBadgeImg, 306, 572, 26, 26);
+          ctx.restore();
         } else {
           ctx.strokeStyle = isTOTS ? '#00f3ff' : '#f59e0b';
           ctx.lineWidth = 2;
           ctx.fillStyle = '#020617';
           ctx.beginPath();
-          ctx.arc(323, 585, 12, 0, Math.PI * 2);
+          ctx.arc(319, 585, 12, 0, Math.PI * 2);
           ctx.fill();
           ctx.stroke();
           ctx.fillStyle = '#ffffff';
           ctx.font = '900 8px sans-serif';
-          ctx.fillText('FC', 323, 588);
+          ctx.fillText('FC', 319, 588);
         }
 
         texture.needsUpdate = true;
@@ -727,7 +737,11 @@ export default function TacticVisualizer3D({ players = [], activeTab = 'totw', c
           loadedFlagImg = flagObj;
           drawCard();
         };
-        flagObj.src = getImageUrl(resolvedFlagUrl);
+        flagObj.onerror = () => {
+          console.warn("Failed to load flag photo:", flagObj.src);
+          drawCard();
+        };
+        flagObj.src = resolvedFlagUrl.startsWith('http') ? resolvedFlagUrl : getImageUrl(resolvedFlagUrl);
       }
 
       if (p.clubBadge) {
@@ -737,7 +751,7 @@ export default function TacticVisualizer3D({ players = [], activeTab = 'totw', c
           loadedBadgeImg = badgeObj;
           drawCard();
         };
-        badgeObj.src = getImageUrl(p.clubBadge);
+        badgeObj.src = getImageUrl(p.clubBadge, 'team');
       }
 
       // 2. Create FUT 3D Card shape using ExtrudeGeometry for shield cutout matching Image 2 TOTW
@@ -987,10 +1001,13 @@ export default function TacticVisualizer3D({ players = [], activeTab = 'totw', c
     };
   }, [players, activeTab, customColor]);
 
-  const getImageUrl = (path) => {
+  const getImageUrl = (path, type = 'user') => {
     if (!path) return null;
-    if (path.includes('default-user.png')) {
-      return '/images/users/default-user.png';
+    if (path.includes('default-user.png') || (path === 'default.png' && type === 'user')) {
+      return '/images/users/default-user.png?v=2';
+    }
+    if (path === 'default.png' && type === 'team') {
+      return '/images/default-team-logo.svg';
     }
     const apiBaseUrl = api.defaults.baseURL || 'http://localhost:8000/api';
     const backendBaseUrl = apiBaseUrl.replace(/\/api$/, '') ;
@@ -1126,7 +1143,7 @@ export default function TacticVisualizer3D({ players = [], activeTab = 'totw', c
                   <div>
                     <span className="text-[9px] text-muted-foreground uppercase font-mono block">Posicion Ideal</span>
                     <span className="text-sm font-black text-amber-400 uppercase tracking-widest font-mono">
-                      {resolvedModalStats.role} ({selectedPlayer.position || selectedPlayer.pos || 'MC'})
+                      {resolvedModalStats.role} ({translatePosition(selectedPlayer.position || selectedPlayer.pos || 'MC')})
                     </span>
                   </div>
                   <div className="bg-amber-500/10 border border-amber-500/25 px-3 py-1 rounded-full text-[9px] text-amber-400 font-mono font-black uppercase tracking-wider">

@@ -41,10 +41,13 @@ export default function TotwTots() {
     const cardTemplateUrl = isTOTS ? totsTemplateImg : totwTemplateImg;
 
     // Helper to resolve URLs with local proxy to bypass CORS
-    const getCORSImageUrl = (path) => {
+    const getCORSImageUrl = (path, type = 'user') => {
       if (!path) return null;
-      if (path.includes('default-user.png')) {
-        return '/images/users/default-user.png';
+      if (path.includes('default-user.png') || (path === 'default.png' && type === 'user')) {
+        return '/images/users/default-user.png?v=2';
+      }
+      if (path === 'default.png' && type === 'team') {
+        return '/images/default-team-logo.svg';
       }
       if (path.startsWith('http')) {
         return path;
@@ -55,7 +58,7 @@ export default function TotwTots() {
 
     const playerImgSrc = getCORSImageUrl(player.foto);
     const resolvedFlagUrl = player.countryFlag || (player.nacionalidad ? getFlagUrl(player.nacionalidad) : null);
-    const clubBadgeUrl = getCORSImageUrl(player.clubBadge);
+    const clubBadgeUrl = getCORSImageUrl(player.clubBadge, 'team');
 
     let loadedCount = 0;
     const totalAssets = 4;
@@ -400,6 +403,9 @@ export default function TotwTots() {
 
   const getImageUrl = (path) => {
     if (!path) return null;
+    if (path.includes('default-user.png') || path === 'default.png') {
+      return '/images/users/default-user.png?v=2';
+    }
     if (path.startsWith('http')) return path;
     if (typeof window.mediaUrl === 'function') {
       return window.mediaUrl(path);

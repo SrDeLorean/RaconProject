@@ -15,7 +15,8 @@ class Organizacion extends Model
     protected $fillable = [
         'owner_id', 'nombre', 'slug', 'descripcion', 'logo', 'banner',
         'color_hex', 'email_contacto', 'discord_url', 'twitter_url',
-        'twitch_url', 'website', 'pais', 'is_verified', 'estado'
+        'twitch_url', 'website', 'pais', 'is_verified', 'estado',
+        'instagram_url', 'facebook_url', 'youtube_url', 'tiktok_url', 'whatsapp'
     ];
 
     protected $casts = [

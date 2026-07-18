@@ -18,7 +18,7 @@ window.mediaUrl = (path, fallbackType) => {
 
   if (isDefault) {
     if (fallbackType === 'user' || fallbackType === 'usuario') {
-      return '/images/users/default-user.png';
+      return '/images/users/default-user.png?v=2';
     }
     if (fallbackType === 'org_logo' || fallbackType === 'organizacion_logo') {
       return '/images/default-org-logo.svg';
@@ -36,7 +36,7 @@ window.mediaUrl = (path, fallbackType) => {
     // Auto-detect based on path keywords if fallbackType is not provided
     if (path) {
       if (path.includes('default-user.png') || path.includes('users')) {
-        return '/images/users/default-user.png';
+        return '/images/users/default-user.png?v=2';
       }
       if (path.includes('default-org-logo')) {
         return '/images/default-org-logo.svg';
@@ -68,7 +68,7 @@ window.mediaUrl = (path, fallbackType) => {
 window.handleImageError = (e, fallbackType) => {
   e.target.onerror = null; // Evitar bucles infinitos
   if (fallbackType === 'user' || fallbackType === 'usuario') {
-    e.target.src = '/images/users/default-user.png';
+    e.target.src = '/images/users/default-user.png?v=2';
   } else if (fallbackType === 'org_logo' || fallbackType === 'organizacion_logo') {
     e.target.src = '/images/default-org-logo.svg';
   } else if (fallbackType === 'org_banner' || fallbackType === 'organizacion_banner') {

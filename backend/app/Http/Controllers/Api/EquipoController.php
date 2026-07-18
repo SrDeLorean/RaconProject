@@ -73,10 +73,24 @@ class EquipoController extends Controller
         $organizaciones = \App\Models\Organizacion::select('id', 'nombre', 'logo', 'slug')->get();
 
         // Autodetectar o usar la organización seleccionada
-        $organizacionId = $request->query('organizacion_id')
-            ?? \App\Models\OrganizacionEquipoUsuario::where('equipo_id', $equipo->id)->value('organizacion_id');
+        $organizacionId = $request->query('organizacion_id');
 
         if (!$organizacionId) {
+            // 1. Intentar autodetectar a partir de alguna competencia donde el equipo esté inscrito
+            $organizacionId = \DB::table('competencia_equipo')
+                ->join('competencias', 'competencia_equipo.competencia_id', '=', 'competencias.id')
+                ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
+                ->where('competencia_equipo.equipo_id', $equipo->id)
+                ->value('temporadas.organizacion_id');
+        }
+
+        if (!$organizacionId) {
+            // 2. Intentar autodetectar a partir del roster
+            $organizacionId = \App\Models\OrganizacionEquipoUsuario::where('equipo_id', $equipo->id)->value('organizacion_id');
+        }
+
+        if (!$organizacionId) {
+            // 3. Fallback a organización del capitan o primera organización
             $organizacionId = \App\Models\Organizacion::where('owner_id', auth()->id())->value('id')
                 ?? \App\Models\Organizacion::value('id')
                 ?? 1; // Fallback
@@ -119,6 +133,7 @@ class EquipoController extends Controller
                 'plataforma' => $comp->plataforma,
                 'max_participantes' => $comp->max_participantes,
                 'estado_inscripcion' => $inscrito ? ($inscrito->estado_inscripcion ?? 'aprobado') : null,
+                'config' => $comp->config,
             ];
         });
 
@@ -169,6 +184,33 @@ class EquipoController extends Controller
                 }
             }
         }
+
+        // Obtener estadísticas avanzadas (IA) del equipo
+        $statsAvanzadasQuery = \DB::table('estadisticas_equipos')
+            ->join('competencias', 'estadisticas_equipos.competencia_id', '=', 'competencias.id')
+            ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
+            ->where('estadisticas_equipos.equipo_id', $equipo->id)
+            ->whereIn('competencias.estado', ['en_progreso', 'finalizado', 'borrador']);
+
+        if ($organizacionId) {
+            $statsAvanzadasQuery->where('temporadas.organizacion_id', $organizacionId);
+        }
+
+        $advancedStats = $statsAvanzadasQuery->select(
+            \DB::raw('AVG(estadisticas_equipos.posesion) as avg_posesion'),
+            \DB::raw('SUM(estadisticas_equipos.tiros) as total_tiros'),
+            \DB::raw('SUM(estadisticas_equipos.pases_intentados) as total_pases'),
+            \DB::raw('AVG(estadisticas_equipos.precision_pases) as avg_precision_pases'),
+            \DB::raw('SUM(estadisticas_equipos.entradas_exitosas) as total_entradas_exitosas'),
+            \DB::raw('SUM(estadisticas_equipos.atajadas) as total_atajadas')
+        )->first();
+
+        $stats['avg_posesion'] = $advancedStats->avg_posesion ? round($advancedStats->avg_posesion, 1) : 0;
+        $stats['total_tiros'] = $advancedStats->total_tiros ?? 0;
+        $stats['total_pases'] = $advancedStats->total_pases ?? 0;
+        $stats['avg_precision_pases'] = $advancedStats->avg_precision_pases ? round($advancedStats->avg_precision_pases, 1) : 0;
+        $stats['total_entradas_exitosas'] = $advancedStats->total_entradas_exitosas ?? 0;
+        $stats['total_atajadas'] = $advancedStats->total_atajadas ?? 0;
 
         // Obtener el próximo partido programado filtrado por organización
         $proximoPartido = \App\Models\Partido::with([
@@ -262,7 +304,7 @@ class EquipoController extends Controller
         $organizacionId = $request->query('organizacion_id');
         $cacheKey = 'equipo_show_' . $equipo->id . ($organizacionId ? '_org_' . $organizacionId : '');
         $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($equipo, $organizacionId) {
-            $equipo->load('capitan');
+            $equipo->load(['capitan', 'competencias.temporada.organizacion']);
 
         $roster = \App\Models\OrganizacionEquipoUsuario::with(['jugador', 'organizacion'])
             ->where('equipo_id', $equipo->id)
@@ -284,16 +326,27 @@ class EquipoController extends Controller
                 ];
             })->filter()->values();
 
-        $competencias = \App\Models\Competencia::whereHas('equipos', function ($q) use ($equipo) {
-            $q->where('equipos.id', $equipo->id);
-        })->get()->map(function ($comp) {
-            return [
-                'id' => $comp->id,
-                'nombre' => $comp->nombre,
-                'formato' => $comp->formato,
-                'plataforma' => $comp->plataforma,
-            ];
-        });
+        $competencias = \App\Models\Competencia::with(['temporada.organizacion'])
+            ->whereHas('equipos', function ($q) use ($equipo) {
+                $q->where('equipos.id', $equipo->id);
+            })->get()->map(function ($comp) {
+                return [
+                    'id' => $comp->id,
+                    'nombre' => $comp->nombre,
+                    'formato' => $comp->formato,
+                    'plataforma' => $comp->plataforma,
+                    'logo' => $comp->banner ?? $comp->logo,
+                    'temporada' => $comp->temporada ? [
+                        'id' => $comp->temporada->id,
+                        'organizacion_id' => $comp->temporada->organizacion_id,
+                        'organizacion' => $comp->temporada->organizacion ? [
+                            'id' => $comp->temporada->organizacion->id,
+                            'nombre' => $comp->temporada->organizacion->nombre,
+                            'logo' => $comp->temporada->organizacion->logo,
+                        ] : null,
+                    ] : null,
+                ];
+            });
 
         $traspasos = \App\Models\SolicitudFichaje::with([
             'jugador:id,name,foto,gamertag',
@@ -345,7 +398,7 @@ class EquipoController extends Controller
         }
         
         $statsPartidosQuery->whereHas('competencia', function($q) {
-            $q->where('estado', 'en_progreso');
+            $q->whereIn('estado', ['en_progreso', 'finalizado', 'borrador']);
         });
 
         $statsPartidos = $statsPartidosQuery->get();
@@ -371,13 +424,40 @@ class EquipoController extends Controller
             }
         }
 
+        // Obtener estadísticas avanzadas (IA) del equipo
+        $statsAvanzadasQuery = \DB::table('estadisticas_equipos')
+            ->join('competencias', 'estadisticas_equipos.competencia_id', '=', 'competencias.id')
+            ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
+            ->where('estadisticas_equipos.equipo_id', $equipo->id)
+            ->whereIn('competencias.estado', ['en_progreso', 'finalizado', 'borrador']);
+
+        if ($organizacionId) {
+            $statsAvanzadasQuery->where('temporadas.organizacion_id', $organizacionId);
+        }
+
+        $advancedStats = $statsAvanzadasQuery->select(
+            \DB::raw('AVG(estadisticas_equipos.posesion) as avg_posesion'),
+            \DB::raw('SUM(estadisticas_equipos.tiros) as total_tiros'),
+            \DB::raw('SUM(estadisticas_equipos.pases_intentados) as total_pases'),
+            \DB::raw('AVG(estadisticas_equipos.precision_pases) as avg_precision_pases'),
+            \DB::raw('SUM(estadisticas_equipos.entradas_exitosas) as total_entradas_exitosas'),
+            \DB::raw('SUM(estadisticas_equipos.atajadas) as total_atajadas')
+        )->first();
+
+        $stats['avg_posesion'] = $advancedStats->avg_posesion ? round($advancedStats->avg_posesion, 1) : 0;
+        $stats['total_tiros'] = $advancedStats->total_tiros ?? 0;
+        $stats['total_pases'] = $advancedStats->total_pases ?? 0;
+        $stats['avg_precision_pases'] = $advancedStats->avg_precision_pases ? round($advancedStats->avg_precision_pases, 1) : 0;
+        $stats['total_entradas_exitosas'] = $advancedStats->total_entradas_exitosas ?? 0;
+        $stats['total_atajadas'] = $advancedStats->total_atajadas ?? 0;
+
         // Top goleadores de la escuadra en el sistema (filtrado por organizacion y competencias en_progreso)
         $goleadoresQuery = \DB::table('estadisticas_jugadores')
             ->join('users', 'estadisticas_jugadores.jugador_id', '=', 'users.id')
             ->join('competencias', 'estadisticas_jugadores.competencia_id', '=', 'competencias.id')
             ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
             ->where('estadisticas_jugadores.equipo_id', $equipo->id)
-            ->where('competencias.estado', 'en_progreso');
+            ->whereIn('competencias.estado', ['en_progreso', 'finalizado', 'borrador']);
 
         if ($organizacionId) {
             $goleadoresQuery->where('temporadas.organizacion_id', $organizacionId);
@@ -413,7 +493,7 @@ class EquipoController extends Controller
             ->join('competencias', 'estadisticas_jugadores.competencia_id', '=', 'competencias.id')
             ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
             ->where('estadisticas_jugadores.equipo_id', $equipo->id)
-            ->where('competencias.estado', 'en_progreso');
+            ->whereIn('competencias.estado', ['en_progreso', 'finalizado', 'borrador']);
 
         if ($organizacionId) {
             $asistentesQuery->where('temporadas.organizacion_id', $organizacionId);
@@ -450,7 +530,7 @@ class EquipoController extends Controller
             ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
             ->where('estadisticas_jugadores.equipo_id', $equipo->id)
             ->whereIn('estadisticas_jugadores.posicion', ['POR', 'GK', 'PO', 'por', 'gk', 'po', 'goalkeeper', 'GOALKEEPER'])
-            ->where('competencias.estado', 'en_progreso');
+            ->whereIn('competencias.estado', ['en_progreso', 'finalizado', 'borrador']);
 
         if ($organizacionId) {
             $arquerosQuery->where('temporadas.organizacion_id', $organizacionId);
@@ -491,7 +571,7 @@ class EquipoController extends Controller
             ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
             ->where('estadisticas_jugadores.equipo_id', $equipo->id)
             ->whereIn('estadisticas_jugadores.posicion', ['DFC', 'DFI', 'DFD', 'CB', 'LB', 'RB', 'DF', 'DEF', 'dfc', 'dfi', 'dfd', 'cb', 'lb', 'rb', 'df', 'def', 'defender', 'DEFENDER'])
-            ->where('competencias.estado', 'en_progreso');
+            ->whereIn('competencias.estado', ['en_progreso', 'finalizado', 'borrador']);
 
         if ($organizacionId) {
             $defensoresQuery->where('temporadas.organizacion_id', $organizacionId);
@@ -532,7 +612,7 @@ class EquipoController extends Controller
             ->join('temporadas', 'competencias.temporada_id', '=', 'temporadas.id')
             ->where('estadisticas_jugadores.equipo_id', $equipo->id)
             ->whereIn('estadisticas_jugadores.posicion', ['MC', 'MCO', 'MCD', 'MD', 'MI', 'CM', 'CAM', 'CDM', 'LM', 'RM', 'MED', 'mc', 'mco', 'mcd', 'md', 'mi', 'cm', 'cam', 'cdm', 'lm', 'rm', 'med', 'midfielder', 'MIDFIELDER'])
-            ->where('competencias.estado', 'en_progreso');
+            ->whereIn('competencias.estado', ['en_progreso', 'finalizado', 'borrador']);
 
         if ($organizacionId) {
             $mediosQuery->where('temporadas.organizacion_id', $organizacionId);
@@ -698,6 +778,22 @@ class EquipoController extends Controller
             ], 422);
         }
 
+        // Delete logo and banner files if they exist
+        $oldLogo = $equipo->logo;
+        if ($oldLogo && str_contains($oldLogo, 'uploads/') && !str_starts_with($oldLogo, 'http')) {
+            $fullPath = public_path(ltrim($oldLogo, '/'));
+            if (file_exists($fullPath) && is_file($fullPath)) {
+                @unlink($fullPath);
+            }
+        }
+        $oldBanner = $equipo->banner;
+        if ($oldBanner && str_contains($oldBanner, 'uploads/') && !str_starts_with($oldBanner, 'http')) {
+            $fullPath = public_path(ltrim($oldBanner, '/'));
+            if (file_exists($fullPath) && is_file($fullPath)) {
+                @unlink($fullPath);
+            }
+        }
+
         $this->clearEquipoCache($equipo);
         $equipo->delete();
 
@@ -715,43 +811,22 @@ class EquipoController extends Controller
             'dorsal' => 'nullable|string',
         ]);
 
-        // Autodetectar o usar la organización recibida
-        $organizacionId = $request->input('organizacion_id')
-            ?? \App\Models\OrganizacionEquipoUsuario::where('equipo_id', $equipo->id)->value('organizacion_id');
+        try {
+            $service = app(\App\Services\SolicitudFichajeService::class);
+            $datosFichaje = [
+                'organizacion_id' => $request->input('organizacion_id'),
+                'dorsal' => $request->dorsal,
+                'posicion' => $request->posicion,
+            ];
 
-        if (!$organizacionId) {
-            $organizacionId = \App\Models\Organizacion::where('owner_id', auth()->id())->value('id')
-                ?? \App\Models\Organizacion::value('id')
-                ?? 1;
+            $resultado = $service->ficharDirectoAdministrativo(auth()->user(), $equipo->id, $request->user_id, $datosFichaje);
+
+            $this->clearEquipoCache($equipo);
+
+            return response()->json(['message' => $resultado['message']], 200);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
         }
-
-        // Verificar si ya está en el roster de este equipo en esta organización
-        $existe = \App\Models\OrganizacionEquipoUsuario::where('organizacion_id', $organizacionId)
-            ->where('user_id', $request->user_id)
-            ->first();
-
-        if ($existe) {
-            if ($existe->equipo_id == $equipo->id) {
-                return response()->json(['message' => 'El jugador ya está en tu roster.'], 400);
-            } else {
-                return response()->json(['message' => 'El competidor ya pertenece a otro club dentro de esta organización.'], 400);
-            }
-        }
-
-        // Crear registro en organizacion_equipo_usuario
-        \App\Models\OrganizacionEquipoUsuario::create([
-            'organizacion_id' => $organizacionId,
-            'equipo_id' => $equipo->id,
-            'user_id' => $request->user_id,
-            'dorsal' => $request->dorsal,
-            'posicion_bloque' => $request->posicion,
-            'estado_fichaje' => 'activo',
-            'fecha_vinculacion' => now(),
-        ]);
-
-        $this->clearEquipoCache($equipo);
-
-        return response()->json(['message' => 'Jugador incorporado exitosamente al roster de la organización.'], 200);
     }
 
     public function removeRosterJugador(Request $request, Equipo $equipo, $userId): JsonResponse

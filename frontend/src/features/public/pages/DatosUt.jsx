@@ -102,10 +102,99 @@ export default function DatosUt() {
     return window.mediaUrl(path);
   };
 
-  const playersList = useMemo(() => {
-    if (!stats) return [];
-    return stats.todos_jugadores || [];
+  // Team, Player & Filter Mode States
+  const [filterMode, setFilterMode] = useState('ambas'); // 'equipo' | 'jugador' | 'ambas'
+  const [selectedTeam, setSelectedTeam] = useState('todos');
+  const [selectedPlayer, setSelectedPlayer] = useState('todos');
+
+  // Reset team/player filters when main filters change
+  useEffect(() => {
+    setSelectedTeam('todos');
+    setSelectedPlayer('todos');
+  }, [selectedOrg, selectedSeason, selectedComp]);
+
+  const handleTeamChange = (teamId) => {
+    setSelectedTeam(teamId);
+    setSelectedPlayer('todos');
+  };
+
+  const availableTeams = useMemo(() => {
+    if (!stats || !stats.todos_equipos) return [];
+    return stats.todos_equipos;
   }, [stats]);
+
+  const availablePlayers = useMemo(() => {
+    if (!stats || !stats.todos_jugadores) return [];
+    return stats.todos_jugadores.filter(p => {
+      if (filterMode === 'jugador' || selectedTeam === 'todos') return true;
+      const teamObj = stats.todos_equipos?.find(t => t.id.toString() === selectedTeam);
+      return p.equipo_nombre === teamObj?.nombre;
+    });
+  }, [stats, selectedTeam, filterMode]);
+
+  const filteredStats = useMemo(() => {
+    if (!stats) return null;
+    
+    let players = stats.todos_jugadores || [];
+    let teams = stats.todos_equipos || [];
+    
+    // 1. Filter players by team if mode is 'equipo' or 'ambas'
+    if (filterMode !== 'jugador' && selectedTeam !== 'todos') {
+      const teamObj = teams.find(t => t.id.toString() === selectedTeam);
+      const teamName = teamObj?.nombre;
+      players = players.filter(p => p.equipo_nombre === teamName);
+      teams = teams.filter(t => t.id.toString() === selectedTeam);
+    }
+    
+    // 2. Filter players by selected player if mode is 'jugador' or 'ambas'
+    if (filterMode !== 'equipo' && selectedPlayer !== 'todos') {
+      players = players.filter(p => p.id.toString() === selectedPlayer);
+    }
+    
+    // Helper to filter a list of players by team/player
+    const filterPlayerList = (list) => {
+      if (!list) return [];
+      return list.filter(p => {
+        // Match player
+        if (filterMode !== 'equipo' && selectedPlayer !== 'todos' && p.id.toString() !== selectedPlayer) return false;
+        // Match team
+        if (filterMode !== 'jugador' && selectedTeam !== 'todos') {
+          const teamObj = stats.todos_equipos?.find(t => t.id.toString() === selectedTeam);
+          if (p.equipo_nombre !== teamObj?.nombre) return false;
+        }
+        return true;
+      });
+    };
+
+    // Helper to filter a list of teams
+    const filterTeamList = (list) => {
+      if (!list) return [];
+      if (filterMode !== 'jugador' && selectedTeam !== 'todos') {
+        return list.filter(t => t.id.toString() === selectedTeam);
+      }
+      return list;
+    };
+
+    return {
+      ...stats,
+      todos_jugadores: players,
+      todos_equipos: teams,
+      goleadores: filterPlayerList(stats.goleadores),
+      asistentes: filterPlayerList(stats.asistentes),
+      porteros: filterPlayerList(stats.porteros),
+      delanteros: filterPlayerList(stats.delanteros),
+      medios: filterPlayerList(stats.medios),
+      defensas: filterPlayerList(stats.defensas),
+      equipos_goles: filterTeamList(stats.equipos_goles),
+      equipos_pases: filterTeamList(stats.equipos_pases),
+      equipos_defensa: filterTeamList(stats.equipos_defensa),
+    };
+  }, [stats, selectedTeam, selectedPlayer, filterMode]);
+
+  const playersList = useMemo(() => {
+    if (!filteredStats) return [];
+    return filteredStats.todos_jugadores || [];
+  }, [filteredStats]);
 
   return (
     <div className="relative min-h-screen bg-background pb-16 overflow-hidden text-foreground">
@@ -204,8 +293,38 @@ export default function DatosUt() {
 
       <div className="relative z-20 max-w-7xl mx-auto px-6 lg:px-10 space-y-8 animate-fade-in">
 
+        {/* Selector de Modo de Filtro */}
+        <div className="flex border border-border/40 p-1 bg-card/25 backdrop-blur-md rounded-2xl max-w-md mx-auto shadow-xl gap-1 mb-6 animate-fade-in">
+          {[
+            { id: 'equipo', label: '🛡️ Por Equipo' },
+            { id: 'jugador', label: '👤 Por Jugador' },
+            { id: 'ambas', label: '⚔️ Ambas Juntas' }
+          ].map((mode) => (
+            <button 
+              key={mode.id}
+              onClick={() => {
+                setFilterMode(mode.id);
+                if (mode.id === 'equipo') {
+                  setSelectedPlayer('todos');
+                } else if (mode.id === 'jugador') {
+                  setSelectedTeam('todos');
+                }
+              }}
+              className={`flex-1 py-2 px-3 text-[10px] font-condensed tracking-widest font-black uppercase rounded-xl transition-all duration-300 cursor-pointer whitespace-nowrap ${
+                filterMode === mode.id 
+                  ? 'bg-primary text-primary-foreground shadow-[0_0_15px_hsla(var(--primary),0.3)]' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+              }`}
+            >
+              {mode.label}
+            </button>
+          ))}
+        </div>
+
         {/* Panel de Filtros */}
-        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 border border-border/40 bg-card/15 backdrop-blur-md p-5 rounded-2xl shadow-xl">
+        <div className={`max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 ${
+          filterMode === 'ambas' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'
+        } gap-4 border border-border/40 bg-card/15 backdrop-blur-md p-5 rounded-2xl shadow-xl`}>
           <div className="space-y-1.5 text-left">
             <label className="text-[9px] font-mono font-black text-muted-foreground uppercase tracking-widest block">🛡️ Organización</label>
             <div className="relative">
@@ -258,13 +377,50 @@ export default function DatosUt() {
               <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-muted-foreground text-[9px]">▼</div>
             </div>
           </div>
+
+          {filterMode !== 'jugador' && (
+            <div className="space-y-1.5 text-left">
+              <label className="text-[9px] font-mono font-black text-muted-foreground uppercase tracking-widest block">🛡️ Equipo</label>
+              <div className="relative">
+                <select 
+                  value={selectedTeam}
+                  onChange={(e) => handleTeamChange(e.target.value)}
+                  disabled={!stats}
+                  className="w-full bg-background/45 border border-border/40 hover:border-primary/45 rounded-xl px-4 py-3 text-xs font-mono font-bold text-foreground focus:outline-none focus:border-primary/50 transition-all disabled:opacity-50 uppercase cursor-pointer select-none appearance-none"
+                >
+                  <option value="todos">🛡️ Todos los Equipos</option>
+                  {availableTeams.map(t => (
+                    <option key={t.id} value={t.id.toString()}>{t.nombre}</option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-muted-foreground text-[9px]">▼</div>
+              </div>
+            </div>
+          )}
+
+          {filterMode !== 'equipo' && (
+            <div className="space-y-1.5 text-left">
+              <label className="text-[9px] font-mono font-black text-muted-foreground uppercase tracking-widest block">👤 Jugador</label>
+              <div className="relative">
+                <select 
+                  value={selectedPlayer}
+                  onChange={(e) => setSelectedPlayer(e.target.value)}
+                  disabled={!stats}
+                  className="w-full bg-background/45 border border-border/40 hover:border-primary/45 rounded-xl px-4 py-3 text-xs font-mono font-bold text-foreground focus:outline-none focus:border-primary/50 transition-all disabled:opacity-50 uppercase cursor-pointer select-none appearance-none"
+                >
+                  <option value="todos">👤 Todos los Jugadores</option>
+                  {availablePlayers.map(p => (
+                    <option key={p.id} value={p.id.toString()}>{p.name}</option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-muted-foreground text-[9px]">▼</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sub-Navegación HUD del Centro de Datos */}
-        <div 
-          className="flex border border-border/40 p-1 bg-card/25 backdrop-blur-md rounded-2xl max-w-2xl mx-auto shadow-xl overflow-x-auto gap-1 no-scrollbar"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
+        <div className="flex border border-border/40 p-1 bg-card/25 backdrop-blur-md rounded-2xl max-w-2xl mx-auto shadow-xl overflow-x-auto gap-1 mobile-scroll-indicator pb-2.5">
           {[
             { id: 'resumen', label: '📊 Resumen' },
             { id: 'telemetria', label: '📋 Telemetría' },
@@ -290,53 +446,63 @@ export default function DatosUt() {
             <Spinner size="lg" />
             <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Cargando telemetría...</span>
           </div>
-        ) : stats ? (
+        ) : filteredStats ? (
           <div className="space-y-12">
             
             {/* Si es Resumen: Mostrar KPIs y Gráficos Colectivos */}
             {activeSubPage === 'resumen' && (
               <div className="space-y-12 animate-fade-in">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {[
-                    { label: 'Partidos en Base', val: stats.total_partidos || 0, desc: 'Partidos disputados registrados.', icon: '⚽' },
-                    { label: 'Goles Registrados', val: stats.goles_totales || 0, desc: 'Goles marcados en total.', icon: '🎯' },
-                    { label: 'Ratio de Anotación', val: `${stats.promedio_goles || 0} G/P`, desc: 'Promedio de goles por partido.', icon: '📈' },
-                    { label: 'Win Rate Local', val: `${stats.porcentaje_local || 0}%`, desc: 'Porcentaje de victorias de local.', icon: '🏠' }
-                  ].map((kpi, idx) => (
-                    <div key={idx} className="relative p-6 rounded-2xl text-left bg-card/25 backdrop-blur-xl border border-border/40 flex flex-col justify-between group overflow-hidden hover:border-primary/50 hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.15)] transition-all duration-500 min-h-[140px]">
-                      {/* Tech corners */}
-                      <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-primary/60 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                      <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-primary/60 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                      <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-primary/60 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                      <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-primary/60 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                      
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                  {(() => {
+                    const teamObj = (filterMode !== 'jugador' && selectedTeam !== 'todos') ? stats.todos_equipos?.find(t => t.id.toString() === selectedTeam) : null;
+                    const totalPartidos = teamObj ? teamObj.partidos_jugados : stats.total_partidos;
+                    const golesTotales = teamObj ? teamObj.total_goles_favor : stats.goles_totales;
+                    const promedioGoles = teamObj ? (totalPartidos > 0 ? (golesTotales / totalPartidos).toFixed(2) : 0) : stats.promedio_goles;
+                    const winRateVal = teamObj ? `${teamObj.avg_tasa_exito_entradas || 0}%` : `${stats.porcentaje_local || 0}%`;
+                    const winRateLabel = teamObj ? 'Éxito Entradas' : 'Win Rate Local';
+                    const winRateDesc = teamObj ? 'Tasa éxito entradas.' : 'Porcentaje de victorias local.';
 
-                      <div className="flex justify-between items-start z-10 relative">
-                        <span className="text-[9px] font-mono font-black text-muted-foreground uppercase tracking-widest bg-background/50 px-2 py-1 rounded-md border border-border/30">{kpi.label}</span>
-                        <span className="text-2xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.1)] group-hover:scale-125 group-hover:rotate-6 transition-all duration-300">{kpi.icon}</span>
-                      </div>
-                      <div className="space-y-1 mt-4 z-10 relative">
-                        <strong className="text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-foreground to-foreground/70 block tracking-wide group-hover:text-glow-primary transition-all duration-300">{kpi.val}</strong>
-                        <div className="flex items-center gap-2">
-                          <div className="h-1 w-8 bg-primary/20 rounded-full overflow-hidden">
-                            <div className="h-full bg-primary w-full -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-out"></div>
+                    return [
+                      { label: 'Partidos en Base', val: totalPartidos || 0, desc: 'Partidos disputados registrados.', icon: '⚽' },
+                      { label: 'Goles Registrados', val: golesTotales || 0, desc: 'Goles marcados en total.', icon: '🎯' },
+                      { label: 'Ratio de Anotación', val: `${promedioGoles || 0} G/P`, desc: 'Promedio de goles por partido.', icon: '📈' },
+                      { label: winRateLabel, val: winRateVal, desc: winRateDesc, icon: teamObj ? '🛡️' : '🏠' }
+                    ].map((kpi, idx) => (
+                      <div key={idx} className="relative p-6 rounded-2xl text-left bg-card/25 backdrop-blur-xl border border-border/40 flex flex-col justify-between group overflow-hidden hover:border-primary/50 hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.15)] transition-all duration-500 min-h-[140px]">
+                        {/* Tech corners */}
+                        <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-primary/60 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-primary/60 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-primary/60 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-primary/60 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+
+                        <div className="flex justify-between items-start z-10 relative">
+                          <span className="text-[9px] font-mono font-black text-muted-foreground uppercase tracking-widest bg-background/50 px-2 py-1 rounded-md border border-border/30">{kpi.label}</span>
+                          <span className="text-2xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.1)] group-hover:scale-125 group-hover:rotate-6 transition-all duration-300">{kpi.icon}</span>
+                        </div>
+                        <div className="space-y-1 mt-4 z-10 relative">
+                          <strong className="text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-foreground to-foreground/70 block tracking-wide group-hover:text-glow-primary transition-all duration-300">{kpi.val}</strong>
+                          <div className="flex items-center gap-2">
+                            <div className="h-1 w-8 bg-primary/20 rounded-full overflow-hidden">
+                              <div className="h-full bg-primary w-full -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-out"></div>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground leading-none font-mono">{kpi.desc}</span>
                           </div>
-                          <span className="text-[10px] text-muted-foreground leading-none font-mono">{kpi.desc}</span>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ));
+                  })()}
                 </div>
 
-                <GraficosColectivos stats={stats} getImageUrl={getImageUrl} />
+                <GraficosColectivos stats={filteredStats} getImageUrl={getImageUrl} />
               </div>
             )}
 
             {/* Si es Telemetría: Mostrar Directorio Tactico */}
             {activeSubPage === 'telemetria' && (
               <div className="animate-fade-in">
-                <DirectorioTactico stats={stats} getImageUrl={getImageUrl} />
+                <DirectorioTactico stats={filteredStats} getImageUrl={getImageUrl} />
               </div>
             )}
 
@@ -350,7 +516,7 @@ export default function DatosUt() {
             {/* Si es Tier List: Mostrar TierListEstadisticas */}
             {activeSubPage === 'tiers' && (
               <div className="animate-fade-in">
-                <TierListEstadisticas stats={stats} getImageUrl={getImageUrl} />
+                <TierListEstadisticas stats={filteredStats} getImageUrl={getImageUrl} />
               </div>
             )}
 

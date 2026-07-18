@@ -844,6 +844,33 @@ export default function CompetenciaUtDetalle() {
               </div>
             )}
           </div>
+
+          {/* OPCION 3: FORZAR ELIMINACION DIRECTA */}
+          <div className="border border-border/60 bg-muted/10 p-5 rounded-2xl flex flex-col gap-3 hover:border-primary/20 transition-colors mt-2">
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-foreground">Opción 3: Forzar Eliminación Directa</span>
+              <span className="text-xs text-muted-foreground mt-1 font-sans">
+                El participante será dado de baja y TODOS los partidos donde iba a participar serán eliminados del fixture. Esto puede descuadrar la tabla si ya había jugado.
+              </span>
+            </div>
+            <Button
+              className="w-full bg-red-900/40 border border-red-500/50 hover:bg-red-900/60 text-red-400 font-display font-black uppercase text-xs tracking-wider"
+              onClick={async () => {
+                if (window.confirm(`⚠️ ADVERTENCIA CRÍTICA: ¿Estás 100% seguro de FORZAR la eliminación de ${selectedEquipoForExit?.nombre}? Se borrarán TODOS sus partidos del sistema.`)) {
+                  await actions.forzarRemoverEquipo(selectedEquipoForExit.id);
+                  setIsExitModalOpen(false);
+                  setSelectedEquipoForExit(null);
+                  setReplacingCaptainUser(null);
+                  setReplacingCompanionId('');
+                  setReplacingClubIdEa('');
+                  setReplaceCaptainSearchQuery('');
+                  setAvailableCaptainUsers([]);
+                }
+              }}
+            >
+              Forzar Eliminación Definitiva
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>

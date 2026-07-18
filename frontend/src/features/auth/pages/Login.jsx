@@ -29,7 +29,7 @@ const KeyIcon = () => (
 
 export default function Login() {
   const navigate = useNavigate();
-  const { user, login, authLoading, authError, clearAuthError, isAuthenticated } = useAuthStore();
+  const { user, token, login, authLoading, authError, clearAuthError, isAuthenticated, logout } = useAuthStore();
   
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
@@ -76,6 +76,14 @@ export default function Login() {
     }
     return () => clearAuthError();
   }, [isAuthenticated, user, navigate, clearAuthError]);
+
+  // Limpieza preventiva si se entra al login con un estado corrupto (ej: isAuthenticated true pero sin token)
+  useEffect(() => {
+    if (isAuthenticated && (!token || !user)) {
+      console.warn("Limpiando estado de sesión inconsistente en Login...");
+      logout(true);
+    }
+  }, [isAuthenticated, token, user, logout]);
 
   const handleChange = (e) => {
     setCredentials({ ...credentials, [e.target.name]: e.target.value });

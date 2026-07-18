@@ -145,7 +145,7 @@ export default function DashboardOrganizador() {
     <div className="animate-fade-in space-y-8 min-h-screen">
       
       {/* Cabecera Táctica del Organizador */}
-      <div className="relative overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/40 p-8 shadow-xl">
+      <div className="relative overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/40 p-4 md:p-8 shadow-xl">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[80px] pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-[80px] pointer-events-none"></div>
         
@@ -195,13 +195,13 @@ export default function DashboardOrganizador() {
           <span className="text-xs uppercase font-black text-primary tracking-widest animate-pulse">Sincronizando Base de Datos...</span>
         </div>
       ) : stats ? (
-        <div className="flex flex-col xl:flex-row gap-8 items-start relative">
+        <div className="flex flex-col xl:flex-row gap-4 md:gap-8 items-start relative">
           
           {/* SIDEBAR TÁCTICO (Navegación Organizador) */}
-          <div className="w-full xl:w-80 shrink-0 xl:sticky xl:top-24 flex flex-col gap-6 z-40">
+          <div className="w-full xl:w-80 shrink-0 flex flex-col gap-6 z-40">
             <Card padding="p-5" className="shadow-xl" hoverLift={false}>
               <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-4 ml-2">Panel de Control</h3>
-              <nav className="flex flex-row xl:flex-col gap-2 overflow-x-auto xl:overflow-visible pb-2 xl:pb-0 no-scrollbar">
+              <nav className="flex flex-row xl:flex-col gap-2 overflow-x-auto xl:overflow-visible pb-3.5 xl:pb-0 mobile-scroll-indicator">
                 {tabsConfig.map((tab) => {
                   const isActive = activeTab === tab.id;
                   return (
@@ -279,7 +279,7 @@ export default function DashboardOrganizador() {
 
         </div>
       ) : (
-        <Card className="p-8 text-center border-destructive/30 bg-destructive/5 text-destructive font-bold uppercase tracking-widest">
+        <Card className="p-4 md:p-8 text-center border-destructive/30 bg-destructive/5 text-destructive font-bold uppercase tracking-widest">
           No se pudieron cargar las estadísticas de tu cuenta.
         </Card>
       )}

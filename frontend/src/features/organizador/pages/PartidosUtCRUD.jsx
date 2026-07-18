@@ -578,28 +578,31 @@ export default function PartidosUtCRUD() {
         const yaRep = row.goles_local !== null && row.goles_visitante !== null;
         const porConfirmar = (row.reporte_local_completado || row.reporte_visitante_completado) && !row.reporte_confirmado;
         return (
-          <div className="flex items-center gap-2">
-            {porConfirmar ? (
-              <Button
-                size="sm"
-                onClick={() => openConfirmModal(row)}
-                className="h-8 px-3 text-[10px] bg-amber-500 hover:bg-amber-600 text-white border-none font-display font-black uppercase tracking-wider shadow-md whitespace-nowrap shrink-0"
-              >
-                🛡️ Revisar Reporte
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                onClick={() => openReportModal(row)}
-                className="h-8 px-3 text-[10px] bg-gradient-to-r from-primary to-destructive text-primary-foreground border-none font-display font-black uppercase tracking-wider shadow-md whitespace-nowrap shrink-0"
-              >
-                🛡️ Ficha / Reportar
-              </Button>
-            )}
+          <div className="flex items-center gap-2 flex-wrap">
+            {!row.reporte_confirmado ? (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => openConfirmModal(row)}
+                  className="h-8 px-3 text-xs bg-amber-500 hover:bg-amber-600 text-white border-none font-display font-black uppercase tracking-wider shadow-md whitespace-nowrap shrink-0"
+                >
+                  🛡️ Revisar/Confirmar
+                </Button>
+                {!row.reporte_local_completado && !row.reporte_visitante_completado && (
+                  <Button
+                    size="sm"
+                    onClick={() => openReportModal(row)}
+                    className="h-8 px-3 text-xs bg-gradient-to-r from-primary to-destructive text-primary-foreground border-none font-display font-black uppercase tracking-wider shadow-md whitespace-nowrap shrink-0"
+                  >
+                    🛡️ Ficha / Reportar
+                  </Button>
+                )}
+              </>
+            ) : null}
             <Button
               size="sm"
               onClick={() => navigate(`/partidos-ut/${row.id}`)}
-              className={`h-8 px-3 text-[10px] font-display font-black uppercase tracking-wider shadow-sm flex items-center justify-center gap-1 transition-all whitespace-nowrap shrink-0 border border-border/45 ${
+              className={`h-8 px-3 text-xs font-display font-black uppercase tracking-wider shadow-sm flex items-center justify-center gap-1 transition-all whitespace-nowrap shrink-0 border border-border/45 ${
                 yaRep || row.reporte_confirmado 
                   ? 'bg-sky-600/15 hover:bg-sky-600 text-sky-400 hover:text-white border-sky-500/30' 
                   : 'bg-card/60 hover:bg-muted text-foreground'
@@ -927,17 +930,17 @@ export default function PartidosUtCRUD() {
           isOpen={isConfirmModalOpen}
           onClose={() => setIsConfirmModalOpen(false)}
           title={`🛡️ Revisar y Confirmar Reporte: ${selectedConfirmMatch.local?.nombre} vs ${selectedConfirmMatch.visitante?.nombre}`}
-          maxWidth="max-w-6xl"
+          maxWidth="max-w-6xl w-full"
           zIndex="z-[120]"
         >
           <div className="space-y-6 text-left">
             {/* COMPARATIVA DE ESTADÍSTICAS EN TIEMPO REAL */}
             <div className="space-y-3 p-4 border border-border/40 rounded-xl bg-card">
-              <h3 className="text-xs font-black text-amber-500 uppercase tracking-widest flex items-center gap-1.5 pb-2 border-b border-border/30">
+              <h3 className="text-xs md:text-sm font-black text-amber-500 uppercase tracking-widest flex items-center gap-1.5 pb-2 border-b border-border/30">
                 <span>📊</span> Comparativa de Estadísticas de Equipo (Actualizado en tiempo real)
               </h3>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-[10px]">
+                <table className="w-full text-left border-collapse text-xs md:text-sm">
                   <thead>
                     <tr className="border-b border-border/30 bg-muted/30">
                       <th className="p-2 font-bold text-muted-foreground uppercase text-left">Estadística</th>
@@ -980,7 +983,7 @@ export default function PartidosUtCRUD() {
                 <button
                   type="button"
                   onClick={() => setConfirmActiveTab('local')}
-                  className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all ${
+                  className={`flex-1 py-2 text-xs md:text-sm font-black uppercase tracking-wider rounded-lg transition-all ${
                     confirmActiveTab === 'local'
                       ? 'bg-primary/10 text-primary border border-primary/20 shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
@@ -991,7 +994,7 @@ export default function PartidosUtCRUD() {
                 <button
                   type="button"
                   onClick={() => setConfirmActiveTab('visitante')}
-                  className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all ${
+                  className={`flex-1 py-2 text-xs md:text-sm font-black uppercase tracking-wider rounded-lg transition-all ${
                     confirmActiveTab === 'visitante'
                       ? 'bg-destructive/10 text-destructive border border-destructive/20 shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
@@ -1006,13 +1009,13 @@ export default function PartidosUtCRUD() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in align-top">
                   {/* COLUMNA IZQUIERDA: REPORTE ORIGINAL CAPITÁN LOCAL */}
                   <div className="space-y-4 border-r border-border/10 pr-0 lg:pr-6 text-left">
-                    <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest pb-1 border-b border-border/20">
+                    <h4 className="text-xs md:text-sm font-black text-amber-500 uppercase tracking-widest pb-1 border-b border-border/20">
                       📋 Reporte Original del Capitán Local
                     </h4>
                     
                     <div className="p-3 rounded-xl bg-card border border-border/40 text-center">
-                      <span className="text-[9px] text-muted-foreground uppercase font-black block">Marcador Reportado</span>
-                      <span className="text-base font-extrabold text-primary">
+                      <span className="text-[11px] md:text-xs text-muted-foreground uppercase font-black block">Marcador Reportado</span>
+                      <span className="text-lg font-extrabold text-primary">
                         {selectedConfirmMatch.reporte_local_completado && selectedConfirmMatch.reporte_local_stats
                           ? `${selectedConfirmMatch.reporte_local_stats.goles_local} - ${selectedConfirmMatch.reporte_local_stats.goles_visitante}`
                           : 'Sin Reporte'}
@@ -1021,36 +1024,36 @@ export default function PartidosUtCRUD() {
 
                     {/* Capturas de Pantalla */}
                     <div className="space-y-2">
-                      <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest block">Evidencias (Fotos)</span>
+                      <span className="text-[11px] md:text-xs font-black uppercase text-muted-foreground tracking-widest block">Evidencias (Fotos)</span>
                       {selectedConfirmMatch.reporte_local_completado && selectedConfirmMatch.reporte_local_stats?.fotos ? (
                         <div className="grid grid-cols-2 gap-2">
                           {['partido', 'conectados'].map((key) => {
                             const path = selectedConfirmMatch.reporte_local_stats.fotos[key];
-                            if (!path) return <div key={key} className="h-12 flex items-center justify-center text-[7px] border border-dashed border-border/30 text-muted-foreground rounded bg-muted/5">Sin foto</div>;
+                            if (!path) return <div key={key} className="h-16 flex items-center justify-center text-[10px] md:text-xs border border-dashed border-border/30 text-muted-foreground rounded bg-muted/5">Sin foto</div>;
                             return (
                               <a href={getImageUrl(path)} target="_blank" rel="noopener noreferrer" key={key} className="block group relative">
-                                <img src={getImageUrl(path)} alt={key} className="w-full h-12 object-cover rounded border border-border/30 group-hover:scale-95 transition-transform" />
-                                <span className="absolute bottom-0 inset-x-0 text-[6px] text-center bg-black/60 text-white font-bold py-0.5 rounded-b uppercase truncate">{key}</span>
+                                <img src={getImageUrl(path)} alt={key} className="w-full h-16 md:h-20 object-cover rounded border border-border/30 group-hover:scale-95 transition-transform" />
+                                <span className="absolute bottom-0 inset-x-0 text-[9px] md:text-xs text-center bg-black/60 text-white font-bold py-0.5 rounded-b uppercase truncate">{key}</span>
                               </a>
                             );
                           })}
                         </div>
                       ) : (
-                        <p className="text-[9px] text-muted-foreground italic">No se subieron capturas.</p>
+                        <p className="text-xs text-muted-foreground italic">No se subieron capturas.</p>
                       )}
                     </div>
                   </div>
 
                   {/* COLUMNA DERECHA: EDITOR OFICIAL LOCAL */}
                   <div className="space-y-4 text-left">
-                    <h4 className="text-[10px] font-black text-primary uppercase tracking-widest pb-1 border-b border-border/20">
+                    <h4 className="text-xs md:text-sm font-black text-primary uppercase tracking-widest pb-1 border-b border-border/20">
                       ✏️ Editor de Estadísticas Oficiales (Local)
                     </h4>
                     
-                    <div className="grid grid-cols-3 gap-2 bg-card p-3 rounded-xl border border-border/40">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 bg-card p-3 rounded-xl border border-border/40">
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Goles a Favor</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.goles_favor || 0} onChange={(e) => {
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Goles a Favor</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.goles_favor || 0} onChange={(e) => {
                           const val = Number(e.target.value);
                           setConfirmTeamLocalStats(prev => ({ ...prev, goles_favor: val }));
                           setConfirmScoreLocal(String(val));
@@ -1058,8 +1061,8 @@ export default function PartidosUtCRUD() {
                         }} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Goles en Contra</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.goles_en_contra || 0} onChange={(e) => {
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Goles en Contra</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.goles_en_contra || 0} onChange={(e) => {
                           const val = Number(e.target.value);
                           setConfirmTeamLocalStats(prev => ({ ...prev, goles_en_contra: val }));
                           setConfirmScoreVisitante(String(val));
@@ -1067,40 +1070,86 @@ export default function PartidosUtCRUD() {
                         }} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Asistencias</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.asistencias || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, asistencias: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Asistencias</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.asistencias || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, asistencias: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Tiros</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.tiros || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, tiros: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Tiros</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.tiros || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, tiros: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Pases Intentados</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.pases_intentados || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, pases_intentados: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Pases Intentados</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.pases_intentados || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, pases_intentados: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Precisión Pases (%)</label>
-                        <input type="number" min="0" max="100" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.precision_pases || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, precision_pases: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Precisión Pases (%)</label>
+                        <input type="number" min="0" max="100" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.precision_pases || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, precision_pases: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Entradas Intent.</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.entradas_intentadas || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, entradas_intentadas: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Entradas Intent.</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.entradas_intentadas || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, entradas_intentadas: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Entradas Exit.</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.entradas_exitosas || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, entradas_exitosas: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Entradas Exit.</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.entradas_exitosas || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, entradas_exitosas: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Atajadas</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.atajadas || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, atajadas: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Atajadas</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.atajadas || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, atajadas: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">T. Amarillas</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.tarjetas_amarillas || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, tarjetas_amarillas: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">T. Amarillas</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.tarjetas_amarillas || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, tarjetas_amarillas: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">T. Rojas</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.tarjetas_rojas || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, tarjetas_rojas: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">T. Rojas</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamLocalStats.tarjetas_rojas || 0} onChange={(e) => setConfirmTeamLocalStats({...confirmTeamLocalStats, tarjetas_rojas: Number(e.target.value)})} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 mt-4">
+                      <span className="text-[11px] md:text-xs font-black uppercase text-muted-foreground tracking-widest block">Rendimiento Plantilla Local (Modificable)</span>
+                      <div className="max-h-52 overflow-y-auto pr-1">
+                        {confirmLocalPlayers.length === 0 ? (
+                          <p className="text-xs text-muted-foreground italic text-center py-4">Sin datos de jugadores.</p>
+                        ) : (
+                          <div className="overflow-x-auto border border-border/40 rounded-xl bg-card">
+                            <table className="w-full text-left border-collapse text-xs md:text-sm">
+                              <thead>
+                                <tr className="border-b border-border/30 bg-muted/30">
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-left">Jugador</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-16">Val.</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-14">Goles</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-14">Asist.</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-10">🟨</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-10">🟥</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border/20">
+                                {confirmLocalPlayers.map((p, idx) => (
+                                  <tr key={p.jugador_id || idx} className="hover:bg-muted/10">
+                                    <td className="p-2 text-foreground font-bold truncate max-w-[100px]" title={p.name}>{p.name || 'Jugador'}</td>
+                                    <td className="p-2 text-center">
+                                      <input type="number" step="0.1" min="0" max="10" className="w-14 h-8 text-center rounded bg-background border border-border/60 font-mono text-xs md:text-sm font-bold text-foreground" value={p.valoracion || 6.0} onChange={(e) => { const c = [...confirmLocalPlayers]; c[idx].valoracion = Number(e.target.value); setConfirmLocalPlayers(c); }} title="Val" />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <input type="number" min="0" className="w-12 h-8 text-center rounded bg-background border border-border/60 font-mono text-xs md:text-sm font-bold text-foreground" value={p.goles || 0} onChange={(e) => { const c = [...confirmLocalPlayers]; c[idx].goles = Number(e.target.value); setConfirmLocalPlayers(c); }} title="Goles" />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <input type="number" min="0" className="w-12 h-8 text-center rounded bg-background border border-border/60 font-mono text-xs md:text-sm font-bold text-foreground" value={p.asistencias || 0} onChange={(e) => { const c = [...confirmLocalPlayers]; c[idx].asistencias = Number(e.target.value); setConfirmLocalPlayers(c); }} title="Asists" />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <input type="checkbox" checked={p.yellowCard || false} onChange={(e) => { const c = [...confirmLocalPlayers]; c[idx].yellowCard = e.target.checked; setConfirmLocalPlayers(c); }} className="w-4 h-4 md:w-5 md:h-5 rounded border-border/60 text-primary focus:ring-0" />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <input type="checkbox" checked={p.redCard || false} onChange={(e) => { const c = [...confirmLocalPlayers]; c[idx].redCard = e.target.checked; setConfirmLocalPlayers(c); }} className="w-4 h-4 md:w-5 md:h-5 rounded border-border/60 text-primary focus:ring-0" />
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1110,12 +1159,12 @@ export default function PartidosUtCRUD() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in align-top">
                   {/* COLUMNA IZQUIERDA: REPORTE ORIGINAL CAPITÁN VISITANTE */}
                   <div className="space-y-4 border-r border-border/10 pr-0 lg:pr-6 text-left">
-                    <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest pb-1 border-b border-border/20">
+                    <h4 className="text-xs md:text-sm font-black text-amber-500 uppercase tracking-widest pb-1 border-b border-border/20">
                       📋 Reporte Original del Capitán Visitante
                     </h4>
                     
                     <div className="p-3 rounded-xl bg-card border border-border/40 text-center">
-                      <span className="text-[9px] text-muted-foreground uppercase font-black block">Marcador Reportado</span>
+                      <span className="text-[11px] md:text-xs text-muted-foreground uppercase font-black block">Marcador Reportado</span>
                       <span className="text-base font-extrabold text-destructive">
                         {selectedConfirmMatch.reporte_visitante_completado && selectedConfirmMatch.reporte_visitante_stats
                           ? `${selectedConfirmMatch.reporte_visitante_stats.goles_local} - ${selectedConfirmMatch.reporte_visitante_stats.goles_visitante}`
@@ -1125,36 +1174,36 @@ export default function PartidosUtCRUD() {
 
                     {/* Capturas de Pantalla */}
                     <div className="space-y-2">
-                      <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest block">Evidencias (Fotos)</span>
+                      <span className="text-[11px] md:text-xs font-black uppercase text-muted-foreground tracking-widest block">Evidencias (Fotos)</span>
                       {selectedConfirmMatch.reporte_visitante_completado && selectedConfirmMatch.reporte_visitante_stats?.fotos ? (
                         <div className="grid grid-cols-2 gap-2">
                           {['partido', 'conectados'].map((key) => {
                             const path = selectedConfirmMatch.reporte_visitante_stats.fotos[key];
-                            if (!path) return <div key={key} className="h-12 flex items-center justify-center text-[7px] border border-dashed border-border/30 text-muted-foreground rounded bg-muted/5">Sin foto</div>;
+                            if (!path) return <div key={key} className="h-16 flex items-center justify-center text-[10px] md:text-xs border border-dashed border-border/30 text-muted-foreground rounded bg-muted/5">Sin foto</div>;
                             return (
                               <a href={getImageUrl(path)} target="_blank" rel="noopener noreferrer" key={key} className="block group relative">
-                                <img src={getImageUrl(path)} alt={key} className="w-full h-12 object-cover rounded border border-border/30 group-hover:scale-95 transition-transform" />
-                                <span className="absolute bottom-0 inset-x-0 text-[6px] text-center bg-black/60 text-white font-bold py-0.5 rounded-b uppercase truncate">{key}</span>
+                                <img src={getImageUrl(path)} alt={key} className="w-full h-16 md:h-20 object-cover rounded border border-border/30 group-hover:scale-95 transition-transform" />
+                                <span className="absolute bottom-0 inset-x-0 text-[9px] md:text-xs text-center bg-black/60 text-white font-bold py-0.5 rounded-b uppercase truncate">{key}</span>
                               </a>
                             );
                           })}
                         </div>
                       ) : (
-                        <p className="text-[9px] text-muted-foreground italic">No se subieron capturas.</p>
+                        <p className="text-xs text-muted-foreground italic">No se subieron capturas.</p>
                       )}
                     </div>
                   </div>
 
                   {/* COLUMNA DERECHA: EDITOR OFICIAL VISITANTE */}
                   <div className="space-y-4 text-left">
-                    <h4 className="text-[10px] font-black text-destructive uppercase tracking-widest pb-1 border-b border-border/20">
+                    <h4 className="text-xs md:text-sm font-black text-destructive uppercase tracking-widest pb-1 border-b border-border/20">
                       ✏️ Editor de Estadísticas Oficiales (Visitante)
                     </h4>
                     
-                    <div className="grid grid-cols-3 gap-2 bg-card p-3 rounded-xl border border-border/40">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 bg-card p-3 rounded-xl border border-border/40">
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Goles a Favor</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.goles_favor || 0} onChange={(e) => {
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Goles a Favor</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.goles_favor || 0} onChange={(e) => {
                           const val = Number(e.target.value);
                           setConfirmTeamVisitanteStats(prev => ({ ...prev, goles_favor: val }));
                           setConfirmScoreVisitante(String(val));
@@ -1162,8 +1211,8 @@ export default function PartidosUtCRUD() {
                         }} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Goles en Contra</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.goles_en_contra || 0} onChange={(e) => {
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Goles en Contra</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.goles_en_contra || 0} onChange={(e) => {
                           const val = Number(e.target.value);
                           setConfirmTeamVisitanteStats(prev => ({ ...prev, goles_en_contra: val }));
                           setConfirmScoreLocal(String(val));
@@ -1171,40 +1220,86 @@ export default function PartidosUtCRUD() {
                         }} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Asistencias</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.asistencias || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, asistencias: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Asistencias</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.asistencias || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, asistencias: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Tiros</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.tiros || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, tiros: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Tiros</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.tiros || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, tiros: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Pases Intentados</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.pases_intentados || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, pases_intentados: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Pases Intentados</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.pases_intentados || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, pases_intentados: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Precisión Pases (%)</label>
-                        <input type="number" min="0" max="100" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.precision_pases || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, precision_pases: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Precisión Pases (%)</label>
+                        <input type="number" min="0" max="100" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.precision_pases || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, precision_pases: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Entradas Intent.</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.entradas_intentadas || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, entradas_intentadas: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Entradas Intent.</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.entradas_intentadas || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, entradas_intentadas: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Entradas Exit.</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.entradas_exitosas || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, entradas_exitosas: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Entradas Exit.</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.entradas_exitosas || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, entradas_exitosas: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">Atajadas</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.atajadas || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, atajadas: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">Atajadas</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.atajadas || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, atajadas: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">T. Amarillas</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.tarjetas_amarillas || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, tarjetas_amarillas: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">T. Amarillas</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.tarjetas_amarillas || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, tarjetas_amarillas: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase text-muted-foreground">T. Rojas</label>
-                        <input type="number" min="0" className="w-full h-8 px-2 text-xs rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.tarjetas_rojas || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, tarjetas_rojas: Number(e.target.value)})} />
+                        <label className="text-[10px] md:text-xs font-black uppercase text-muted-foreground">T. Rojas</label>
+                        <input type="number" min="0" className="w-full h-10 px-3 text-sm rounded bg-background border border-border/60 text-center font-mono font-bold text-foreground focus:ring-1 focus:ring-primary" value={confirmTeamVisitanteStats.tarjetas_rojas || 0} onChange={(e) => setConfirmTeamVisitanteStats({...confirmTeamVisitanteStats, tarjetas_rojas: Number(e.target.value)})} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 mt-4">
+                      <span className="text-[11px] md:text-xs font-black uppercase text-muted-foreground tracking-widest block">Rendimiento Plantilla Visitante (Modificable)</span>
+                      <div className="max-h-52 overflow-y-auto pr-1">
+                        {confirmVisitantePlayers.length === 0 ? (
+                          <p className="text-xs text-muted-foreground italic text-center py-4">Sin datos de jugadores.</p>
+                        ) : (
+                          <div className="overflow-x-auto border border-border/40 rounded-xl bg-card">
+                            <table className="w-full text-left border-collapse text-xs md:text-sm">
+                              <thead>
+                                <tr className="border-b border-border/30 bg-muted/30">
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-left">Jugador</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-16">Val.</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-14">Goles</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-14">Asist.</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-10">🟨</th>
+                                  <th className="p-2 font-bold text-muted-foreground uppercase text-center w-10">🟥</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border/20">
+                                {confirmVisitantePlayers.map((p, idx) => (
+                                  <tr key={p.jugador_id || idx} className="hover:bg-muted/10">
+                                    <td className="p-2 text-foreground font-bold truncate max-w-[100px]" title={p.name}>{p.name || 'Jugador'}</td>
+                                    <td className="p-2 text-center">
+                                      <input type="number" step="0.1" min="0" max="10" className="w-14 h-8 text-center rounded bg-background border border-border/60 font-mono text-xs md:text-sm font-bold text-foreground" value={p.valoracion || 6.0} onChange={(e) => { const c = [...confirmVisitantePlayers]; c[idx].valoracion = Number(e.target.value); setConfirmVisitantePlayers(c); }} title="Val" />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <input type="number" min="0" className="w-12 h-8 text-center rounded bg-background border border-border/60 font-mono text-xs md:text-sm font-bold text-foreground" value={p.goles || 0} onChange={(e) => { const c = [...confirmVisitantePlayers]; c[idx].goles = Number(e.target.value); setConfirmVisitantePlayers(c); }} title="Goles" />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <input type="number" min="0" className="w-12 h-8 text-center rounded bg-background border border-border/60 font-mono text-xs md:text-sm font-bold text-foreground" value={p.asistencias || 0} onChange={(e) => { const c = [...confirmVisitantePlayers]; c[idx].asistencias = Number(e.target.value); setConfirmVisitantePlayers(c); }} title="Asists" />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <input type="checkbox" checked={p.yellowCard || false} onChange={(e) => { const c = [...confirmVisitantePlayers]; c[idx].yellowCard = e.target.checked; setConfirmVisitantePlayers(c); }} className="w-4 h-4 md:w-5 md:h-5 rounded border-border/60 text-primary focus:ring-0" />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <input type="checkbox" checked={p.redCard || false} onChange={(e) => { const c = [...confirmVisitantePlayers]; c[idx].redCard = e.target.checked; setConfirmVisitantePlayers(c); }} className="w-4 h-4 md:w-5 md:h-5 rounded border-border/60 text-primary focus:ring-0" />
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1217,8 +1312,8 @@ export default function PartidosUtCRUD() {
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] text-primary font-black uppercase tracking-wider block">Goles Local Oficial</label>
-                    <input type="number" min="0" className="w-20 h-10 text-center text-lg rounded-xl bg-background border border-border/60 font-mono font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary" value={confirmScoreLocal} onChange={(e) => {
+                    <label className="text-xs md:text-sm text-primary font-black uppercase tracking-wider block">Goles Local Oficial</label>
+                    <input type="number" min="0" className="w-24 h-12 text-center text-xl rounded-xl bg-background border border-border/60 font-mono font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary" value={confirmScoreLocal} onChange={(e) => {
                       const val = e.target.value;
                       setConfirmScoreLocal(val);
                       const numVal = val !== '' ? Number(val) : 0;
@@ -1226,10 +1321,10 @@ export default function PartidosUtCRUD() {
                       setConfirmTeamVisitanteStats(prev => ({ ...prev, goles_en_contra: numVal }));
                     }} />
                   </div>
-                  <span className="text-lg font-black font-mono mt-4 text-muted-foreground">-</span>
+                  <span className="text-xl font-black font-mono mt-4 text-muted-foreground">-</span>
                   <div className="space-y-1">
-                    <label className="text-[10px] text-destructive font-black uppercase tracking-wider block">Goles Visitante Oficial</label>
-                    <input type="number" min="0" className="w-20 h-10 text-center text-lg rounded-xl bg-background border border-border/60 font-mono font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-destructive" value={confirmScoreVisitante} onChange={(e) => {
+                    <label className="text-xs md:text-sm text-destructive font-black uppercase tracking-wider block">Goles Visitante Oficial</label>
+                    <input type="number" min="0" className="w-24 h-12 text-center text-xl rounded-xl bg-background border border-border/60 font-mono font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-destructive" value={confirmScoreVisitante} onChange={(e) => {
                       const val = e.target.value;
                       setConfirmScoreVisitante(val);
                       const numVal = val !== '' ? Number(val) : 0;
@@ -1240,13 +1335,13 @@ export default function PartidosUtCRUD() {
                 </div>
 
                 <div className="flex gap-2 w-full sm:w-auto justify-end">
-                  <Button onClick={() => setIsConfirmModalOpen(false)} variant="outline" className="h-10 text-[10px]" disabled={confirmProcessing}>
+                  <Button onClick={() => setIsConfirmModalOpen(false)} variant="outline" className="h-11 px-4 text-xs md:text-sm font-bold" disabled={confirmProcessing}>
                     Cancelar
                   </Button>
                   <Button
                     onClick={handleConfirmReportSubmit}
                     isLoading={confirmProcessing}
-                    className="h-10 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-display font-black uppercase tracking-wider shadow-lg border-none"
+                    className="h-11 px-5 text-xs md:text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-display font-black uppercase tracking-wider shadow-lg border-none"
                   >
                     🛡️ Confirmar Ficha y Cerrar Partido
                   </Button>

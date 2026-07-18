@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '@/api/axios';
 import Badge from '@/components/ui/Badge';
 import { useDebounce } from '@/hooks/useDebounce';
 
 
 export default function Equipos() {
+  const navigate = useNavigate();
   const [equipos, setEquipos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -357,8 +358,8 @@ export default function Equipos() {
                 const orgName = eq.organizacion?.nombre || eq.competencia?.temporada?.organizacion?.nombre || null;
 
                 return (
-                  <Link 
-                    to={`/equipos/${eq.id}`}
+                  <div 
+                    onClick={() => navigate(`/equipos/${eq.id}`)}
                     key={eq.id} 
                     className="group relative overflow-hidden flex flex-col cursor-pointer animate-fade-in-up rounded-2xl"
                     style={{ 
@@ -586,7 +587,7 @@ export default function Equipos() {
 
                       </div>
                     </div>
-                  </Link>
+                  </div>
                 );
               })}
             </div>

@@ -7,9 +7,93 @@ import Spinner from '@/components/ui/Spinner';
 import PageLoader from '@/components/ui/PageLoader';
 import Card from '@/components/shared/Card';
 
+const SOCIAL_ICONS = {
+  whatsapp: (
+    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.457L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.966C16.59 1.988 14.113.96 11.48.96c-5.438 0-9.863 4.37-9.866 9.8.001 1.93.535 3.568 1.545 5.093L2.148 21.3l5.5-1.423-.001-.004-.002.001z" />
+    </svg>
+  ),
+  instagram: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+    </svg>
+  ),
+  twitter: (
+    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  ),
+  x: (
+    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  ),
+  twitch: (
+    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
+    </svg>
+  ),
+  youtube: (
+    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.107C19.53 3.5 12 3.5 12 3.5s-7.53 0-9.388.556a3.002 3.002 0 0 0-2.11 2.107C0 8.018 0 12 0 12s0 3.982.502 5.837a3.003 3.003 0 0 0 2.11 2.107C4.47 20.5 12 20.5 12 20.5s7.53 0 9.388-.556a3.003 3.003 0 0 0 2.11-2.107C24 15.982 24 12 24 12s0-3.982-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+    </svg>
+  ),
+  tiktok: (
+    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.05 1.62 4.2 1.21 1.4 2.93 2.38 4.77 2.64v3.88c-1.51-.16-3-.8-4.14-1.85-.75-.69-1.3-1.57-1.6-2.52-.04 2.87-.03 5.75-.04 8.62-.05 1.56-.44 3.13-1.19 4.51-1.25 2.33-3.71 3.92-6.38 4.09-2.91.22-5.91-.98-7.46-3.48-1.54-2.43-1.39-5.85.38-8.11 1.34-1.74 3.44-2.79 5.66-2.83V12.7c-1.12.01-2.27.37-3.11 1.11-.96.86-1.4 2.21-1.16 3.48.24 1.33 1.25 2.47 2.53 2.82 1.43.4 3.07-.15 3.86-1.39.46-.72.63-1.59.6-2.43.02-5.45.01-10.9.02-16.35-.04.05-.08.06-.08.08z" />
+    </svg>
+  ),
+  facebook: (
+    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+    </svg>
+  )
+};
 
+const SOCIAL_THEMES = {
+  whatsapp: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 hover:shadow-[0_0_12px_rgba(16,185,129,0.3)]',
+  instagram: 'bg-pink-500/10 border-pink-500/30 text-pink-400 hover:bg-pink-500/25 hover:shadow-[0_0_12px_rgba(236,72,153,0.3)]',
+  twitter: 'bg-slate-300/10 border-slate-300/30 text-slate-300 hover:bg-slate-300/25 hover:shadow-[0_0_12px_rgba(203,213,225,0.3)]',
+  x: 'bg-slate-300/10 border-slate-300/30 text-slate-300 hover:bg-slate-300/25 hover:shadow-[0_0_12px_rgba(203,213,225,0.3)]',
+  twitch: 'bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/25 hover:shadow-[0_0_12px_rgba(168,85,247,0.3)]',
+  youtube: 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/25 hover:shadow-[0_0_12px_rgba(239,68,68,0.3)]',
+  tiktok: 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/25 hover:shadow-[0_0_12px_rgba(6,182,212,0.3)]',
+  facebook: 'bg-blue-600/10 border-blue-600/30 text-blue-500 hover:bg-blue-600/25 hover:shadow-[0_0_12px_rgba(37,99,235,0.3)]'
+};
 
-const getImageUrl = (path, fallbackType) => {
+const getSocialLink = (platform, value) => {
+  if (!value) return null;
+  const cleanVal = value.trim();
+  if (cleanVal.startsWith('http://') || cleanVal.startsWith('https://')) {
+    return cleanVal;
+  }
+  
+  switch (platform.toLowerCase()) {
+    case 'whatsapp': {
+      const phone = cleanVal.replace(/[+\s\-()]/g, '');
+      return `https://wa.me/${phone}`;
+    }
+    case 'instagram':
+      return `https://instagram.com/${cleanVal.replace('@', '')}`;
+    case 'twitter':
+    case 'x':
+      return `https://x.com/${cleanVal.replace('@', '')}`;
+    case 'twitch':
+      return `https://twitch.tv/${cleanVal}`;
+    case 'youtube':
+      return cleanVal.startsWith('@') 
+        ? `https://youtube.com/${cleanVal}` 
+        : `https://youtube.com/@${cleanVal}`;
+    case 'tiktok':
+      return cleanVal.startsWith('@')
+        ? `https://tiktok.com/${cleanVal}`
+        : `https://tiktok.com/@${cleanVal}`;
+    default:
+      return cleanVal;
+  }
+};const getImageUrl = (path, fallbackType) => {
   if (!path) {
     if (fallbackType === 'user' || fallbackType === 'usuario') return '/images/users/default-user.png';
     if (fallbackType === 'org_logo' || fallbackType === 'organizacion_logo') return '/images/default-org-logo.svg';
@@ -466,99 +550,163 @@ export default function Temporadas() {
   return (
     <div className="relative min-h-screen bg-background text-foreground overflow-hidden selection:bg-primary/30 selection:text-primary font-sans">
       
-      {/* Ambient glows */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[70%] h-[550px] bg-primary/5 blur-[120px] pointer-events-none z-0"></div>
-      <div className="absolute bottom-10 right-10 w-[400px] h-[400px] bg-primary/3 blur-[110px] rounded-full pointer-events-none z-0"></div>
 
-      {/* Sleek Navigation Back Button Row */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-28 md:pt-32 pb-4 flex justify-start items-center relative z-30">
-        <button 
-          onClick={() => navigate('/organizaciones')}
-          className="flex items-center gap-2.5 px-4 py-2 rounded-xl border border-border/50 bg-card/35 backdrop-blur-md text-xs font-condensed tracking-wider font-bold text-muted-foreground hover:text-primary hover:border-primary/45 transition-all duration-300 shadow-md active:scale-95 group cursor-pointer"
-        >
-          <span className="group-hover:-translate-x-1 transition-transform duration-300">←</span>
-          VOLVER AL CIRCUITO
-        </button>
+
+      {/* ========================================================================= */}
+      {/* 2. HERO CENTRAL (Banner Inmersivo Estilo Detalle Equipo)                  */}
+      {/* ========================================================================= */}
+      {/* Banner Superior Inmersivo */}
+      <div className="h-80 md:h-[460px] relative z-0 overflow-hidden bg-card border-b border-primary/20">
+        {organizacion.banner ? (
+          <div 
+            className="absolute inset-0 bg-cover bg-center opacity-80"
+            style={{ backgroundImage: `url('${getImageUrl(organizacion.banner, 'org_banner')}')` }}
+          />
+        ) : (
+          <div 
+            className="absolute inset-0 bg-cover bg-center opacity-45 mix-blend-overlay"
+            style={{ backgroundImage: `url('${getImageUrl('default-org-banner', 'org_banner')}')` }}
+          />
+        )}
+        {/* Gradient fallback */}
+        {!organizacion.banner && (
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-card/50 to-background opacity-90 -z-10" />
+        )}
+        {/* Grid and scanline tech layers */}
+        <div className="absolute inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent"></div>
+        
+        {/* Floating tech banner elements */}
+        <div className="absolute top-1/3 left-10 text-[6rem] md:text-[10rem] font-display font-black uppercase text-foreground/[0.025] select-none leading-none pointer-events-none font-extrabold tracking-tighter">
+          {organizacion.abreviatura || 'ORG'}
+        </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* 2. HERO CENTRAL (Cinemático y Táctico - Estilo Organizaciones)            */}
-      {/* ========================================================================= */}
-      <section className="relative z-20 max-w-7xl mx-auto overflow-hidden rounded-3xl border border-border/40 bg-card/45 backdrop-blur-md shadow-2xl">
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 relative z-10 -mt-20 md:-mt-28 space-y-8 animate-fade-in-up">
         
-        {/* Banner image as header */}
-        <div className="relative h-56 md:h-72 w-full overflow-hidden border-b border-border/40">
-          <img 
-            src={getImageUrl(organizacion.banner, 'org_banner')} 
-            alt={organizacion.nombre} 
-            className="w-full h-full object-cover opacity-85" 
-            onError={(e) => window.handleImageError(e, 'org_banner')}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent z-10"></div>
-        </div>
-
-        <div className="p-6 md:p-8 relative z-10 -mt-14 md:-mt-16">
-          <div className="grid grid-cols-1 lg:grid-cols-10 gap-8 items-end">
+        {/* Cabecera de la Organización */}
+        <div className="flex flex-col md:flex-row items-center md:items-end justify-between gap-6 pb-6 border-b border-border/40">
+          
+          <div className="flex flex-col items-center md:items-start gap-4">
             
-            {/* LADO IZQUIERDO — IMPACTO PRINCIPAL */}
-            <div className="lg:col-span-7 relative flex flex-col items-start gap-4">
-              
-              <div className="flex items-center gap-3 animate-fade-in-up">
-                <Badge 
-                  variant="primary" 
-                  className="px-5 py-2 text-[10px] font-condensed tracking-[0.2em] text-primary border border-primary/30 bg-primary/10 rounded-full shadow-[0_0_20px_hsla(var(--primary),0.15)] uppercase animate-pulse shrink-0 z-10"
-                >
-                  🔴 CIRCUITO EN VIVO · REGIÓN {organizacion.pais || 'GLOBAL'}
-                </Badge>
-              </div>
+            {/* Botón Volver Sobre el Logo */}
+            <button 
+              onClick={() => navigate('/organizaciones')}
+              className="flex items-center gap-2.5 px-4 py-2 rounded-xl border border-border/50 bg-card/65 backdrop-blur-md text-[10px] sm:text-xs font-condensed tracking-wider font-bold text-muted-foreground hover:text-primary hover:border-primary/45 transition-all duration-300 shadow-md active:scale-95 group cursor-pointer"
+            >
+              <span className="group-hover:-translate-x-1 transition-transform duration-300">←</span>
+              VOLVER AL CIRCUITO
+            </button>
 
-              <div className="flex items-center gap-5 mt-2 z-10 animate-fade-in-up">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              {organizacion.logo ? (
                 <img 
                   src={getImageUrl(organizacion.logo, 'org_logo')} 
-                  alt={organizacion.nombre}
-                  className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover border-4 border-card bg-card shadow-xl shrink-0"
+                  alt={organizacion.nombre} 
+                  className="w-28 h-28 md:w-36 md:h-36 rounded-2xl object-cover border-[3.5px] border-background bg-card shadow-[0_0_20px_hsla(var(--primary),0.3)] shrink-0 transition-transform duration-500 hover:scale-105"
                   onError={(e) => window.handleImageError(e, 'org_logo')}
                 />
-                <div>
-                  <h1 className="text-4xl md:text-6xl font-display font-black text-foreground uppercase tracking-normal leading-tight drop-shadow-2xl">
-                    {organizacion.nombre}
-                  </h1>
-                  <p className="text-xs md:text-sm text-muted-foreground mt-2 max-w-xl font-light leading-relaxed">
-                    {organizacion.descripcion || 'American Club Leagues. Confederación líder en eSports Pro Clubs profesionales.'}
-                  </p>
+              ) : (
+                <div className="w-28 h-28 md:w-36 md:h-36 rounded-2xl bg-gradient-to-tr from-primary to-destructive border-[3.5px] border-background flex items-center justify-center font-display font-black text-primary-foreground text-4xl shadow-[0_0_20px_hsla(var(--primary),0.3)] uppercase shrink-0 transition-transform duration-500 hover:scale-105">
+                  {organizacion.abreviatura || organizacion.nombre?.charAt(0)}
                 </div>
-              </div>
-            </div>
+              )}
 
-            {/* DERECHA — INFORMACIÓN TÁCTICA */}
-            <div className="lg:col-span-3 flex flex-col justify-center items-start lg:items-stretch gap-6 z-10 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
-              <div className="border border-border/40 bg-card/65 backdrop-blur-md rounded-2xl p-5 w-full space-y-4 shadow-xl">
-                
-                <div className="flex justify-between items-center border-b border-border/30 pb-2">
-                  <span className="text-[10px] font-condensed tracking-widest text-muted-foreground uppercase">DETALLE ACTIVIDAD</span>
-                  <span className="text-[10px] font-mono text-primary font-bold">INFO GENERAL</span>
+              <div className="text-center md:text-left space-y-2">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                  <Badge variant="primary" className="text-[10px] font-mono px-2.5 py-0.5 rounded-lg font-black tracking-wider border backdrop-blur-sm bg-primary/10 text-primary border-primary/25 shadow-[0_0_15px_hsla(var(--primary),0.2)] uppercase">
+                    <span>🔴</span>
+                    <span className="ml-1">CIRCUITO EN VIVO · REGIÓN {organizacion.pais || 'GLOBAL'}</span>
+                  </Badge>
+                  {organizacion.abreviatura && (
+                    <span className="bg-muted/65 border border-border/40 px-2.5 py-0.5 rounded text-[10px] text-muted-foreground font-mono font-black">
+                      {organizacion.abreviatura}
+                    </span>
+                  )}
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">TEMPORADA ACTIVA</h4>
-                    <span className="text-2xl font-display font-black text-foreground">{activeSeason?.nombre || 'S48'}</span>
-                  </div>
-                  <div>
-                    <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">DIVISIONES</h4>
-                    <span className="text-2xl font-display font-black text-primary">{orgStats.divisiones} Ligas</span>
-                  </div>
-                </div>
-
-                <p className="text-[11px] text-muted-foreground leading-relaxed font-sans font-light">
-                  Confederación deportiva que administra torneos Pro Clubs con reportes automatizados y control estricto de rosters.
+                <h1 className="text-4xl md:text-5xl font-display font-extrabold uppercase tracking-tight text-foreground text-glow-primary select-none drop-shadow-lg">
+                  {organizacion.nombre}
+                </h1>
+                <p className="text-xs md:text-sm text-muted-foreground mt-2 max-w-xl font-light leading-relaxed">
+                  {organizacion.descripcion || 'American Club Leagues. Confederación líder en eSports Pro Clubs profesionales.'}
                 </p>
+                
+                {/* Redes Sociales Usando Columnas Reales de Organizaciones */}
+                {(organizacion.discord_url || organizacion.twitter_url || organizacion.twitch_url || organizacion.website || organizacion.email_contacto || organizacion.instagram_url || organizacion.facebook_url || organizacion.youtube_url || organizacion.tiktok_url || organizacion.whatsapp) && (
+                  <div className="flex flex-wrap items-center gap-2 mt-3 justify-center md:justify-start">
+                    {[
+                      { platform: 'whatsapp', value: organizacion.whatsapp },
+                      { platform: 'twitter', value: organizacion.twitter_url },
+                      { platform: 'instagram', value: organizacion.instagram_url },
+                      { platform: 'facebook', value: organizacion.facebook_url },
+                      { platform: 'youtube', value: organizacion.youtube_url },
+                      { platform: 'tiktok', value: organizacion.tiktok_url },
+                      { platform: 'twitch', value: organizacion.twitch_url },
+                      { platform: 'discord', value: organizacion.discord_url },
+                      { platform: 'website', value: organizacion.website },
+                      { platform: 'email', value: organizacion.email_contacto },
+                    ].map(({ platform, value }) => {
+                      if (!value) return null;
+                      
+                      if (platform === 'discord') {
+                        return (
+                          <a key="discord" href={getSocialLink('discord', value)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-mono font-bold uppercase transition-all duration-300 bg-[#5865F2]/10 border-[#5865F2]/30 text-[#5865F2] hover:bg-[#5865F2]/25" title={`Discord`}>
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 127.14 96.36"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a67.73,67.73,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1,105.25,105.25,0,0,0,32.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.31,60,73.31,53s5-12.74,11.43-12.74S96.33,46,96.22,53,91.08,65.69,84.69,65.69Z"/></svg>
+                            <span>Discord</span>
+                          </a>
+                        );
+                      }
+                      if (platform === 'email') {
+                        return (
+                          <a key="email" href={`mailto:${value}`} className="flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-mono font-bold uppercase transition-all duration-300 bg-amber-500/10 border-amber-500/30 text-amber-500 hover:bg-amber-500/25" title={`Email: ${value}`}>
+                            <span>✉️</span><span>Email</span>
+                          </a>
+                        );
+                      }
+                      if (platform === 'website') {
+                        return (
+                          <a key="website" href={getSocialLink('website', value)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-mono font-bold uppercase transition-all duration-300 bg-primary/10 border-primary/30 text-primary hover:bg-primary/25" title={`Website: ${value}`}>
+                            <span>🌐</span><span>Web</span>
+                          </a>
+                        );
+                      }
+
+                      const url = getSocialLink(platform, value);
+                      if (!url) return null;
+                      const icon = SOCIAL_ICONS[platform] || <span>🔗</span>;
+                      const theme = SOCIAL_THEMES[platform] || 'bg-muted/30 border-border/50 text-muted-foreground hover:bg-card';
+                      
+                      return (
+                        <a key={platform} href={url} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-mono font-bold uppercase transition-all duration-300 ${theme}`} title={`${platform}: ${value}`}>
+                          {icon}
+                          <span>{platform === 'twitter' ? 'X' : platform}</span>
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
+          </div>
 
+          {/* Additional Info Cards (Optional right side) */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="flex flex-col items-end border border-border/40 bg-card/65 backdrop-blur-md rounded-2xl p-4 shadow-xl">
+              <span className="text-[10px] font-condensed tracking-widest text-muted-foreground uppercase">INFO GENERAL</span>
+              <div className="flex gap-4 mt-2">
+                <div className="text-right">
+                  <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">TEMPORADA</h4>
+                  <span className="text-xl font-display font-black text-foreground">{activeSeason?.nombre || 'S48'}</span>
+                </div>
+                <div className="text-right border-l border-border/30 pl-4">
+                  <h4 className="text-[9px] font-condensed text-muted-foreground uppercase tracking-widest leading-none">DIVISIONES</h4>
+                  <span className="text-xl font-display font-black text-primary">{orgStats.divisiones} Ligas</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
 
       {/* ========================================================================= */}
       {/* 3. TABS DE NAVEGACIÓN (Horizontal premium eSports tabs)                     */}

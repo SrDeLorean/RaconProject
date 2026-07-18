@@ -5,6 +5,34 @@ import Badge from '@/components/ui/Badge';
 import Partidos from './Partidos';
 import PlayerCard from '@/components/ui/PlayerCard';
 
+const translatePosition = (pos) => {
+  if (!pos) return '—';
+  const p = pos.toUpperCase();
+  const map = {
+    'GK': 'POR',
+    'PO': 'POR',
+    'CB': 'DFC',
+    'LB': 'LI',
+    'RB': 'LD',
+    'LWB': 'CAR',
+    'RWB': 'CAD',
+    'CDM': 'MCD',
+    'CM': 'MC',
+    'CAM': 'MCO',
+    'LM': 'MI',
+    'RM': 'MD',
+    'LW': 'EI',
+    'RW': 'ED',
+    'CF': 'SD',
+    'ST': 'DC',
+    'DF': 'DFC',
+    'DL': 'DC',
+    'DEFENDER': 'DFC',
+    'MIDFIELDER': 'MC'
+  };
+  return map[p] || p;
+};
+
 const SOCIAL_ICONS = {
   whatsapp: (
     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -686,12 +714,15 @@ export default function DetalleJugador() {
   ];
 
   const redesSociales = {
-    whatsapp: user.telefono || '',
+    whatsapp: user.whatsapp || user.telefono || '',
     instagram: user.instagram || '',
+    twitter: user.twitter || '',
     twitch: user.twitch || '',
     youtube: user.youtube || '',
     tiktok: user.tiktok || '',
-    facebook: user.facebook || ''
+    facebook: user.facebook || '',
+    discord: user.discord || '',
+    website: user.website || ''
   };
   const hasSocials = Object.values(redesSociales).some(Boolean);
 
@@ -723,7 +754,7 @@ export default function DetalleJugador() {
         
         {/* Floating tech banner elements */}
         <div className="absolute top-1/3 left-10 text-[6rem] md:text-[10rem] font-display font-black uppercase text-foreground/[0.015] select-none leading-none pointer-events-none font-extrabold tracking-tighter">
-          {rawPos || 'JUGADOR'}
+          {translatePosition(rawPos) || 'JUGADOR'}
         </div>
       </div>
 
@@ -782,9 +813,26 @@ export default function DetalleJugador() {
                 <div className="flex flex-wrap items-center gap-2 mt-2 justify-center md:justify-start">
                   {Object.entries(redesSociales).map(([platform, value]) => {
                     if (!value) return null;
+                    
+                    if (platform === 'discord') {
+                      return (
+                        <a key="discord" href={getSocialLink('discord', value)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-mono font-bold uppercase transition-all duration-300 bg-[#5865F2]/10 border-[#5865F2]/30 text-[#5865F2] hover:bg-[#5865F2]/25" title={`Discord`}>
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 127.14 96.36"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a67.73,67.73,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1,105.25,105.25,0,0,0,32.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.31,60,73.31,53s5-12.74,11.43-12.74S96.33,46,96.22,53,91.08,65.69,84.69,65.69Z"/></svg>
+                          <span>Discord</span>
+                        </a>
+                      );
+                    }
+                    if (platform === 'website') {
+                      return (
+                        <a key="website" href={getSocialLink('website', value)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-mono font-bold uppercase transition-all duration-300 bg-primary/10 border-primary/30 text-primary hover:bg-primary/25" title={`Website: ${value}`}>
+                          <span>🌐</span><span>Web</span>
+                        </a>
+                      );
+                    }
+
                     const url = getSocialLink(platform, value);
                     if (!url) return null;
-                    const icon = SOCIAL_ICONS[platform.toLowerCase()];
+                    const icon = SOCIAL_ICONS[platform.toLowerCase()] || <span>🔗</span>;
                     const theme = SOCIAL_THEMES[platform.toLowerCase()] || 'bg-muted/30 border-border/50 text-muted-foreground hover:bg-card';
                     
                     return (
@@ -797,7 +845,7 @@ export default function DetalleJugador() {
                         title={`${platform}: ${value}`}
                       >
                         {icon}
-                        <span>{platform}</span>
+                        <span>{platform === 'twitter' ? 'X' : platform}</span>
                       </a>
                     );
                   })}
@@ -815,7 +863,7 @@ export default function DetalleJugador() {
         </div>
 
         {/* Tabulación de Secciones */}
-        <div className="flex border border-border/40 p-1 bg-card/25 backdrop-blur-md rounded-2xl max-w-4xl mx-auto shadow-xl overflow-x-auto gap-1">
+        <div className="flex border border-border/40 p-1 bg-card/25 backdrop-blur-md rounded-2xl max-w-4xl mx-auto shadow-xl overflow-x-auto gap-1 mobile-scroll-indicator pb-2.5">
           {[
             { id: 'resumen', label: '👤 Resumen' },
             { id: 'stats', label: '📊 Rendimiento' },

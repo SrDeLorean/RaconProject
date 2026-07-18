@@ -46,6 +46,7 @@ export default function Drawer({
           <button 
             onClick={onClose}
             className="text-muted-foreground hover:text-primary transition-colors font-bold text-base p-1"
+            aria-label="Cerrar"
           >
             ✕
           </button>

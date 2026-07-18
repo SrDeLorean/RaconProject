@@ -448,8 +448,6 @@ export default function MatchmakerCalendarioUt({ equipos = [], competenciaId = n
     if (diasSeleccionados.includes(dia)) {
       setDiasSeleccionados(diasSeleccionados.filter(d => d !== dia));
     } else {
-      setDiasSeleccionados([...diasSeleccionados, day => day]);
-      // Actually we need to toggle it correctly
       setDiasSeleccionados([...diasSeleccionados, dia]);
     }
   };
@@ -458,23 +456,31 @@ export default function MatchmakerCalendarioUt({ equipos = [], competenciaId = n
     const hoursCount = hoursArray.length;
     const dayOfWeekNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     
+    // Calcular qué slot de hora y qué día le toca
     const hourSlot = matchIndex % hoursCount;
     const dayIndexOffset = Math.floor(matchIndex / hoursCount);
     
-    let date = new Date(currentDate);
-    let matchedDays = 0;
+    const [year, month, day] = currentDate.split('-');
+    let date = new Date(year, month - 1, day, 12, 0, 0); // 12 PM to avoid daylight saving issues
     
-    while (matchedDays < dayIndexOffset || !daysArray.includes(dayOfWeekNames[date.getDay()])) {
+    // 1. Encontrar el primer día válido a partir de la fecha de inicio
+    while (!daysArray.includes(dayOfWeekNames[date.getDay()])) {
+      date.setDate(date.getDate() + 1);
+    }
+    
+    // 2. Avanzar "dayIndexOffset" días válidos
+    let addedDays = 0;
+    while (addedDays < dayIndexOffset) {
+      date.setDate(date.getDate() + 1);
       if (daysArray.includes(dayOfWeekNames[date.getDay()])) {
-        matchedDays++;
-      }
-      if (matchedDays < dayIndexOffset || !daysArray.includes(dayOfWeekNames[date.getDay()])) {
-        date.setDate(date.getDate() + 1);
+        addedDays++;
       }
     }
     
+    const localDateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    
     return {
-      dateString: date.toISOString().split('T')[0],
+      dateString: localDateString,
       hourString: hoursArray[hourSlot].trim()
     };
   };

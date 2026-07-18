@@ -1,5 +1,7 @@
-import { lazy } from 'react';
-import AdminLayout from '@/layouts/AdminLayout';
+import { lazy, Suspense } from 'react';
+import PageLoader from '@/components/ui/PageLoader';
+
+const AdminLayout = lazy(() => import('@/layouts/AdminLayout'));
 
 const DashboardAdmin = lazy(() => import('@/features/admin/pages/DashboardAdmin'));
 const UsuariosCRUD = lazy(() => import('@/features/admin/pages/UsuariosCRUD'));
@@ -13,7 +15,7 @@ const Configuracion = lazy(() => import('@/features/shared/Configuracion'));
 
 export const adminRoutes = {
   path: '/admin',
-  element: <AdminLayout />,
+  element: <Suspense fallback={<PageLoader />}><AdminLayout /></Suspense>,
   children: [
     { 
       index: true, 

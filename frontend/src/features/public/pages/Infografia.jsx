@@ -235,6 +235,7 @@ export default function Infografia() {
           glow: 'rgba(139,92,246,0.6)',
           stars: 4,
           statLabel: 'Pases',
+          statVal: '85%'
         }
       ];
     }
@@ -296,9 +297,9 @@ export default function Infografia() {
   return (
     <div className="relative min-h-screen bg-background pb-16 overflow-hidden selection:bg-primary selection:text-primary-foreground">
       {/* Resplandores ambientales e-sports premium */}
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[400px] md:w-[800px] h-[400px] md:h-[800px] bg-primary/10 blur-[150px] rounded-full pointer-events-none z-10 mix-blend-screen animate-pulse-slow"></div>
-      <div className="absolute bottom-1/3 right-1/4 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-destructive/10 blur-[130px] rounded-full pointer-events-none z-10 mix-blend-screen animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(ellipse_at_center,rgba(var(--primary-rgb),0.05)_0%,transparent_70%)] pointer-events-none z-0"></div>
+      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[400px] md:w-[800px] h-[400px] md:h-[800px] bg-primary/25 blur-[180px] rounded-full pointer-events-none z-10 mix-blend-screen animate-pulse-slow"></div>
+      <div className="absolute bottom-1/3 right-1/4 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-destructive/25 blur-[180px] rounded-full pointer-events-none z-10 mix-blend-screen animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(ellipse_at_center,rgba(var(--primary-rgb),0.15)_0%,transparent_80%)] pointer-events-none z-0"></div>
 
       {/* ========================================================================= */}
       {/* 1. HERO CENTRAL (Cinemático y Táctico)                                    */}
@@ -570,11 +571,27 @@ export default function Infografia() {
                     </div>
                     
                     {/* Pedestal Column */}
-                    <div className="w-full h-32 bg-gradient-to-t from-background via-card to-info/15 border-t-2 border-l border-r border-info/40 rounded-t-3xl relative flex flex-col items-center justify-start pt-6 gap-1 shadow-[0_-10px_30px_rgba(59,130,246,0.15)] group-hover:shadow-[0_-10px_40px_rgba(59,130,246,0.3)] group-hover:border-info/70 transition-all duration-500 overflow-hidden">
+                    <div className="w-full h-32 bg-gradient-to-t from-background via-card to-info/15 border-t-2 border-l border-r border-info/70 rounded-t-3xl border-x-2 border-t-2 relative flex flex-col items-center justify-start pt-6 gap-1 shadow-[0_-10px_50px_rgba(59,130,246,0.4)] group-hover:shadow-[0_-20px_70px_rgba(59,130,246,0.7)] backdrop-blur-xl group-hover:border-info/70 transition-all duration-500 overflow-hidden">
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.05)_0%,transparent_100%)]"></div>
+                      <div className="absolute bottom-0 inset-x-0 h-16 bg-[linear-gradient(to_top,rgba(59,130,246,0.1)_0%,transparent_100%)] border-b-2 border-info/40"></div>
+                      <div className="absolute bottom-4 inset-x-0 flex justify-center gap-1 opacity-20">
+                        <div className="w-1 h-4 bg-info"></div>
+                        <div className="w-1 h-6 bg-info"></div>
+                        <div className="w-1 h-3 bg-info"></div>
+                      </div>
+                      <span className="absolute bottom-1 text-[7px] font-mono text-info/30 tracking-[0.2em] uppercase">RANK // 02</span>
+                      {podiumData[1]?.foto && (
+                        <img src={getImageUrl(podiumData[1].foto)} alt="" className="absolute inset-0 w-full h-full object-contain opacity-[0.03] grayscale mix-blend-overlay pointer-events-none scale-150" />
+                      )}
                       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-info to-transparent"></div>
                       <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,rgba(59,130,246,0.05)_100%)] opacity-0 group-hover:opacity-100 transition-opacity"></div>
                       <span className="text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-info to-info/50 leading-none drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">#2</span>
                       <span className="text-[10px] font-mono text-foreground font-bold mt-1 z-10">{podiumData[1]?.metric}</span>
+                      {podiumData[1]?.statVal && (
+                        <span className="text-[9px] text-info font-mono font-bold bg-info/10 px-2 py-0.5 rounded-full border border-info/20 mt-1 z-10">
+                          {podiumData[1].statLabel}: {podiumData[1].statVal}
+                        </span>
+                      )}
                       <span className="text-[8px] bg-info/20 text-info px-3 py-1 rounded-full font-mono uppercase font-black tracking-wider mt-2 border border-info/30 shadow-[0_0_10px_rgba(59,130,246,0.3)] z-10">
                         PLATA
                       </span>
@@ -610,7 +627,20 @@ export default function Infografia() {
                     </div>
                     
                     {/* Pedestal Column */}
-                    <div className="w-full h-48 bg-gradient-to-t from-background via-card to-warning/20 border-t-2 border-l border-r border-warning/50 rounded-t-[2.5rem] relative flex flex-col items-center justify-start pt-8 gap-1 shadow-[0_-15px_40px_rgba(245,158,11,0.25)] group-hover:shadow-[0_-15px_60px_rgba(245,158,11,0.4)] group-hover:border-warning/80 transition-all duration-500 overflow-hidden">
+                    <div className="w-full h-48 bg-gradient-to-t from-background via-card to-warning/20 border-t-2 border-l border-r border-warning/80 rounded-t-[2.5rem] border-x-4 border-t-4 relative flex flex-col items-center justify-start pt-8 gap-1 shadow-[0_-15px_60px_rgba(245,158,11,0.5)] group-hover:shadow-[0_-25px_80px_rgba(245,158,11,0.8)] backdrop-blur-xl group-hover:border-warning/80 transition-all duration-500 overflow-hidden">
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.05)_0%,transparent_100%)]"></div>
+                      <div className="absolute bottom-0 inset-x-0 h-24 bg-[linear-gradient(to_top,rgba(245,158,11,0.1)_0%,transparent_100%)] border-b-4 border-warning/50"></div>
+                      <div className="absolute bottom-4 inset-x-0 flex justify-center gap-1 opacity-20">
+                        <div className="w-1 h-6 bg-warning animate-pulse"></div>
+                        <div className="w-1 h-8 bg-warning animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-1 h-4 bg-warning animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                        <div className="w-1 h-10 bg-warning animate-pulse" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-1 h-5 bg-warning animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                      </div>
+                      <span className="absolute bottom-2 text-[8px] font-mono text-warning/30 tracking-[0.3em] uppercase">RACON // SUPREME</span>
+                      {podiumData[0]?.foto && (
+                        <img src={getImageUrl(podiumData[0].foto)} alt="" className="absolute inset-0 w-full h-full object-contain opacity-[0.03] grayscale mix-blend-overlay pointer-events-none scale-150" />
+                      )}
                       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-warning to-transparent opacity-80"></div>
                       <div className="absolute top-0 inset-x-0 h-32 bg-warning/10 blur-xl pointer-events-none"></div>
                       <div className="absolute -top-4 bg-gradient-to-r from-warning to-yellow-300 text-yellow-950 font-mono font-black text-[9px] px-4 py-1 rounded-full uppercase tracking-widest border border-warning/50 shadow-[0_0_15px_rgba(245,158,11,0.6)] z-20 animate-bounce-slow">
@@ -654,10 +684,26 @@ export default function Infografia() {
                     </div>
                     
                     {/* Pedestal Column */}
-                    <div className="w-full h-24 bg-gradient-to-t from-background via-card to-primary/15 border-t-2 border-l border-r border-primary/40 rounded-t-3xl relative flex flex-col items-center justify-start pt-5 gap-1 shadow-[0_-10px_30px_rgba(var(--primary-rgb),0.15)] group-hover:shadow-[0_-10px_40px_rgba(var(--primary-rgb),0.3)] group-hover:border-primary/70 transition-all duration-500 overflow-hidden">
+                    <div className="w-full h-24 bg-gradient-to-t from-background via-card to-primary/15 border-t-2 border-l border-r border-primary/70 rounded-t-3xl border-x-2 border-t-2 relative flex flex-col items-center justify-start pt-5 gap-1 shadow-[0_-10px_30px_rgba(var(--primary-rgb),0.15)] group-hover:shadow-[0_-10px_40px_rgba(var(--primary-rgb),0.3)] group-hover:border-primary/70 transition-all duration-500 overflow-hidden">
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.05)_0%,transparent_100%)]"></div>
+                      <div className="absolute bottom-0 inset-x-0 h-12 bg-[linear-gradient(to_top,rgba(139,92,246,0.1)_0%,transparent_100%)] border-b-2 border-primary/40"></div>
+                      <div className="absolute bottom-4 inset-x-0 flex justify-center gap-1 opacity-20">
+                        <div className="w-1 h-3 bg-primary"></div>
+                        <div className="w-1 h-4 bg-primary"></div>
+                        <div className="w-1 h-2 bg-primary"></div>
+                      </div>
+                      <span className="absolute bottom-1 text-[7px] font-mono text-primary/30 tracking-[0.2em] uppercase">RANK // 03</span>
+                      {podiumData[2]?.foto && (
+                        <img src={getImageUrl(podiumData[2].foto)} alt="" className="absolute inset-0 w-full h-full object-contain opacity-[0.03] grayscale mix-blend-overlay pointer-events-none scale-150" />
+                      )}
                       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent"></div>
                       <span className="text-2xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-primary to-primary/50 leading-none drop-shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]">#3</span>
                       <span className="text-[10px] font-mono text-foreground font-bold mt-1 z-10">{podiumData[2]?.metric}</span>
+                      {podiumData[2]?.statVal && (
+                        <span className="text-[9px] text-primary font-mono font-bold bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20 mt-1 z-10">
+                          {podiumData[2].statLabel}: {podiumData[2].statVal}
+                        </span>
+                      )}
                       <span className="text-[8px] bg-primary/20 text-primary px-3 py-1 rounded-full font-mono uppercase font-black tracking-wider mt-2 border border-primary/30 shadow-[0_0_10px_rgba(var(--primary-rgb),0.3)] z-10">
                         BRONCE
                       </span>

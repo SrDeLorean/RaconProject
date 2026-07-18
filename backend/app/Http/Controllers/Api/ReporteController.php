@@ -81,7 +81,7 @@ class ReporteController extends Controller
         $user = Auth::user();
 
         // Cargar relaciones
-        $partido->load(['local', 'visitante']);
+        $partido->load(['local', 'visitante', 'competencia.temporada']);
 
         $isOrganizerOrAdmin = in_array($user->role, ['administrador', 'organizador']);
         $isHomeCaptain = $partido->local && $partido->local->id_capitan == $user->id;
@@ -133,6 +133,7 @@ class ReporteController extends Controller
         $warningPlayers = [];
 
         $validatePlayers = function (array $playersEA, int $equipoId, string $clubName) use ($partido, &$warningPlayers) {
+            $isSinTransferencias = isset($partido->competencia->config['sin_transferencias']) && $partido->competencia->config['sin_transferencias'] == true;
             $eaNames = array_column($playersEA, 'playername');
             $users = User::whereIn('id_ea', $eaNames)
                 ->orWhereIn('gamertag', $eaNames)
@@ -151,8 +152,8 @@ class ReporteController extends Controller
                         'reason' => 'El jugador no está registrado en el sistema.'
                     ];
                 } else {
-                    // Verificar si está inscrito en la plantilla
-                    $isInRoster = DB::table('organizacion_equipo_usuario')
+                    // Verificar si está inscrito en la plantilla (se omite si es sin transferencias)
+                    $isInRoster = $isSinTransferencias || DB::table('organizacion_equipo_usuario')
                         ->where('user_id', $user->id)
                         ->where('equipo_id', $equipoId)
                         ->where('organizacion_id', $partido->competencia->temporada->organizacion_id)
@@ -257,8 +258,9 @@ class ReporteController extends Controller
                         $user->save();
                     }
 
-                    // Verificar si está inscrito activamente en la plantilla del equipo en esta organización
-                    $isInRoster = DB::table('organizacion_equipo_usuario')
+                    // Verificar si está inscrito activamente en la plantilla del equipo en esta organización (se omite si es sin transferencias)
+                    $isSinTransferencias = isset($partido->competencia->config['sin_transferencias']) && $partido->competencia->config['sin_transferencias'] == true;
+                    $isInRoster = $isSinTransferencias || DB::table('organizacion_equipo_usuario')
                         ->where('user_id', $user->id)
                         ->where('equipo_id', $equipoId)
                         ->where('organizacion_id', $partido->competencia->temporada->organizacion_id)
@@ -461,16 +463,13 @@ class ReporteController extends Controller
             'fotos.jugadores' => ['nullable', 'string'],
             'fotos.conectados'=> ['nullable', 'string'],
             'team_stats'      => ['required', 'array'],
-            'player_stats'    => ['required', 'array'],
+            'player_stats'    => ['present', 'array'],
             'side'            => ['nullable', 'string', 'in:local,visitante'],
         ]);
 
-        // Si es empate, se exige que las 3 fotos estén presentes
-        $isEmpate = (int)$data['goles_local'] === (int)$data['goles_visitante'];
-        if ($isEmpate) {
-            if (empty($data['fotos']['partido']) || empty($data['fotos']['jugadores']) || empty($data['fotos']['conectados'])) {
-                return response()->json(['message' => 'Para reportar un empate es obligatorio subir las 3 fotos (Estadísticas del partido, Estadísticas del jugador, y Jugadores conectados).'], 422);
-            }
+        // Es obligatorio subir las 3 fotos para completar el reporte manual o por foto
+        if (empty($data['fotos']['partido']) || empty($data['fotos']['jugadores']) || empty($data['fotos']['conectados'])) {
+            return response()->json(['message' => 'Es obligatorio subir las 3 fotos (Estadísticas del partido, Estadísticas del jugador, y Jugadores conectados) para completar el reporte.'], 422);
         }
 
         // Determinar el lado (local/visitante) del reporte
@@ -535,41 +534,46 @@ class ReporteController extends Controller
             'goles_visitante' => ['required', 'integer', 'min:0'],
             'local_stats'     => ['required', 'array'],
             'local_stats.team_stats' => ['required', 'array'],
-            'local_stats.player_stats' => ['required', 'array'],
+            'local_stats.player_stats' => ['present', 'array'],
             'visitante_stats' => ['required', 'array'],
             'visitante_stats.team_stats' => ['required', 'array'],
-            'visitante_stats.player_stats' => ['required', 'array'],
+            'visitante_stats.player_stats' => ['present', 'array'],
         ]);
 
-        // Validar coherencia de estadísticas de plantilla Local en backend
-        $localGoalsSum = collect($data['local_stats']['player_stats'])->sum('goles');
-        $localAssistsSum = collect($data['local_stats']['player_stats'])->sum('asistencias');
-        $localTeamGoals = (int)($data['local_stats']['team_stats']['goles_favor'] ?? 0);
-        $localTeamAssists = (int)($data['local_stats']['team_stats']['asistencias'] ?? 0);
-
-        if ($localGoalsSum !== $localTeamGoals) {
-            return response()->json(['message' => "La suma de goles de los jugadores locales ({$localGoalsSum}) no coincide con los Goles a Favor del club local ({$localTeamGoals})."], 422);
-        }
-        if ($localAssistsSum !== $localTeamAssists) {
-            return response()->json(['message' => "La suma de asistencias de los jugadores locales ({$localAssistsSum}) no coincide con las Asistencias del club local ({$localTeamAssists})."], 422);
-        }
-
-        // Validar coherencia de estadísticas de plantilla Visitante en backend
-        $visitanteGoalsSum = collect($data['visitante_stats']['player_stats'])->sum('goles');
-        $visitanteAssistsSum = collect($data['visitante_stats']['player_stats'])->sum('asistencias');
-        $visitanteTeamGoals = (int)($data['visitante_stats']['team_stats']['goles_favor'] ?? 0);
-        $visitanteTeamAssists = (int)($data['visitante_stats']['team_stats']['asistencias'] ?? 0);
-
-        if ($visitanteGoalsSum !== $visitanteTeamGoals) {
-            return response()->json(['message' => "La suma de goles de los jugadores visitantes ({$visitanteGoalsSum}) no coincide con los Goles a Favor del club visitante ({$visitanteTeamGoals})."], 422);
-        }
-        if ($visitanteAssistsSum !== $visitanteTeamAssists) {
-            return response()->json(['message' => "La suma de asistencias de los jugadores visitantes ({$visitanteAssistsSum}) no coincide con las Asistencias del club visitante ({$visitanteTeamAssists})."], 422);
-        }
-
         $partido->load(['local', 'visitante', 'competencia.temporada']);
+        $statsDisabled = isset($partido->competencia->config['sin_transferencias']) && $partido->competencia->config['sin_transferencias'] == true;
 
-        DB::transaction(function() use ($partido, $data) {
+        // Validar coherencia de estadísticas de plantilla Local en backend (solo si se proveen jugadores y no están deshabilitadas)
+        if (!$statsDisabled && count($data['local_stats']['player_stats']) > 0) {
+            $localGoalsSum = collect($data['local_stats']['player_stats'])->sum('goles');
+            $localAssistsSum = collect($data['local_stats']['player_stats'])->sum('asistencias');
+            $localTeamGoals = (int)($data['local_stats']['team_stats']['goles_favor'] ?? 0);
+            $localTeamAssists = (int)($data['local_stats']['team_stats']['asistencias'] ?? 0);
+
+            if ($localGoalsSum !== $localTeamGoals) {
+                return response()->json(['message' => "La suma de goles de los jugadores locales ({$localGoalsSum}) no coincide con los Goles a Favor del club local ({$localTeamGoals})."], 422);
+            }
+            if ($localAssistsSum !== $localTeamAssists) {
+                return response()->json(['message' => "La suma de asistencias de los jugadores locales ({$localAssistsSum}) no coincide con las Asistencias del club local ({$localTeamAssists})."], 422);
+            }
+        }
+
+        // Validar coherencia de estadísticas de plantilla Visitante en backend (solo si se proveen jugadores y no están deshabilitadas)
+        if (!$statsDisabled && count($data['visitante_stats']['player_stats']) > 0) {
+            $visitanteGoalsSum = collect($data['visitante_stats']['player_stats'])->sum('goles');
+            $visitanteAssistsSum = collect($data['visitante_stats']['player_stats'])->sum('asistencias');
+            $visitanteTeamGoals = (int)($data['visitante_stats']['team_stats']['goles_favor'] ?? 0);
+            $visitanteTeamAssists = (int)($data['visitante_stats']['team_stats']['asistencias'] ?? 0);
+
+            if ($visitanteGoalsSum !== $visitanteTeamGoals) {
+                return response()->json(['message' => "La suma de goles de los jugadores visitantes ({$visitanteGoalsSum}) no coincide con los Goles a Favor del club visitante ({$visitanteTeamGoals})."], 422);
+            }
+            if ($visitanteAssistsSum !== $visitanteTeamAssists) {
+                return response()->json(['message' => "La suma de asistencias de los jugadores visitantes ({$visitanteAssistsSum}) no coincide con las Asistencias del club visitante ({$visitanteTeamAssists})."], 422);
+            }
+        }
+
+        DB::transaction(function() use ($partido, $data, $statsDisabled) {
             // 1. Eliminar estadísticas previas
             EstadisticaEquipo::where('partido_id', $partido->id)->delete();
             EstadisticaJugador::where('partido_id', $partido->id)->delete();
@@ -577,7 +581,7 @@ class ReporteController extends Controller
 
             // 2. Procesar Equipo Local
             $localTeamStats = $data['local_stats']['team_stats'];
-            $localPlayerStats = $data['local_stats']['player_stats'];
+            $localPlayerStats = $statsDisabled ? [] : $data['local_stats']['player_stats'];
             
             $pasesIntentadosLocal = (int)($localTeamStats['pases_intentados'] ?? 0);
             $precisionPasesLocal = (float)($localTeamStats['precision_pases'] ?? 0);
@@ -616,7 +620,7 @@ class ReporteController extends Controller
 
             // 3. Procesar Equipo Visitante
             $visitTeamStats = $data['visitante_stats']['team_stats'];
-            $visitPlayerStats = $data['visitante_stats']['player_stats'];
+            $visitPlayerStats = $statsDisabled ? [] : $data['visitante_stats']['player_stats'];
             
             $pasesIntentadosVisit = (int)($visitTeamStats['pases_intentados'] ?? 0);
             $precisionPasesVisit = (float)($visitTeamStats['precision_pases'] ?? 0);
@@ -726,35 +730,74 @@ class ReporteController extends Controller
                 }
             }
 
-            // 6. Roster Logs para los que no jugaron
-            $rosterUsers = DB::table('organizacion_equipo_usuario')
-                ->where('organizacion_id', $partido->competencia->temporada->organizacion_id)
-                ->whereIn('equipo_id', [$partido->equipo_local_id, $partido->equipo_visitante_id])
-                ->where('estado_fichaje', 'activo')
-                ->pluck('user_id');
+            // 6. Roster Logs para los que no jugaron (solo si hay estadísticas de jugadores registradas)
+            if (count($localPlayerStats) > 0 || count($visitPlayerStats) > 0) {
+                $rosterUsers = DB::table('organizacion_equipo_usuario')
+                    ->where('organizacion_id', $partido->competencia->temporada->organizacion_id)
+                    ->whereIn('equipo_id', [$partido->equipo_local_id, $partido->equipo_visitante_id])
+                    ->where('estado_fichaje', 'activo')
+                    ->pluck('user_id');
 
-            $jugadoresEquipo = User::whereIn('id', $rosterUsers)->get();
-            foreach ($jugadoresEquipo as $jugador) {
-                if (!in_array($jugador->id, $jugadoresJugoIds)) {
-                    $eqPivot = DB::table('organizacion_equipo_usuario')
-                        ->where('organizacion_id', $partido->competencia->temporada->organizacion_id)
-                        ->where('user_id', $jugador->id)
-                        ->where('estado_fichaje', 'activo')
-                        ->first();
+                $jugadoresEquipo = User::whereIn('id', $rosterUsers)->get();
+                foreach ($jugadoresEquipo as $jugador) {
+                    if (!in_array($jugador->id, $jugadoresJugoIds)) {
+                        $eqPivot = DB::table('organizacion_equipo_usuario')
+                            ->where('organizacion_id', $partido->competencia->temporada->organizacion_id)
+                            ->where('user_id', $jugador->id)
+                            ->where('estado_fichaje', 'activo')
+                            ->first();
 
-                    if ($eqPivot) {
-                        EstadisticaJugadorLog::create([
-                            'playername' => $jugador->gamertag ?: $jugador->name,
-                            'partido_id' => $partido->id,
-                            'jugador_id' => $jugador->id,
-                            'equipo_id' => $eqPivot->equipo_id,
-                            'competencia_id' => $partido->competencia_id,
-                            'jugo' => false,
-                            'procesado' => false,
-                            'estado' => 'no_jugo'
-                        ]);
+                        if ($eqPivot) {
+                            EstadisticaJugadorLog::create([
+                                'playername' => $jugador->gamertag ?: $jugador->name,
+                                'partido_id' => $partido->id,
+                                'jugador_id' => $jugador->id,
+                                'equipo_id' => $eqPivot->equipo_id,
+                                'competencia_id' => $partido->competencia_id,
+                                'jugo' => false,
+                                'procesado' => false,
+                                'estado' => 'no_jugo'
+                            ]);
+                        }
                     }
                 }
+            }
+
+            // 6.5 Borrar fotos asociadas a los reportes de capitanes
+            if ($partido->reporte_local_stats && isset($partido->reporte_local_stats['fotos'])) {
+                $localStats = $partido->reporte_local_stats;
+                foreach ($localStats['fotos'] as $key => $path) {
+                    if ($path) {
+                        $fullPath = public_path(ltrim($path, '/'));
+                        if (file_exists($fullPath) && is_file($fullPath)) {
+                            @unlink($fullPath);
+                        }
+                    }
+                }
+                $localStats['fotos'] = [
+                    'partido' => null,
+                    'jugadores' => null,
+                    'conectados' => null
+                ];
+                $partido->reporte_local_stats = $localStats;
+            }
+
+            if ($partido->reporte_visitante_stats && isset($partido->reporte_visitante_stats['fotos'])) {
+                $visitStats = $partido->reporte_visitante_stats;
+                foreach ($visitStats['fotos'] as $key => $path) {
+                    if ($path) {
+                        $fullPath = public_path(ltrim($path, '/'));
+                        if (file_exists($fullPath) && is_file($fullPath)) {
+                            @unlink($fullPath);
+                        }
+                    }
+                }
+                $visitStats['fotos'] = [
+                    'partido' => null,
+                    'jugadores' => null,
+                    'conectados' => null
+                ];
+                $partido->reporte_visitante_stats = $visitStats;
             }
 
             // 7. Actualizar el partido

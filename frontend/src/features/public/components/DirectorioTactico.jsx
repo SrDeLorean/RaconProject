@@ -24,8 +24,17 @@ const getVisiblePages = (currentPage, totalPages) => {
 };
 
 
-export default function DirectorioTactico({ stats, getImageUrl }) {
+export default function DirectorioTactico({ stats, getImageUrl, filterMode = 'ambas' }) {
   const [directoryTab, setDirectoryTab] = useState('jugadores'); // 'jugadores' | 'equipos'
+
+  // Sync directoryTab with filterMode
+  useEffect(() => {
+    if (filterMode === 'equipo') {
+      setDirectoryTab('equipos');
+    } else if (filterMode === 'jugador') {
+      setDirectoryTab('jugadores');
+    }
+  }, [filterMode]);
 
   // Player search/filter/sort states
   const [playerSearch, setPlayerSearch] = useState('');
@@ -147,24 +156,26 @@ export default function DirectorioTactico({ stats, getImageUrl }) {
         </div>
         
         {/* Selector de Pestañas del Directorio */}
-        <div className="flex bg-background/55 p-1 rounded-xl border border-border/40 gap-1 shrink-0 self-start sm:self-center">
-          {[
-            { id: 'jugadores', label: '🏃 Jugadores' },
-            { id: 'equipos', label: '🛡️ Clubes' }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setDirectoryTab(tab.id)}
-              className={`px-4 py-2 rounded-lg text-[10px] font-condensed tracking-widest uppercase transition-all duration-300 cursor-pointer ${
-                directoryTab === tab.id
-                  ? 'text-primary bg-primary/10 border border-primary/20 font-black'
-                  : 'text-muted-foreground hover:text-foreground font-bold'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        {filterMode === 'ambas' && (
+          <div className="flex bg-background/55 p-1 rounded-xl border border-border/40 gap-1 shrink-0 self-start sm:self-center">
+            {[
+              { id: 'jugadores', label: '🏃 Jugadores' },
+              { id: 'equipos', label: '🛡️ Clubes' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setDirectoryTab(tab.id)}
+                className={`px-4 py-2 rounded-lg text-[10px] font-condensed tracking-widest uppercase transition-all duration-300 cursor-pointer ${
+                  directoryTab === tab.id
+                    ? 'text-primary bg-primary/10 border border-primary/20 font-black'
+                    : 'text-muted-foreground hover:text-foreground font-bold'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* CONTENIDO DE PESTAÑA: JUGADORES */}

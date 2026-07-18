@@ -30,7 +30,7 @@ export default function EquipoFormDrawer({
       onClose={onClose}
       title={selectedEquipo ? "Editar Ficha de Club" : "Crear Club Deportivo"}
       footer={
-        <div className="flex gap-4 w-full mt-2">
+        <div className="flex flex-col-reverse sm:flex-row gap-4 w-full mt-2">
           <Button variant="outline" className="flex-1 h-12 border-border/60 text-foreground" onClick={onClose} disabled={isSaving}>
             Cancelar
           </Button>

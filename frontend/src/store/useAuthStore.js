@@ -73,10 +73,20 @@ export const useAuthStore = create(
         }
       },
 
-      // Cierre de sesión limpio
-      logout: async () => {
+      // Cierre de sesión limpio (con opción de limpieza local inmediata si el token no es válido)
+      logout: async (localOnly = false) => {
+        if (localOnly) {
+          set({ 
+            user: null, 
+            token: null, 
+            isAuthenticated: false,
+            authLoading: false,
+            authError: null
+          });
+          return;
+        }
         try {
-          // Opcional: Avisar a Laravel para que destruya el token en la BD
+          // Avisar a Laravel para que destruya el token en la BD
           await api.post('/logout'); 
         } catch (error) {
           console.error("Error al cerrar sesión en el servidor", error);

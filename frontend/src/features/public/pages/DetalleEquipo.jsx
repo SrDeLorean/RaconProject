@@ -4,6 +4,54 @@ import api from '@/api/axios';
 import Badge from '@/components/ui/Badge';
 import Partidos from './Partidos';
 
+const translatePosition = (pos) => {
+  if (!pos) return '—';
+  const p = pos.toUpperCase();
+  const map = {
+    'GK': 'POR',
+    'PO': 'POR',
+    'CB': 'DFC',
+    'LB': 'LI',
+    'RB': 'LD',
+    'LWB': 'CAR',
+    'RWB': 'CAD',
+    'CDM': 'MCD',
+    'CM': 'MC',
+    'CAM': 'MCO',
+    'LM': 'MI',
+    'RM': 'MD',
+    'LW': 'EI',
+    'RW': 'ED',
+    'CF': 'SD',
+    'ST': 'DC',
+    'DF': 'DFC',
+    'DL': 'DC',
+    'DEFENDER': 'DFC',
+    'MIDFIELDER': 'MC'
+  };
+  return map[p] || p;
+};
+
+function FilterChip({ label, active, onClick, count }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wide whitespace-nowrap transition-all duration-200 border cursor-pointer ${
+        active
+          ? 'bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20'
+          : 'bg-card/25 text-muted-foreground border-border/40 hover:border-primary/40 hover:text-foreground backdrop-blur-sm'
+      }`}
+    >
+      {label}
+      {count != null && (
+        <span className={`text-[8px] px-1.5 py-0.5 rounded font-black ${active ? 'bg-white/20' : 'bg-muted/50'}`}>
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
 const SOCIAL_ICONS = {
   whatsapp: (
     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -86,6 +134,70 @@ const getSocialLink = (platform, value) => {
   }
 };
 
+
+
+function computeStandings(partidos, equipos) {
+    if (!partidos || !equipos) return [];
+    const map = {};
+    equipos.forEach(eq => {
+      map[eq.id] = {
+        id: eq.id,
+        equipo_id: eq.id, 
+        nombre: eq.nombre, 
+        abreviatura: eq.abreviatura, 
+        logo: eq.logo,
+        pj: 0, pg: 0, pe: 0, pp: 0, gf: 0, gc: 0, pts: 0,
+        ultimosCinco: []
+      };
+    });
+
+    // Sort matches chronologically to calculate form order correctly
+    const sortedPartidos = [...partidos].sort((a, b) => {
+      const dateA = a.fecha || '';
+      const dateB = b.fecha || '';
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+      const timeA = a.hora || '';
+      const timeB = b.hora || '';
+      return timeA.localeCompare(timeB);
+    });
+
+    sortedPartidos.forEach(p => {
+      if (p.goles_local == null || p.goles_visitante == null) return;
+      const gl = p.goles_local, gv = p.goles_visitante;
+      const lid = p.equipo_local_id || p.local?.id;
+      const vid = p.equipo_visitante_id || p.visitante?.id;
+      
+      if (!lid || !vid || !map[lid] || !map[vid]) return;
+      
+      const tl = map[lid], tv = map[vid];
+      tl.pj++; tv.pj++;
+      tl.gf += gl; tl.gc += gv;
+      tv.gf += gv; tv.gc += gl;
+      if (gl > gv) {
+        tl.pg++; tl.pts += 3; tv.pp++;
+        tl.ultimosCinco.push('v');
+        tv.ultimosCinco.push('x');
+      } else if (gl < gv) {
+        tv.pg++; tv.pts += 3; tl.pp++;
+        tl.ultimosCinco.push('x');
+        tv.ultimosCinco.push('v');
+      } else {
+        tl.pe++; tl.pts++; tv.pe++; tv.pts++;
+        tl.ultimosCinco.push('-');
+        tv.ultimosCinco.push('-');
+      }
+    });
+
+    Object.values(map).forEach(t => {
+      t.ultimosCinco = t.ultimosCinco.slice(-5);
+    });
+
+    const arr = Object.values(map).map(t => ({ ...t, dg: t.gf - t.gc }));
+    return arr.sort(
+      (a, b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf
+    );
+}
+
 export default function DetalleEquipo() {
   const { id } = useParams();
   const [equipo, setEquipo] = useState(null);
@@ -105,6 +217,66 @@ export default function DetalleEquipo() {
   const [loadingStats, setLoadingStats] = useState(false);
   const [historyOrg, setHistoryOrg] = useState('todos');
   const [historySeason, setHistorySeason] = useState('todos');
+
+  // --- Posiciones States ---
+  const [posicionesOrg, setPosicionesOrg] = useState('todos');
+  const [posicionesComp, setPosicionesComp] = useState(null);
+  const [posicionesData, setPosicionesData] = useState(null);
+  const [loadingPosiciones, setLoadingPosiciones] = useState(false);
+
+  // Memoized list of filtered competencies for the team
+  const teamCompetenciasFiltradas = useMemo(() => {
+    if (!equipo || !equipo.competencias) return [];
+    return equipo.competencias.filter(c => {
+      if (posicionesOrg === 'todos') return true;
+      const orgId = c.temporada?.organizacion?.id || c.temporada?.organizacion_id;
+      return orgId?.toString() === posicionesOrg;
+    });
+  }, [equipo, posicionesOrg]);
+
+  // Automatically select the first competition in the filtered list
+  useEffect(() => {
+    if (teamCompetenciasFiltradas.length > 0) {
+      const exists = teamCompetenciasFiltradas.some(c => c.id === posicionesComp);
+      if (!exists) {
+        setPosicionesComp(teamCompetenciasFiltradas[0].id);
+      }
+    } else {
+      setPosicionesComp(null);
+    }
+  }, [teamCompetenciasFiltradas, posicionesComp]);
+
+  // Effect to fetch posiciones when selected competition changes or activeTab changes
+  useEffect(() => {
+    if (activeTab !== 'posiciones' || !equipo) return;
+    if (!posicionesComp) {
+      setPosicionesData(null);
+      return;
+    }
+
+    const fetchPosiciones = async () => {
+      setLoadingPosiciones(true);
+      setPosicionesData(null);
+      try {
+        const res = await api.get(`/competencias/${posicionesComp}`);
+        const compData = res.data.data || res.data;
+        const tabla = computeStandings(compData.partidos, compData.equipos);
+        setPosicionesData({ 
+          id: compData.id,
+          nombre: compData.nombre, 
+          logo: compData.logo,
+          formato: compData.formato,
+          partidos: compData.partidos,
+          tabla 
+        });
+      } catch (err) {
+        console.error("Error fetching posiciones:", err);
+      } finally {
+        setLoadingPosiciones(false);
+      }
+    };
+    fetchPosiciones();
+  }, [activeTab, posicionesComp, equipo]);
 
   const getPlatDetails = (plat) => {
     const p = (plat || '').toUpperCase();
@@ -447,9 +619,10 @@ export default function DetalleEquipo() {
         </div>
 
         {/* Tabulación de Secciones */}
-        <div className="flex border border-border/40 p-1 bg-card/25 backdrop-blur-md rounded-2xl max-w-4xl mx-auto shadow-xl overflow-x-auto gap-1">
+        <div className="flex border border-border/40 p-1 bg-card/25 backdrop-blur-md rounded-2xl max-w-4xl mx-auto shadow-xl overflow-x-auto gap-1 mobile-scroll-indicator pb-2.5">
           {[
             { id: 'roster', label: '👥 Plantilla' },
+            { id: 'posiciones', label: '🏆 Posiciones' },
             { id: 'partidos', label: '📅 Calendario' },
             { id: 'traspasos', label: '🔄 Traspasos' },
             { id: 'estadisticas', label: '📊 Estadísticas' },
@@ -595,7 +768,7 @@ export default function DetalleEquipo() {
                                   N° {p.dorsal || '—'}
                                 </span>
                                 <span className={`text-[9px] border font-black px-2 py-0.5 rounded-md uppercase font-mono ${posStyles.posColor}`}>
-                                  {p.posicion || 'MC'}
+                                  {translatePosition(p.posicion)}
                                 </span>
                               </div>
                             </Link>
@@ -609,7 +782,223 @@ export default function DetalleEquipo() {
             </div>
           )}
 
-          {/* TAB 2: Calendario Completo */}
+            {activeTab === 'posiciones' && (
+            <div className="space-y-6 animate-fade-in">
+              {/* ── FILTERS PANEL ── */}
+              <div className="border border-border/40 bg-card/25 backdrop-blur-md rounded-2xl p-5 space-y-4 shadow-md">
+                
+                {/* Org chips */}
+                {allOrgs.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground font-mono">Confederación / Organización</p>
+                    <div className="flex flex-wrap gap-2">
+                      <FilterChip 
+                        label="Todas" 
+                        active={posicionesOrg === 'todos'}
+                        onClick={() => setPosicionesOrg('todos')} 
+                      />
+                      {allOrgs.map(org => {
+                        const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') ;
+                        const logoUrl = org.logo 
+                          ? (org.logo.startsWith('http') 
+                              ? org.logo 
+                              : (typeof window.mediaUrl === 'function' 
+                                  ? window.mediaUrl(org.logo) 
+                                  : `${backendBaseUrl}${org.logo}`)) 
+                          : '';
+                        return (
+                          <FilterChip 
+                            key={org.id} 
+                            label={
+                              <span className="flex items-center gap-1.5">
+                                {logoUrl && (
+                                  <img src={logoUrl} alt="" className="w-4.5 h-4.5 rounded object-cover" />
+                                )}
+                                <span>{org.nombre}</span>
+                              </span>
+                            } 
+                            active={posicionesOrg === org.id.toString()}
+                            onClick={() => setPosicionesOrg(org.id.toString())} 
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Competition chips */}
+                {teamCompetenciasFiltradas.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground font-mono">Competencia del Equipo</p>
+                    <div className="flex flex-wrap gap-2">
+                      {teamCompetenciasFiltradas.map(c => {
+                        const fmt = (c.formato || 'liga').toLowerCase();
+                        const fmtIcon = fmt === 'copa' ? '🥇' : fmt.includes('playoff') ? '🏆' : '🏟️';
+                        
+                        const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') ;
+                        const logoUrl = c.logo 
+                          ? (c.logo.startsWith('http') 
+                              ? c.logo 
+                              : (typeof window.mediaUrl === 'function' 
+                                  ? window.mediaUrl(c.logo) 
+                                  : `${backendBaseUrl}${c.logo}`)) 
+                          : '';
+                        
+                        return (
+                          <FilterChip 
+                            key={c.id} 
+                            label={
+                              <span className="flex items-center gap-1.5">
+                                {logoUrl ? (
+                                  <img src={logoUrl} alt="" className="w-4.5 h-4.5 rounded object-cover" />
+                                ) : (
+                                  <span>{fmtIcon}</span>
+                                )}
+                                <span>{c.nombre}</span>
+                              </span>
+                            }
+                            active={posicionesComp === c.id}
+                            onClick={() => setPosicionesComp(c.id)} 
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── STANDINGS DISPLAY ── */}
+              <div className="border border-border/40 bg-card/15 backdrop-blur-md rounded-2xl overflow-hidden shadow-xl">
+                {loadingPosiciones ? (
+                  <div className="flex flex-col items-center justify-center py-20 gap-3">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+                    <span className="text-xs text-muted-foreground font-mono uppercase tracking-widest">Calculando Posiciones...</span>
+                  </div>
+                ) : !posicionesData || !posicionesData.tabla || posicionesData.tabla.length === 0 ? (
+                  <div className="text-center py-16 text-muted-foreground font-mono text-xs uppercase tracking-wide">
+                    ⚠️ No hay competencias registradas o datos de posiciones en el filtro seleccionado.
+                  </div>
+                ) : (
+                  <div>
+                    <div className="px-5 py-3.5 bg-muted/20 border-b border-border/40 flex items-center justify-between">
+                      <span className="text-xs font-black uppercase tracking-widest text-primary font-display flex items-center gap-2">
+                        🏆 Clasificación: {posicionesData.nombre}
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-border/40 bg-muted/30 text-[9px] uppercase font-black text-muted-foreground tracking-widest font-mono">
+                            <th className="px-4 py-3 text-center w-10">#</th>
+                            <th className="px-4 py-3">Club</th>
+                            <th className="px-4 py-3 text-center w-12">PJ</th>
+                            <th className="hidden sm:table-cell px-4 py-3 text-center w-12 text-emerald-400">PG</th>
+                            <th className="hidden sm:table-cell px-4 py-3 text-center w-12">PE</th>
+                            <th className="hidden sm:table-cell px-4 py-3 text-center w-12 text-destructive">PP</th>
+                            <th className="hidden md:table-cell px-4 py-3 text-center w-12">GF</th>
+                            <th className="hidden md:table-cell px-4 py-3 text-center w-12">GC</th>
+                            <th className="px-4 py-3 text-center w-14">DG</th>
+                            <th className="px-4 py-3 text-center w-16 text-primary">Pts</th>
+                            <th className="hidden lg:table-cell px-4 py-3 text-center w-36">Últimos 5</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/30 font-semibold text-xs">
+                          {(() => {
+                            const hasResults = posicionesData.tabla.some(s => s.pj > 0);
+                            return posicionesData.tabla.map((s, idx) => {
+                              const isCurrentTeam = s.equipo_id === parseInt(id);
+                              const dg = s.gf - s.gc;
+                              const backendBaseUrl = api.defaults.baseURL?.replace(/\/api$/, '') ;
+                              const logoUrl = s.logo 
+                                ? (s.logo.startsWith('http') 
+                                    ? s.logo 
+                                    : (typeof window.mediaUrl === 'function' 
+                                        ? window.mediaUrl(s.logo) 
+                                        : `${backendBaseUrl}${s.logo}`)) 
+                                : '';
+
+                              return (
+                                <tr
+                                  key={s.equipo_id}
+                                  className={`transition-colors duration-200 ${
+                                    isCurrentTeam 
+                                      ? 'bg-primary/20 border-y border-primary/45 shadow-[inset_4px_0_0_hsla(var(--primary),1)]' 
+                                      : 'hover:bg-primary/5'
+                                  } ${idx === 0 && hasResults ? 'bg-primary/5' : ''}`}
+                                >
+                                  <td className="px-4 py-3 text-center">
+                                    <span className={`inline-flex items-center justify-center w-6 h-6 rounded font-black font-mono text-[10px] shadow-sm ${
+                                      idx === 0 && hasResults ? 'bg-gradient-to-tr from-amber-400 to-yellow-600 text-slate-950 shadow-amber-400/30' :
+                                      idx === 1 && hasResults ? 'bg-gradient-to-tr from-slate-300 to-slate-500 text-slate-950 shadow-slate-400/20' :
+                                      idx === 2 && hasResults ? 'bg-gradient-to-tr from-amber-700 to-amber-900 text-amber-100 shadow-amber-900/20' :
+                                      'bg-muted/60 text-foreground'
+                                    }`}>{idx + 1}</span>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center gap-2.5">
+                                      {logoUrl ? (
+                                        <img 
+                                          src={logoUrl} 
+                                          alt={s.nombre} 
+                                          className="w-8 h-8 rounded-lg object-cover border border-border/50 shadow-inner bg-card shrink-0"
+                                        />
+                                      ) : (
+                                        <div className={`w-8 h-8 rounded-lg border flex items-center justify-center font-display font-black text-[9px] shadow-inner uppercase shrink-0 ${
+                                          idx === 0 && hasResults ? 'bg-primary/15 border-primary/40 text-primary' : 'bg-muted/40 border-border/50 text-foreground'
+                                        }`}>{s.abreviatura || s.nombre?.substring(0,3)}</div>
+                                      )}
+                                      <span className={`font-black uppercase tracking-wide ${isCurrentTeam ? 'text-primary' : 'text-foreground'}`}>
+                                        {s.nombre}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 text-center font-mono">{s.pj}</td>
+                                  <td className="hidden sm:table-cell px-4 py-3 text-center font-mono text-emerald-400">{s.pg}</td>
+                                  <td className="hidden sm:table-cell px-4 py-3 text-center font-mono text-muted-foreground">{s.pe}</td>
+                                  <td className="hidden sm:table-cell px-4 py-3 text-center font-mono text-destructive">{s.pp}</td>
+                                  <td className="hidden md:table-cell px-4 py-3 text-center font-mono">{s.gf}</td>
+                                  <td className="hidden md:table-cell px-4 py-3 text-center font-mono">{s.gc}</td>
+                                  <td className={`px-4 py-3 text-center font-mono font-bold ${dg > 0 ? 'text-emerald-400' : dg < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                                    {dg > 0 ? `+${dg}` : dg}
+                                  </td>
+                                  <td className="px-4 py-3 text-center font-mono text-primary font-black text-sm">{s.pts}</td>
+                                  <td className="hidden lg:table-cell px-4 py-3 text-center">
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      {s.ultimosCinco && s.ultimosCinco.length > 0 ? (
+                                        s.ultimosCinco.map((res, rIdx) => {
+                                          let bgColor = 'bg-slate-500/20 text-slate-400 border border-slate-500/30';
+                                          if (res === 'v') bgColor = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+                                          if (res === 'x') bgColor = 'bg-rose-500/20 text-rose-400 border border-rose-500/30';
+                                          return (
+                                            <span
+                                              key={rIdx}
+                                              className={`w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-black uppercase ${bgColor}`}
+                                              title={res === 'v' ? 'Victoria' : res === 'x' ? 'Derrota' : 'Empate'}
+                                            >
+                                              {res}
+                                            </span>
+                                          );
+                                        })
+                                      ) : (
+                                        <span className="text-muted-foreground/40 text-[10px] font-mono">—</span>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+            {/* TAB 2: Calendario Completo */}
           {activeTab === 'partidos' && (
             <div className="space-y-6 animate-fade-in">
               <div className="relative border border-border/40 bg-card/15 backdrop-blur-md rounded-2xl p-4 md:p-6 shadow-xl overflow-hidden">
@@ -762,7 +1151,7 @@ export default function DetalleEquipo() {
                                   </span>
                                   {userF.posicion && (
                                     <span className={`text-[8px] font-mono px-1.5 py-0.2 rounded border ${posStyles.posColor}`}>
-                                      {userF.posicion}
+                                      {translatePosition(userF.posicion)}
                                     </span>
                                   )}
                                 </div>
@@ -952,6 +1341,45 @@ export default function DetalleEquipo() {
                     )}
                   </div>
 
+                  {/* Bloque 1.5: Estadísticas Avanzadas de Equipo */}
+                  <div className="space-y-6">
+                    <h2 className="text-xl font-display font-black uppercase tracking-wider text-foreground border-b border-border/20 pb-2">
+                      Rendimiento Avanzado
+                    </h2>
+                    {equipo.estadisticas && (equipo.estadisticas.total_tiros > 0 || equipo.estadisticas.total_pases > 0) ? (
+                      (() => {
+                        const stats = equipo.estadisticas || {};
+                        return (
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
+                              {[
+                                { label: 'Posesión', value: `${stats.avg_posesion}%`, color: 'text-primary', bg: 'bg-primary/5 border-primary/20 hover:border-primary/45' },
+                                { label: 'Tiros Totales', value: stats.total_tiros, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/45' },
+                                { label: 'Pases', value: stats.total_pases, color: 'text-foreground', bg: 'bg-card/20 border-border/40' },
+                                { label: 'Prec. Pases', value: `${stats.avg_precision_pases}%`, color: 'text-sky-400', bg: 'bg-sky-500/5 border-sky-500/20 hover:border-sky-500/45' },
+                                { label: 'Entradas Ext.', value: stats.total_entradas_exitosas, color: 'text-amber-500', bg: 'bg-amber-500/5 border-amber-500/20 hover:border-amber-500/45' },
+                                { label: 'Atajadas', value: stats.total_atajadas, color: 'text-rose-500', bg: 'bg-rose-500/5 border-rose-500/20 hover:border-rose-500/45' },
+                              ].map((stat, idx) => (
+                                <div key={`adv-${idx}`} className={`relative overflow-hidden border backdrop-blur-md rounded-2xl p-3 sm:p-5 text-center space-y-1 shadow-md transition-all duration-300 hover:scale-[1.02] ${stat.bg}`}>
+                                  <div className="absolute top-0 right-0 w-8 h-8 bg-foreground/[0.01] pointer-events-none"></div>
+                                  <span className="text-[8px] sm:text-[9px] font-bold text-muted-foreground uppercase tracking-widest block leading-none font-mono">
+                                    {stat.label}
+                                  </span>
+                                  <strong className={`text-xl sm:text-2xl font-display font-black block leading-none pt-1 ${stat.color} font-mono`}>
+                                    {stat.value}
+                                  </strong>
+                                </div>
+                              ))}
+                            </div>
+                        );
+                      })()
+                    ) : (
+                      <div className="border border-border/50 bg-muted/10 rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-3">
+                        <span className="text-2xl opacity-50">🤖</span>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground font-medium italic">Sube reportes mediante Inteligencia Artificial para habilitar las estadísticas avanzadas del club.</p>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Bloque 2: Rankings y Líderes del Club */}
                   <div className="space-y-8 animate-fade-in-up">
                     
@@ -1005,7 +1433,7 @@ export default function DetalleEquipo() {
                                       {g.total_goles} {g.total_goles === 1 ? 'Gol' : 'Goles'}
                                     </strong>
                                     <span className={`text-[7px] sm:text-[8px] font-mono font-bold px-1 sm:px-1.5 py-0.2 rounded border ${posStyles.posColor}`}>
-                                      {g.posicion || 'MC'}
+                                      {translatePosition(g.posicion)}
                                     </span>
                                   </div>
                                 </div>
@@ -1064,7 +1492,7 @@ export default function DetalleEquipo() {
                                       {a.total_asistencias} {a.total_asistencias === 1 ? 'Asist.' : 'Asist.'}
                                     </strong>
                                     <span className={`text-[7px] sm:text-[8px] font-mono font-bold px-1 sm:px-1.5 py-0.2 rounded border ${posStyles.posColor}`}>
-                                      {a.posicion || 'MC'}
+                                      {translatePosition(a.posicion)}
                                     </span>
                                   </div>
                                 </div>

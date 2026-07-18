@@ -28,7 +28,9 @@ class Competencia extends Model
         'config' => 'array'
     ];
 
-    protected $appends = ['top_stats'];
+    // PERFORMANCE FIX: Removed from $appends to prevent N+1 bomb on list views.
+    // Load top_stats explicitly when needed: $competencia->append('top_stats')
+    protected $appends = [];
 
     public function getTopStatsAttribute()
     {

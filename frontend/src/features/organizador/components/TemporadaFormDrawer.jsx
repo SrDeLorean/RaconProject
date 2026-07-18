@@ -33,7 +33,7 @@ export default function TemporadaFormDrawer({
       onClose={onClose}
       title={selectedTemporada ? "Modificar Parámetros de Temporada" : "Inaugurar Nueva Temporada"}
       footer={
-        <div className="flex gap-4 w-full mt-2">
+        <div className="flex flex-col-reverse sm:flex-row gap-4 w-full mt-2">
           <Button 
             variant="outline" 
             className="flex-1 h-12 border-border/60 text-foreground hover:bg-muted font-bold tracking-wide transition-colors" 

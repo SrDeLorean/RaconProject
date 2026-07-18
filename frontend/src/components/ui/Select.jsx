@@ -4,14 +4,17 @@ const Select = forwardRef(({
   label, 
   error, 
   icon,
+  id,
   options = [], 
   className = '', 
   ...props 
 }, ref) => {
+  const selectId = id || (label ? `select-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined);
+
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
       {label && (
-        <label className="text-technical text-muted-foreground ml-1 drop-shadow-sm">
+        <label htmlFor={selectId} className="text-technical text-muted-foreground ml-1 drop-shadow-sm">
           {label}
         </label>
       )}
@@ -35,6 +38,7 @@ const Select = forwardRef(({
 
         <select 
           ref={ref}
+          id={selectId}
           className={`
             relative w-full text-foreground border rounded-xl px-4 py-3 appearance-none
             transition-all duration-300 outline-none

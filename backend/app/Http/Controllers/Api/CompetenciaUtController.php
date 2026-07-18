@@ -161,6 +161,28 @@ class CompetenciaUtController extends Controller
             $data['slug'] = Str::slug($data['nombre']) . '-' . uniqid();
         }
 
+        // Delete old logo if updated
+        if (array_key_exists('logo', $data) && $data['logo'] !== $competencia->logo) {
+            $oldLogo = $competencia->logo;
+            if ($oldLogo && str_contains($oldLogo, 'uploads/') && !str_starts_with($oldLogo, 'http')) {
+                $fullPath = public_path(ltrim($oldLogo, '/'));
+                if (file_exists($fullPath) && is_file($fullPath)) {
+                    @unlink($fullPath);
+                }
+            }
+        }
+
+        // Delete old banner if updated
+        if (array_key_exists('banner', $data) && $data['banner'] !== $competencia->banner) {
+            $oldBanner = $competencia->banner;
+            if ($oldBanner && str_contains($oldBanner, 'uploads/') && !str_starts_with($oldBanner, 'http')) {
+                $fullPath = public_path(ltrim($oldBanner, '/'));
+                if (file_exists($fullPath) && is_file($fullPath)) {
+                    @unlink($fullPath);
+                }
+            }
+        }
+
         $competencia->update($data);
         Cache::forget('competencia_ut_show_' . $competencia->id);
 

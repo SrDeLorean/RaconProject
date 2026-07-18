@@ -14,7 +14,8 @@ export default function PlantillaClub({
   onDesvincular, 
   onUpdateRoster, 
   organizaciones = [],
-  historialFichajes = []
+  historialFichajes = [],
+  transfersDisabled = false
 }) {
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [editDorsal, setEditDorsal] = useState('');
@@ -149,18 +150,20 @@ export default function PlantillaClub({
           >
             <span>⚙️</span> Configurar
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-8 text-xs border-border hover:border-destructive/40 text-muted-foreground hover:text-destructive transition-all flex items-center gap-1 bg-card/40 hover:bg-destructive/10" 
-            onClick={() => onDesvincular(row)}
-          >
-            <span>❌</span> Dar de Baja
-          </Button>
+          {!transfersDisabled && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 text-xs border-border hover:border-destructive/40 text-muted-foreground hover:text-destructive transition-all flex items-center gap-1 bg-card/40 hover:bg-destructive/10" 
+              onClick={() => onDesvincular(row)}
+            >
+              <span>❌</span> Dar de Baja
+            </Button>
+          )}
         </div>
       )
     }
-  ], [onDesvincular]);
+  ], [onDesvincular, transfersDisabled]);
 
   const columnasHistorial = useMemo(() => [
     {
@@ -259,74 +262,110 @@ export default function PlantillaClub({
         </div>
 
         {/* PANEL LATERAL DE CONTRATACIONES */}
-        <Card className="space-y-4 relative overflow-hidden h-fit max-h-screen" padding="p-5" withGlow={true}>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
-          <div className="space-y-1">
-            <h3 className="text-sm font-bold text-foreground uppercase tracking-wide flex items-center gap-2">
-              <span>🛡️</span> Fichar Agentes
+        {transfersDisabled ? (
+          <Card className="space-y-4 relative overflow-hidden h-fit text-center border-border/40 bg-card/35 p-6 rounded-2xl shadow-xl" padding="p-6">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-destructive/5 rounded-full blur-3xl pointer-events-none"></div>
+            <span className="text-3xl block animate-pulse">🚫</span>
+            <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">
+              Fichajes Deshabilitados
             </h3>
-            <p className="text-xs text-muted-foreground">Busca competidores con rol de jugador e incorpóralos bajo contrato.</p>
-          </div>
-          
-          <Input 
-            placeholder="Escribe Gamertag o Nombre..." 
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-          
-          <div className="space-y-3.5 max-h-[350px] overflow-y-auto pt-1 pr-1">
-            {jugadoresLibres.filter(j => !j.role || j.role === 'jugador').length > 0 ? (
-              jugadoresLibres.filter(j => !j.role || j.role === 'jugador').map((jugador) => (
-                <div key={jugador.id} className="flex flex-col p-3.5 rounded-xl bg-card/40 border border-border/40 text-xs shadow-md transition-all hover:border-primary/40 hover:shadow-[0_0_15px_rgba(232,0,29,0.06)] hover:bg-card/60 space-y-3 group/agent">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex flex-col min-w-0 flex-1">
-                      <span className="font-bold text-foreground text-sm truncate group-hover/agent:text-primary transition-colors">{jugador.gamertag || jugador.name}</span>
-                      <span className="text-[10px] text-muted-foreground truncate">{jugador.name} • {jugador.email}</span>
+            <p className="text-xs text-muted-foreground leading-relaxed font-light">
+              Esta competencia se juega con plantillas cerradas. No se permite reclutar agentes libres ni procesar transferencias en esta división.
+            </p>
+          </Card>
+        ) : (
+          <Card className="space-y-4 relative overflow-hidden h-fit max-h-screen" padding="p-5" withGlow={true}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-foreground uppercase tracking-wide flex items-center gap-2">
+                <span>🛡️</span> Fichar Agentes
+              </h3>
+              <p className="text-xs text-muted-foreground">Busca competidores con rol de jugador e incorpóralos bajo contrato.</p>
+            </div>
+            
+            <Input 
+              placeholder="Escribe Gamertag o Nombre..." 
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+            />
+            
+            <div className="space-y-3.5 max-h-[350px] overflow-y-auto pt-1 pr-1">
+              {jugadoresLibres.filter(j => !j.role || j.role === 'jugador').length > 0 ? (
+                jugadoresLibres.filter(j => !j.role || j.role === 'jugador').map((jugador) => (
+                  <div key={jugador.id} className="flex flex-col p-3.5 rounded-xl bg-card/40 border border-border/40 text-xs shadow-md transition-all hover:border-primary/40 hover:shadow-[0_0_15px_rgba(232,0,29,0.06)] hover:bg-card/60 space-y-3 group/agent">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="font-bold text-foreground text-sm truncate group-hover/agent:text-primary transition-colors">{jugador.gamertag || jugador.name}</span>
+                        <span className="text-[10px] text-muted-foreground truncate">{jugador.name} • {jugador.email}</span>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        className="h-8 text-[10px] px-3.5 bg-primary text-primary-foreground font-black uppercase tracking-wider shadow-[0_0_10px_hsla(var(--primary),0.3)] hover:shadow-[0_0_15px_hsla(var(--primary),0.5)] transition-all shrink-0"
+                        onClick={() => handleOpenSign(jugador)}
+                      >
+                        Fichar
+                      </Button>
                     </div>
-                    <Button 
-                      size="sm" 
-                      className="h-8 text-[10px] px-3.5 bg-primary text-primary-foreground font-black uppercase tracking-wider shadow-[0_0_10px_hsla(var(--primary),0.3)] hover:shadow-[0_0_15px_hsla(var(--primary),0.5)] transition-all shrink-0"
-                      onClick={() => handleOpenSign(jugador)}
-                    >
-                      Fichar
-                    </Button>
-                  </div>
-                  
-                  {/* Detalles de Demarcación y Contratos en otras Ligas */}
-                  <div className="pt-2.5 border-t border-border/20 flex flex-col gap-1.5 text-[10px]">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground uppercase font-bold text-[9px] tracking-wider">Demarcación:</span>
-                      <span className={`font-mono font-bold uppercase px-2.5 py-0.5 rounded border text-[9px] ${getPosBadgeClass(jugador.posicion)}`}>
-                        {posicionesDisponibles.find(p => p.value === jugador.posicion)?.label || jugador.posicion || 'Sin Demarcación'}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-1.5 mt-1">
-                      <span className="text-muted-foreground font-bold uppercase tracking-wider text-[8px]">Contratos Activos en Otras Ligas:</span>
-                      {jugador.contratos && jugador.contratos.length > 0 ? (
-                        <div className="flex flex-wrap gap-1 mt-0.5">
-                          {jugador.contratos.map((c, idx) => (
-                            <span key={idx} className="bg-muted/60 px-2 py-0.5 rounded text-[8px] border border-border/40 text-foreground font-mono font-bold">
-                              🏢 {c.club} ({c.organizacion})
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground italic text-[9px] pl-1 flex items-center gap-1">
-                          🟢 Agente Libre Absoluto (Sin Contratos)
+                    
+                    {/* Detalles de Demarcación y Contratos en otras Ligas */}
+                    <div className="pt-2.5 border-t border-border/20 flex flex-col gap-1.5 text-[10px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground uppercase font-bold text-[9px] tracking-wider">Demarcación:</span>
+                        <span className={`font-mono font-bold uppercase px-2.5 py-0.5 rounded border text-[9px] ${getPosBadgeClass(jugador.posicion)}`}>
+                          {posicionesDisponibles.find(p => p.value === jugador.posicion)?.label || jugador.posicion || 'Sin Demarcación'}
                         </span>
-                      )}
+                      </div>
+                      <div className="flex flex-col gap-1.5 mt-1">
+                        <span className="text-muted-foreground font-bold uppercase tracking-wider text-[8px]">Contratos Activos en Otras Ligas:</span>
+                        {jugador.contratos && jugador.contratos.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {jugador.contratos.map((c, idx) => (
+                              <span key={idx} className="bg-muted/60 px-2 py-0.5 rounded text-[8px] border border-border/40 text-foreground font-mono font-bold">
+                                🏢 {c.club} ({c.organizacion})
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground italic text-[9px] pl-1 flex items-center gap-1">
+                            🟢 Agente Libre Absoluto (Sin Contratos)
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
-            ) : searchTerm ? (
-              <span className="text-xs text-muted-foreground block text-center py-6 bg-background rounded-xl border border-dashed border-border/60">
-                No se encontraron jugadores libres.
-              </span>
-            ) : null}
-          </div>
-        </Card>
+                ))
+              ) : searchTerm ? (
+                <span className="text-xs text-muted-foreground block text-center py-6 bg-background rounded-xl border border-dashed border-border/60">
+                  No se encontraron jugadores libres.
+                </span>
+              ) : null}
+            </div>
+          </Card>
+        )}
       </div>
+
+      {/* SECCIÓN NUEVA: SOLICITUDES EN REVISIÓN POR ADMINISTRADOR */}
+      {historialFichajes.filter(f => f.estado === 'pendiente_admin').length > 0 && (
+        <Card className="space-y-4 border-amber-500/20 bg-amber-500/[0.02]" padding="p-5" withGlow={true}>
+          <div className="flex items-center justify-between border-b border-border/30 pb-3">
+            <h3 className="text-sm font-bold text-foreground uppercase tracking-wide flex items-center gap-2">
+              <span>⏳</span> Solicitudes en Revisión por Administrador
+            </h3>
+            <Badge variant="warning" className="uppercase text-[8px] font-black tracking-widest px-2.5 py-0.5 animate-pulse">
+              En Espera de Aprobación
+            </Badge>
+          </div>
+
+          <DataTable 
+            columns={columnasHistorial}
+            data={historialFichajes.filter(f => f.estado === 'pendiente_admin')}
+            isLoading={false}
+            perPage={5}
+            showPagination={true}
+            searchPlaceholder="Filtrar solicitudes en revisión..."
+          />
+        </Card>
+      )}
 
       {/* TERCERA TABLA: LOG/HISTORIAL DE TRANSACCIONES */}
       <Card className="space-y-4" padding="p-5" withGlow={true}>
@@ -369,7 +408,7 @@ export default function PlantillaClub({
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1.5 col-span-1">
                   <label className="text-xs font-bold text-foreground uppercase tracking-wide block">Dorsal</label>
                   <Input 
@@ -441,7 +480,7 @@ export default function PlantillaClub({
               </div>
 
               {/* Parámetros Sugeridos */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1.5 col-span-1">
                   <label className="text-xs font-bold text-foreground uppercase tracking-wide block">Dorsal Sugerido</label>
                   <Input 

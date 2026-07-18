@@ -87,12 +87,21 @@ class CompetenciaEquipoController extends Controller
     }
 
     // 5. Expulsar / Dar de baja a un equipo del torneo
-    public function destroy(Competencia $competencia, $equipo_id)
+    public function destroy(Request $request, Competencia $competencia, $equipo_id)
     {
-        if ($competencia->partidos()->exists()) {
+        if ($competencia->partidos()->exists() && !$request->boolean('force')) {
             return response()->json([
                 'message' => 'No se puede dar de baja directamente porque la competencia ya tiene un calendario generado. Utiliza las opciones de WO o Reemplazo.'
             ], 422);
+        }
+
+        if ($request->boolean('force')) {
+            \App\Models\Partido::where('competencia_id', $competencia->id)
+                ->where(function ($q) use ($equipo_id) {
+                    $q->where('equipo_local_id', $equipo_id)
+                      ->orWhere('equipo_visitante_id', $equipo_id);
+                })
+                ->delete();
         }
 
         $competencia->equipos()->detach($equipo_id);

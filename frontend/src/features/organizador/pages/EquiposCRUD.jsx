@@ -19,7 +19,10 @@ const getImageUrl = (path) => {
   return typeof window.mediaUrl === 'function' ? window.mediaUrl(path) : `http://localhost:8000${path.startsWith('/') ? path : '/' + path}`;
 };
 
+import { useNavigate } from 'react-router-dom';
+
 export default function EquiposCRUD() {
+  const navigate = useNavigate();
   const { data, ui, form, actions } = useEquipos();
 
   const tabsConfig = useMemo(() => [
@@ -89,6 +92,14 @@ export default function EquiposCRUD() {
       header: 'Operaciones',
       render: (row) => (
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 flex gap-1 items-center"
+            onClick={() => navigate(`/organizador/equipos/${row.id}/plantilla`)}
+          >
+            👥 Plantilla
+          </Button>
           <Button
             variant="outline"
             size="sm"

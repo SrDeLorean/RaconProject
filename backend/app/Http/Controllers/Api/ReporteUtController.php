@@ -74,6 +74,8 @@ class ReporteUtController extends Controller
         $partido = PartidoUt::with(['local.capitan', 'local.companero', 'visitante.capitan', 'visitante.companero', 'competencia'])->findOrFail($id);
         $user = Auth::user();
 
+        $partido->load(['local', 'visitante', 'competencia.temporada']);
+
         $isOrganizerOrAdmin = in_array($user->role, ['administrador', 'organizador']);
         $isHomeCaptain = $partido->local && $partido->local->id_capitan == $user->id;
         $isAwayCaptain = $partido->visitante && $partido->visitante->id_capitan == $user->id;
@@ -121,7 +123,8 @@ class ReporteUtController extends Controller
         // --- VALIDACIÓN DE INTEGRANTES DEL EQUIPO UT ---
         $warningPlayers = [];
 
-        $validateUtPlayers = function (array $playersEA, EquipoUt $team, string $clubName) use (&$warningPlayers) {
+        $validateUtPlayers = function (array $playersEA, EquipoUt $team, string $clubName) use ($partido, &$warningPlayers) {
+            $isSinTransferencias = isset($partido->competencia->config['sin_transferencias']) && $partido->competencia->config['sin_transferencias'] == true;
             $allowedUsers = collect([$team->capitan, $team->companero])->filter()->values();
             
             foreach ($playersEA as $playerEA) {
@@ -141,8 +144,8 @@ class ReporteUtController extends Controller
                     continue;
                 }
 
-                // Verificar si pertenece a esta pareja/equipo UT
-                $isTeamRoster = $allowedUsers->contains('id', $systemUser->id);
+                // Verificar si pertenece a esta pareja/equipo UT (se omite si es sin transferencias)
+                $isTeamRoster = $isSinTransferencias || $allowedUsers->contains('id', $systemUser->id);
                 if (!$isTeamRoster) {
                     $warningPlayers[] = [
                         'playername' => $playername,
@@ -181,6 +184,7 @@ class ReporteUtController extends Controller
         $eaPlayersGlobal = collect();
 
         $procesarJugadoresUt = function (array $playersEA, EquipoUt $team) use ($partido, &$eaPlayersGlobal) {
+            $isSinTransferencias = isset($partido->competencia->config['sin_transferencias']) && $partido->competencia->config['sin_transferencias'] == true;
             $allowedUsers = collect([$team->capitan, $team->companero])->filter()->values();
 
             foreach ($playersEA as $playerEA) {
@@ -209,7 +213,8 @@ class ReporteUtController extends Controller
                         $user->save();
                     }
 
-                    $isTeamRoster = $allowedUsers->contains('id', $user->id);
+                    // Verificar roster (se omite si es sin transferencias)
+                    $isTeamRoster = $isSinTransferencias || $allowedUsers->contains('id', $user->id);
                     if (!$isTeamRoster) {
                         $estado = 'no_inscrito_equipo';
                     } else {
@@ -414,12 +419,9 @@ class ReporteUtController extends Controller
             'side'            => ['nullable', 'string', 'in:local,visitante'],
         ]);
 
-        // Si es empate, se exige que las 2 fotos (partido y conectados) estén presentes
-        $isEmpate = (int)$data['goles_local'] === (int)$data['goles_visitante'];
-        if ($isEmpate) {
-            if (empty($data['fotos']['partido']) || empty($data['fotos']['conectados'])) {
-                return response()->json(['message' => 'Para reportar un empate es obligatorio subir las 2 fotos (Estadísticas del partido y Jugadores conectados).'], 422);
-            }
+        // Es obligatorio subir las 2 fotos (partido y conectados) para completar el reporte
+        if (empty($data['fotos']['partido']) || empty($data['fotos']['conectados'])) {
+            return response()->json(['message' => 'Es obligatorio subir las 2 fotos (Estadísticas del partido y Jugadores conectados) para completar el reporte.'], 422);
         }
 
         // Determinar el lado (local/visitante) del reporte
@@ -485,14 +487,16 @@ class ReporteUtController extends Controller
             'goles_visitante' => ['required', 'integer', 'min:0'],
             'local_stats'     => ['required', 'array'],
             'local_stats.team_stats' => ['required', 'array'],
-            'local_stats.player_stats' => ['required', 'array'],
+            'local_stats.player_stats' => ['present', 'array'],
             'visitante_stats' => ['required', 'array'],
             'visitante_stats.team_stats' => ['required', 'array'],
-            'visitante_stats.player_stats' => ['required', 'array'],
+            'visitante_stats.player_stats' => ['present', 'array'],
         ]);
 
-        // Validar coherencia de estadísticas de plantilla Local en backend (solo si se enviaron)
-        if (count($data['local_stats']['player_stats'] ?? []) > 0) {
+        $statsDisabled = isset($partido->competencia->config['sin_transferencias']) && $partido->competencia->config['sin_transferencias'] == true;
+
+        // Validar coherencia de estadísticas de plantilla Local en backend (solo si se enviaron y no están deshabilitadas)
+        if (!$statsDisabled && count($data['local_stats']['player_stats'] ?? []) > 0) {
             $localGoalsSum = collect($data['local_stats']['player_stats'])->sum('goles');
             $localAssistsSum = collect($data['local_stats']['player_stats'])->sum('asistencias');
             $localTeamGoals = (int)($data['local_stats']['team_stats']['goles_favor'] ?? 0);
@@ -506,8 +510,8 @@ class ReporteUtController extends Controller
             }
         }
 
-        // Validar coherencia de estadísticas de plantilla Visitante en backend (solo si se enviaron)
-        if (count($data['visitante_stats']['player_stats'] ?? []) > 0) {
+        // Validar coherencia de estadísticas de plantilla Visitante en backend (solo si se enviaron y no están deshabilitadas)
+        if (!$statsDisabled && count($data['visitante_stats']['player_stats'] ?? []) > 0) {
             $visitanteGoalsSum = collect($data['visitante_stats']['player_stats'])->sum('goles');
             $visitanteAssistsSum = collect($data['visitante_stats']['player_stats'])->sum('asistencias');
             $visitanteTeamGoals = (int)($data['visitante_stats']['team_stats']['goles_favor'] ?? 0);
@@ -521,7 +525,7 @@ class ReporteUtController extends Controller
             }
         }
 
-        DB::transaction(function() use ($partido, $data) {
+        DB::transaction(function() use ($partido, $data, $statsDisabled) {
             // 1. Eliminar estadísticas previas
             EstadisticaEquipoUt::where('partido_ut_id', $partido->id)->delete();
             EstadisticaJugadorUt::where('partido_ut_id', $partido->id)->delete();
@@ -529,7 +533,7 @@ class ReporteUtController extends Controller
 
             // 2. Procesar Equipo Local
             $localTeamStats = $data['local_stats']['team_stats'];
-            $localPlayerStats = $data['local_stats']['player_stats'];
+            $localPlayerStats = $statsDisabled ? [] : $data['local_stats']['player_stats'];
             
             $pasesIntentadosLocal = (int)($localTeamStats['pases_intentados'] ?? 0);
             $precisionPasesLocal = (float)($localTeamStats['precision_pases'] ?? 0);
@@ -567,7 +571,7 @@ class ReporteUtController extends Controller
 
             // 3. Procesar Equipo Visitante
             $visitTeamStats = $data['visitante_stats']['team_stats'];
-            $visitPlayerStats = $data['visitante_stats']['player_stats'];
+            $visitPlayerStats = $statsDisabled ? [] : $data['visitante_stats']['player_stats'];
             
             $pasesIntentadosVisit = (int)($visitTeamStats['pases_intentados'] ?? 0);
             $precisionPasesVisit = (float)($visitTeamStats['precision_pases'] ?? 0);
@@ -702,6 +706,43 @@ class ReporteUtController extends Controller
                         'estado' => 'no_jugo'
                     ]);
                 }
+            }
+
+            // 6.5 Borrar fotos asociadas a los reportes de capitanes
+            if ($partido->reporte_local_stats && isset($partido->reporte_local_stats['fotos'])) {
+                $localStats = $partido->reporte_local_stats;
+                foreach ($localStats['fotos'] as $key => $path) {
+                    if ($path) {
+                        $fullPath = public_path(ltrim($path, '/'));
+                        if (file_exists($fullPath) && is_file($fullPath)) {
+                            @unlink($fullPath);
+                        }
+                    }
+                }
+                $localStats['fotos'] = [
+                    'partido' => null,
+                    'jugadores' => null,
+                    'conectados' => null
+                ];
+                $partido->reporte_local_stats = $localStats;
+            }
+
+            if ($partido->reporte_visitante_stats && isset($partido->reporte_visitante_stats['fotos'])) {
+                $visitStats = $partido->reporte_visitante_stats;
+                foreach ($visitStats['fotos'] as $key => $path) {
+                    if ($path) {
+                        $fullPath = public_path(ltrim($path, '/'));
+                        if (file_exists($fullPath) && is_file($fullPath)) {
+                            @unlink($fullPath);
+                        }
+                    }
+                }
+                $visitStats['fotos'] = [
+                    'partido' => null,
+                    'jugadores' => null,
+                    'conectados' => null
+                ];
+                $partido->reporte_visitante_stats = $visitStats;
             }
 
             // 7. Actualizar el partido

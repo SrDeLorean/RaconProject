@@ -47,6 +47,10 @@ class UserRequest extends FormRequest
             'twitch'           => ['sometimes', 'nullable', 'string', 'max:255'],
             'youtube'          => ['sometimes', 'nullable', 'string', 'max:255'],
             'tiktok'           => ['sometimes', 'nullable', 'string', 'max:255'],
+            'discord'          => ['sometimes', 'nullable', 'string', 'max:255'],
+            'twitter'          => ['sometimes', 'nullable', 'string', 'max:255'],
+            'website'          => ['sometimes', 'nullable', 'string', 'max:255'],
+            'whatsapp'         => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
     }
 
